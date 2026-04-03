@@ -1,0 +1,129 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer components {
+  .dashboard-light {
+    @apply bg-slate-50 min-h-screen text-slate-900;
+  }
+
+  .sales-card {
+    @apply bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden transition-all hover:shadow-md;
+  }
+
+  .thumb-button {
+    @apply active:scale-95 transition-transform duration-100 select-none;
+  }
+
+  .sticky-bottom-actions {
+    @apply fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-lg border-t border-slate-200 z-50;
+  }
+
+  .kpi-card-dark {
+    @apply bg-[#1A1D23] border-l-4 p-4 rounded-lg flex flex-col justify-between h-full transition-all hover:bg-[#23272F];
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    @apply w-1.5 h-1.5;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-[#0F1115];
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-700 rounded-full border-2 border-transparent bg-clip-padding;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-600;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Card Shadows */
+  .card-shadow {
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  }
+  .card-shadow-hover:hover {
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+  .animate-shake {
+    animation: shake 0.2s ease-in-out 0s 2;
+  }
+
+  /* Leaflet Map Styles */
+  .leaflet-container {
+    @apply bg-[#1A1D23] !important;
+  }
+
+  .custom-popup .leaflet-popup-content-wrapper {
+    @apply bg-white rounded-xl shadow-2xl border border-slate-100 p-0 overflow-hidden;
+  }
+
+  .custom-popup .leaflet-popup-tip {
+    @apply bg-white;
+  }
+
+  .custom-popup .leaflet-popup-content {
+    @apply m-0 !important;
+  }
+
+  .leaflet-div-icon {
+    @apply bg-transparent border-none !important;
+  }
+
+  .marker-cluster-small {
+    @apply bg-indigo-500/20 !important;
+  }
+  .marker-cluster-small div {
+    @apply bg-indigo-500 text-white font-bold !important;
+  }
+
+  .marker-cluster-medium {
+    @apply bg-emerald-500/20 !important;
+  }
+  .marker-cluster-medium div {
+    @apply bg-emerald-500 text-white font-bold !important;
+  }
+
+  .marker-cluster-large {
+    @apply bg-rose-500/20 !important;
+  }
+  .marker-cluster-large div {
+    @apply bg-rose-500 text-white font-bold !important;
+  }
+}

@@ -1,0 +1,95 @@
+export const MOCK_SUPPLIER_INVENTORY = [
+  { 
+    id: 'INV-101',
+    product: 'LOST MARY BM6000 KIT', 
+    sku: 'LM-BM6000-SL',
+    warehouse: 'London Central Hub', 
+    available: 12540, 
+    reserved: 150, 
+    damaged: 5, 
+    reorderLevel: 5000,
+    dailySales: 210,
+    flavours: [
+      { name: 'Triple Mango', stock: 2185, health: 'green' },
+      { name: 'Watermelon Ice', stock: 1605, health: 'green' },
+      { name: 'Strawberry Watermelon', stock: 800, health: 'amber' },
+      { name: 'Pink Lemonade', stock: 656, health: 'amber' },
+      { name: 'Mango Peach Papaya', stock: 300, health: 'amber' },
+      { name: 'Strawberry Raspberry', stock: 5, health: 'red' },
+    ]
+  },
+  { 
+    id: 'INV-102',
+    product: 'Hawcos Crystal 600 KIT', 
+    sku: 'HC-CRY-600',
+    warehouse: 'Manchester North', 
+    available: 10220, 
+    reserved: 40, 
+    damaged: 2, 
+    reorderLevel: 4000,
+    dailySales: 130,
+    flavours: [
+      { name: 'Blue Razz Lemonade', stock: 3200, health: 'green' },
+      { name: 'Strawberry Ice', stock: 2800, health: 'green' },
+      { name: 'Watermelon', stock: 1500, health: 'green' },
+      { name: 'Mixed Berry', stock: 1220, health: 'green' },
+      { name: 'Peach Mango', stock: 900, health: 'amber' },
+      { name: 'Grape Ice', stock: 600, health: 'amber' },
+    ]
+  },
+  { 
+    id: 'INV-103',
+    product: 'Lost Mary BM6000 KIT', 
+    sku: 'LM-BM6000-KIT',
+    warehouse: 'Birmingham Logistics', 
+    available: 8430, 
+    reserved: 0, 
+    damaged: 0, 
+    reorderLevel: 3000,
+    dailySales: 200,
+    flavours: [
+      { name: 'Pink Lemonade', stock: 2100, health: 'green' },
+      { name: 'Blue Razz Ice', stock: 1800, health: 'green' },
+      { name: 'Mango Ice', stock: 1500, health: 'green' },
+      { name: 'Cola Ice', stock: 1200, health: 'green' },
+      { name: 'Mint', stock: 830, health: 'amber' },
+      { name: 'Cherry', stock: 200, health: 'red' },
+    ]
+  },
+  { 
+    id: 'INV-104',
+    product: 'Lost Mary NERA 30K KIT', 
+    sku: 'LM-NERA-30K',
+    warehouse: 'London Central Hub', 
+    available: 7300, 
+    reserved: 0, 
+    damaged: 0, 
+    reorderLevel: 2500,
+    dailySales: 150,
+    flavours: [
+      { name: 'Watermelon Ice', stock: 2400, health: 'green' },
+      { name: 'Triple Mango', stock: 1900, health: 'green' },
+      { name: 'Strawberry Kiwi', stock: 1500, health: 'green' },
+      { name: 'Blueberry Pomegranate', stock: 1000, health: 'green' },
+      { name: 'Lychee Ice', stock: 500, health: 'amber' },
+    ]
+  },
+  { 
+    id: 'INV-105',
+    product: 'Lost Mary BM6000 POD', 
+    sku: 'LM-BM6000-POD',
+    warehouse: 'Manchester North', 
+    available: 6390, 
+    reserved: 0, 
+    damaged: 0, 
+    reorderLevel: 2000,
+    dailySales: 110,
+    flavours: [
+      { name: 'Pink Lemonade', stock: 2000, health: 'green' },
+      { name: 'Blue Razz', stock: 1500, health: 'green' },
+      { name: 'Cola Ice', stock: 1100, health: 'green' },
+      { name: 'Strawberry Banana', stock: 890, health: 'amber' },
+      { name: 'Watermelon Bubblegum', stock: 900, health: 'amber' },
+    ]
+  }
+];

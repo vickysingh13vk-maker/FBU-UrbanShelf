@@ -1,0 +1,7 @@
+{
+  "name": "FBU",
+  "description": "Fulfillment By Urbanshelf",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
