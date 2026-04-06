@@ -7,7 +7,8 @@ import {
   Plus, Search, Filter, MoreHorizontal, Calendar, Clock,
   ChevronRight, ChevronLeft, CheckCircle, Package, MapPin,
   Info, Truck, FileDown, Warehouse,
-  Activity, ShieldCheck, Lock, X, BarChart3, Printer, AlertCircle
+  Activity, ShieldCheck, Lock, X, BarChart3, Printer, AlertCircle,
+  Receipt
 } from 'lucide-react';
 import { useSupplier } from '../../context/SupplierContext';
 import { SHIPMENT_STATUS_CONFIG } from '../../constants/supplierStatus';
@@ -439,10 +440,98 @@ const SupplierInbound: React.FC = () => {
               </div>
             </div>
 
+            {/* Quotation */}
+            {(() => {
+              const FEE_RECEIVING = 0.15;
+              const FEE_STORAGE = 0.08;
+              const FEE_QC = 0.05;
+              const lineItems = selectedProductIds.map(id => {
+                const product = products.find(p => p.id === id)!;
+                const qty = quantities[id] || 0;
+                return { product, qty, lineTotal: qty * (product.price || 0) };
+              });
+              const subtotal = lineItems.reduce((sum, li) => sum + li.lineTotal, 0);
+              const receivingFee = totalUnits * FEE_RECEIVING;
+              const storageFee = totalUnits * FEE_STORAGE;
+              const qcFee = totalUnits * FEE_QC;
+              const totalFees = receivingFee + storageFee + qcFee;
+              const grandTotal = subtotal + totalFees;
+
+              return (
+                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                  <div className="flex items-center gap-2 px-6 py-3 bg-indigo-50 border-b border-indigo-100">
+                    <Receipt className="h-4 w-4 text-indigo-600" />
+                    <h4 className="text-xs font-bold text-indigo-700 uppercase tracking-widest">Quotation</h4>
+                  </div>
+                  <div className="px-6 py-4 space-y-4">
+                    {/* Line Items */}
+                    <div className="border border-slate-100 rounded-xl overflow-hidden">
+                      <Table>
+                        <THead>
+                          <TR className="bg-slate-50/50">
+                            <TH className="text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2">Product</TH>
+                            <TH className="text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2 text-center">Qty</TH>
+                            <TH className="text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2 text-right">Unit Price</TH>
+                            <TH className="text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2 text-right">Total</TH>
+                          </TR>
+                        </THead>
+                        <TBody>
+                          {lineItems.map(({ product, qty, lineTotal }) => (
+                            <TR key={product.id}>
+                              <TD className="py-2">
+                                <p className="text-xs font-bold text-slate-900 line-clamp-1">{product.name}</p>
+                                <p className="text-[10px] text-slate-400 font-mono">SKU: {product.sku}</p>
+                              </TD>
+                              <TD className="text-center py-2">
+                                <span className="text-xs font-bold text-slate-700">{qty}</span>
+                              </TD>
+                              <TD className="text-right py-2">
+                                <span className="text-xs font-medium text-slate-600">£{product.price.toFixed(2)}</span>
+                              </TD>
+                              <TD className="text-right py-2">
+                                <span className="text-xs font-black text-slate-900">£{lineTotal.toFixed(2)}</span>
+                              </TD>
+                            </TR>
+                          ))}
+                        </TBody>
+                      </Table>
+                    </div>
+
+                    {/* Totals */}
+                    <div className="space-y-2 pt-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-500 font-medium">Subtotal ({totalUnits} units)</span>
+                        <span className="font-bold text-slate-700">£{subtotal.toFixed(2)}</span>
+                      </div>
+                      <div className="border-t border-dashed border-slate-200 pt-2 space-y-1.5">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">FBU Service Fees</p>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-slate-500 font-medium">Receiving & Handling (£0.15/unit)</span>
+                          <span className="font-medium text-slate-600">£{receivingFee.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-slate-500 font-medium">Storage — 30 days est. (£0.08/unit)</span>
+                          <span className="font-medium text-slate-600">£{storageFee.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-slate-500 font-medium">Quality Check (£0.05/unit)</span>
+                          <span className="font-medium text-slate-600">£{qcFee.toFixed(2)}</span>
+                        </div>
+                      </div>
+                      <div className="border-t-2 border-slate-900 pt-2 flex justify-between items-center">
+                        <span className="text-sm font-black text-slate-900 uppercase tracking-wide">Grand Total</span>
+                        <span className="text-lg font-black text-indigo-600">£{grandTotal.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-xl border border-amber-100">
               <Info className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-amber-800 leading-relaxed font-medium">
-                By creating this shipment, you agree to follow our packaging and labeling guidelines. 
+                By creating this shipment, you agree to follow our packaging and labeling guidelines.
                 Incorrectly labeled items may be rejected at the warehouse.
               </p>
             </div>

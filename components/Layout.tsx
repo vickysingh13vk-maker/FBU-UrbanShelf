@@ -22,8 +22,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login');
+    } else if (user?.roleName === 'Supplier' && user?.onboardingCompleted === false) {
+      navigate('/supplier/onboarding');
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

@@ -159,6 +159,21 @@ export interface User {
   status: 'Active' | 'Inactive' | 'Suspended';
   createdDate: string;
   image?: string;
+  onboardingCompleted?: boolean;
+  supplierId?: string;
+}
+
+export interface SupplierOnboardingData {
+  companyName: string;
+  contactPerson: string;
+  phone: string;
+  email: string;
+  vatNumber: string;
+  address: string;
+  city: string;
+  postalCode: string;
+  country: string;
+  businessType: 'Manufacturer' | 'Distributor' | 'Brand Owner';
 }
 
 export type CommissionStatus = 'Pending' | 'Matured' | 'Released' | 'Paid';

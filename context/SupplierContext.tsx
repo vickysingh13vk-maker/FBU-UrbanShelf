@@ -18,7 +18,9 @@ import {
   SupplierMarketInsightsData,
   SupplierReportsData,
   Promotion,
+  SupplierOnboardingData,
 } from '../types';
+import { PRODUCTS, SUPPLIERS } from '../data';
 
 interface SupplierContextType {
   products: Product[];
@@ -41,6 +43,12 @@ interface SupplierContextType {
   updatePromotion: (id: string, promotion: Partial<Promotion>) => void;
   deletePromotion: (id: string) => void;
   isLoading: boolean;
+  // Onboarding
+  allBrands: { id: string; name: string; logo: string }[];
+  allProducts: Product[];
+  productMappings: Record<string, string>; // productId → userId
+  completeOnboarding: (userId: string, data: SupplierOnboardingData, brandNames: string[], productIds: string[]) => void;
+  isProductAssigned: (productId: string) => boolean;
 }
 
 const SupplierContext = createContext<SupplierContextType | undefined>(undefined);
@@ -56,6 +64,41 @@ export const SupplierProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [marketInsights] = useState<SupplierMarketInsightsData>(MOCK_SUPPLIER_MARKET_INSIGHTS);
   const [reports] = useState<SupplierReportsData>(MOCK_SUPPLIER_REPORTS as SupplierReportsData);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Onboarding data
+  const allBrands = SUPPLIERS.map(s => ({ id: s.id, name: s.name, logo: s.logo }));
+  const allProducts = PRODUCTS as Product[];
+  const [productMappings, setProductMappings] = useState<Record<string, string>>(() => {
+    const saved = localStorage.getItem('fbu_product_mappings');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  const isProductAssigned = (productId: string) => {
+    return productId in productMappings;
+  };
+
+  const completeOnboarding = (userId: string, data: SupplierOnboardingData, brandNames: string[], productIds: string[]) => {
+    // Map selected products to this supplier
+    const newMappings = { ...productMappings };
+    productIds.forEach(pid => {
+      newMappings[pid] = userId;
+    });
+    setProductMappings(newMappings);
+    localStorage.setItem('fbu_product_mappings', JSON.stringify(newMappings));
+
+    // Save onboarding data
+    const onboardingStore = JSON.parse(localStorage.getItem('fbu_onboarding_data') || '{}');
+    onboardingStore[userId] = { ...data, brands: brandNames, productIds };
+    localStorage.setItem('fbu_onboarding_data', JSON.stringify(onboardingStore));
+
+    // Mark user as onboarded
+    const savedUser = localStorage.getItem('auth_user');
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+      user.onboardingCompleted = true;
+      localStorage.setItem('auth_user', JSON.stringify(user));
+    }
+  };
 
   const addProduct = (product: Partial<Product>) => {
     setIsLoading(true);
@@ -192,6 +235,11 @@ export const SupplierProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         updatePromotion,
         deletePromotion,
         isLoading,
+        allBrands,
+        allProducts,
+        productMappings,
+        completeOnboarding,
+        isProductAssigned,
       }}
     >
       {children}

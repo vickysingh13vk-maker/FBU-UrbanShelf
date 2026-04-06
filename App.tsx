@@ -35,6 +35,7 @@ import SupplierPricing from './pages/supplier/SupplierPricing';
 import SupplierPromotions from './pages/supplier/SupplierPromotions';
 import SupplierReports from './pages/supplier/SupplierReports';
 import SupplierAccountManager from './pages/supplier/SupplierAccountManager';
+import SupplierOnboarding from './pages/supplier/SupplierOnboarding';
 import UsersPage from './pages/Users';
 import RolesPermissionsPage from './pages/RolesPermissions';
 import CheckInPage from './pages/CheckIn';
@@ -57,6 +58,7 @@ const App: React.FC = () => {
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/supplier/login" element={<SupplierLogin />} />
+              <Route path="/supplier/onboarding" element={<SupplierOnboarding />} />
               <Route path="/*" element={
                 <Layout>
                   <Routes>

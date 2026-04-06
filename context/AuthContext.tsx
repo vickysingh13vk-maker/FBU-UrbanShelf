@@ -9,6 +9,7 @@ interface AuthContextType {
   logout: () => void;
   hasPermission: (module: string, action: 'view' | 'create' | 'edit' | 'delete') => boolean;
   isAuthenticated: boolean;
+  markOnboardingComplete: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,10 +34,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (foundUser.status !== 'Active') {
         throw new Error('Your account is suspended. Please contact admin.');
       }
-      setUser(foundUser);
+      // Preserve onboarding status from previous sessions
+      const onboardingStore = JSON.parse(localStorage.getItem('fbu_onboarding_data') || '{}');
+      const hasCompletedOnboarding = foundUser.onboardingCompleted || !!onboardingStore[foundUser.id];
+      const userToSave = {
+        ...foundUser,
+        onboardingCompleted: hasCompletedOnboarding,
+      };
+      setUser(userToSave);
       const userRole = ROLES.find(r => r.id === foundUser.roleId);
       if (userRole) setRole(userRole);
-      localStorage.setItem('auth_user', JSON.stringify(foundUser));
+      localStorage.setItem('auth_user', JSON.stringify(userToSave));
       return true;
     }
     return false;
@@ -48,6 +56,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('auth_user');
   };
 
+  const markOnboardingComplete = () => {
+    if (user) {
+      const updated = { ...user, onboardingCompleted: true };
+      setUser(updated);
+      localStorage.setItem('auth_user', JSON.stringify(updated));
+    }
+  };
+
   const hasPermission = (module: string, action: 'view' | 'create' | 'edit' | 'delete'): boolean => {
     if (!role) return false;
     const modulePermission = role.permissions.find(p => p.module === module);
@@ -56,13 +72,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      role, 
-      login, 
-      logout, 
-      hasPermission, 
-      isAuthenticated: !!user 
+    <AuthContext.Provider value={{
+      user,
+      role,
+      login,
+      logout,
+      hasPermission,
+      isAuthenticated: !!user,
+      markOnboardingComplete,
     }}>
       {children}
     </AuthContext.Provider>

@@ -23,7 +23,17 @@ const LoginPage: React.FC = () => {
     try {
       const success = await login(email, password);
       if (success) {
-        navigate('/');
+        const savedUser = localStorage.getItem('auth_user');
+        const parsedUser = savedUser ? JSON.parse(savedUser) : null;
+        if (parsedUser?.roleName === 'Supplier') {
+          if (parsedUser.onboardingCompleted) {
+            navigate('/supplier/dashboard');
+          } else {
+            navigate('/supplier/onboarding');
+          }
+        } else {
+          navigate('/');
+        }
       } else {
         setError('Invalid email or password');
       }
@@ -118,18 +128,6 @@ const LoginPage: React.FC = () => {
               Sign In to Dashboard
             </Button>
 
-            <div className="pt-4 border-t border-slate-100 text-center">
-              <p className="text-sm text-slate-500">
-                Are you a supplier?{' '}
-                <button
-                  type="button"
-                  onClick={() => navigate('/supplier/login')}
-                  className="font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
-                >
-                  Go to Supplier Portal
-                </button>
-              </p>
-            </div>
           </form>
         </Card>
 

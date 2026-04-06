@@ -242,35 +242,60 @@ export const USERS: User[] = [
     status: 'Active',
     createdDate: '2024-03-30'
   },
-  { 
-    id: 'U006', 
-    name: 'FBU Supplier', 
-    email: 'supplier@demo.com', 
+  {
+    id: 'U006',
+    name: 'FBU Supplier',
+    email: 'supplier@demo.com',
     password: '123456',
-    roleId: 'R005', 
+    roleId: 'R005',
     roleName: 'Supplier',
     status: 'Active',
-    createdDate: '2026-04-01'
+    createdDate: '2026-04-01',
+    onboardingCompleted: false
   },
-  { 
-    id: 'U007', 
-    name: 'FBU Supplier', 
-    email: 'partner@fbu.com', 
+  {
+    id: 'U007',
+    name: 'FBU Supplier',
+    email: 'partner@fbu.com',
     password: 'partner123',
-    roleId: 'R005', 
+    roleId: 'R005',
     roleName: 'Supplier',
     status: 'Active',
-    createdDate: '2026-04-01'
+    createdDate: '2026-04-01',
+    onboardingCompleted: false
   },
-  { 
-    id: 'U008', 
-    name: 'Demo Supplier', 
-    email: 'supplier@demo.com', 
+  {
+    id: 'U008',
+    name: 'Demo Supplier',
+    email: 'demo@supplier.com',
     password: '123456',
-    roleId: 'R005', 
+    roleId: 'R005',
     roleName: 'Supplier',
     status: 'Active',
-    createdDate: '2026-04-01'
+    createdDate: '2026-04-01',
+    onboardingCompleted: true
+  },
+  {
+    id: 'U009',
+    name: 'Velo UK',
+    email: 'velo@supplier.com',
+    password: 'velo123',
+    roleId: 'R005',
+    roleName: 'Supplier',
+    status: 'Active',
+    createdDate: '2026-04-06',
+    onboardingCompleted: false
+  },
+  {
+    id: 'U010',
+    name: 'Elf Bar UK',
+    email: 'elfbar@supplier.com',
+    password: 'elfbar123',
+    roleId: 'R005',
+    roleName: 'Supplier',
+    status: 'Active',
+    createdDate: '2026-04-06',
+    onboardingCompleted: false
   }
 ];
 
