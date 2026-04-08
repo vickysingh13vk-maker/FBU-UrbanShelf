@@ -136,6 +136,7 @@ const OrdersPage: React.FC = () => {
   // --- Wizard Sorting & Pagination State ---
   const [productPage, setProductPage] = useState(1);
   const [productSearch, setProductSearch] = useState('');
+  const [flavourPickerProduct, setFlavourPickerProduct] = useState<string | null>(null);
   const [isCustomerDetailsExpanded, setIsCustomerDetailsExpanded] = useState(false);
   const productsPerPage = 8;
 
@@ -750,20 +751,30 @@ const OrdersPage: React.FC = () => {
 
   const renderStep2 = () => {
     const filteredProducts = PRODUCTS.filter(p => {
-      const matchesSearch = p.name.toLowerCase().includes(productSearch.toLowerCase()) || 
+      const matchesSearch = p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
                            p.sku.toLowerCase().includes(productSearch.toLowerCase()) ||
                            p.supplier?.toLowerCase().includes(productSearch.toLowerCase()) ||
-                           p.category.toLowerCase().includes(productSearch.toLowerCase());
+                           p.category.toLowerCase().includes(productSearch.toLowerCase()) ||
+                           (p.flavour || '').toLowerCase().includes(productSearch.toLowerCase());
       const matchesCategory = productFilters.category === 'All' || p.category === productFilters.category;
       const matchesSupplier = productFilters.supplier === 'All' || p.supplier === productFilters.supplier;
-      const matchesStock = productFilters.stock === 'All' || 
+      const matchesStock = productFilters.stock === 'All' ||
                           (productFilters.stock === 'In Stock' && p.stock > 0) ||
                           (productFilters.stock === 'Out of Stock' && p.stock === 0);
       return matchesSearch && matchesCategory && matchesSupplier && matchesStock;
     });
 
-    const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
-    const displayProducts = filteredProducts.slice((productPage - 1) * productsPerPage, productPage * productsPerPage);
+    // Group products by name
+    const groupedMap = new Map<string, Product[]>();
+    filteredProducts.forEach(p => {
+      const existing = groupedMap.get(p.name) || [];
+      existing.push(p);
+      groupedMap.set(p.name, existing);
+    });
+    const groupedProducts = Array.from(groupedMap.entries());
+
+    const totalPages = Math.ceil(groupedProducts.length / productsPerPage);
+    const displayGroups = groupedProducts.slice((productPage - 1) * productsPerPage, productPage * productsPerPage);
 
     const vat = subtotal * 0.2;
     const total = subtotal + vat;
@@ -815,8 +826,7 @@ const OrdersPage: React.FC = () => {
                     <TR>
                       <TH className="px-4 py-4">IMAGE</TH>
                       <TH className="px-4 py-4">NAME</TH>
-                      <TH className="px-4 py-4">FLAVOUR</TH>
-                      <TH className="px-4 py-4">SUPPLIER</TH>
+                      <TH className="px-4 py-4">BRAND</TH>
                       <TH className="px-4 py-4">QUANTITY</TH>
                       <TH className="px-4 py-4">PRICE/PC.</TH>
                       <TH className="px-4 py-4">VAT</TH>
@@ -827,76 +837,180 @@ const OrdersPage: React.FC = () => {
                     </TR>
                   </THead>
                   <TBody>
-                    {displayProducts.map(product => {
-                      const inCart = cart[product.id];
-                      const cartonPrice = product.price * (product.unitsPerCarton || 1);
+                    {displayGroups.map(([groupName, variants]) => {
+                      const firstProduct = variants[0];
+                      const isMultiFlavour = variants.length > 1;
+                      const totalStock = variants.reduce((sum, p) => sum + p.stock, 0);
+                      const totalQtyInCart = variants.reduce((sum, p) => sum + (cart[p.id]?.qty || 0), 0);
+                      const flavoursInCart = variants.filter(p => cart[p.id]?.qty > 0).length;
+                      const prices = [...new Set(variants.map(p => p.price))];
+                      const priceDisplay = prices.length === 1 ? `£${prices[0].toFixed(2)}` : `£${Math.min(...prices).toFixed(2)} - £${Math.max(...prices).toFixed(2)}`;
+                      const cartonPrice = firstProduct.price * (firstProduct.unitsPerCarton || 1);
+                      const isPickerOpen = flavourPickerProduct === groupName;
 
                       return (
-                        <TR key={product.id}>
-                          <TD className="px-4 py-4">
-                            <div className="h-12 w-12 rounded bg-slate-50 border border-slate-200 flex items-center justify-center flex-shrink-0">
-                              <img src={product.image} alt="" className="h-10 w-10 object-contain mix-blend-multiply" />
-                            </div>
-                          </TD>
-                          <TD className="px-4 py-4">
-                            <div className="min-w-[200px]">
-                              <p className="font-black text-slate-900 text-sm uppercase">{product.name}</p>
-                              <p className="text-[11px] text-slate-400 font-medium">{product.sku}</p>
-                            </div>
-                          </TD>
-                          <TD className="px-4 py-4">
-                            <span className="text-slate-500 font-medium">{product.flavour}</span>
-                          </TD>
-                          <TD className="px-4 py-4">
-                            <span className="text-slate-500 font-medium">{product.supplier}</span>
-                          </TD>
-                          <TD className="px-4 py-4">
-                            <div className="flex items-center gap-2">
-                              <button 
-                                onClick={() => handleAddToCart(product, -1)} 
-                                className="w-8 h-8 flex items-center justify-center bg-slate-100 rounded text-slate-400 hover:text-indigo-600 transition-colors"
-                                disabled={!inCart}
-                              >
-                                <Minus className="h-4 w-4" />
-                              </button>
-                              <div className="w-16 h-10 border border-slate-200 rounded flex items-center justify-center font-bold text-slate-900 bg-white">
-                                {inCart?.qty || 0}
+                        <React.Fragment key={groupName}>
+                          <TR className={isPickerOpen ? 'bg-indigo-50/30' : ''}>
+                            <TD className="px-4 py-4">
+                              <div className="h-12 w-12 rounded bg-slate-50 border border-slate-200 flex items-center justify-center flex-shrink-0">
+                                <img src={firstProduct.image} alt="" className="h-10 w-10 object-contain mix-blend-multiply" />
                               </div>
-                              <button 
-                                onClick={() => handleAddToCart(product, 1)} 
-                                className="w-8 h-8 flex items-center justify-center bg-indigo-50 rounded text-indigo-600 hover:bg-indigo-100 transition-colors"
-                                disabled={product.stock > 0 && (inCart?.qty || 0) >= product.stock}
-                              >
-                                <Plus className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </TD>
-                          <TD className="px-4 py-4">
-                            <p className="text-sm font-black text-slate-900">£{product.price.toFixed(2)}</p>
-                          </TD>
-                          <TD className="px-4 py-4 text-slate-400">£0.00</TD>
-                          <TD className="px-4 py-4 text-slate-400">£{product.price.toFixed(2)}</TD>
-                          <TD className="px-4 py-4 text-slate-500 font-medium">{product.unitsPerCarton || 1}</TD>
-                          <TD className="px-4 py-4">
-                            <span className={`font-bold ${product.stock === 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                              {product.stock}
-                            </span>
-                          </TD>
-                          <TD className="px-4 py-4">
-                            <p className="text-sm font-bold text-emerald-600">£{cartonPrice.toFixed(2)}</p>
-                          </TD>
-                        </TR>
+                            </TD>
+                            <TD className="px-4 py-4">
+                              <div className="min-w-[200px]">
+                                <p className="font-black text-slate-900 text-sm uppercase">{groupName}</p>
+                                <p className="text-[11px] text-slate-400 font-medium">{firstProduct.sku}</p>
+                                {isMultiFlavour ? (
+                                  <p className="text-[11px] text-indigo-500 font-bold">{variants.length} flavours available</p>
+                                ) : (
+                                  <p className="text-[11px] text-slate-400 font-medium">{firstProduct.flavour}</p>
+                                )}
+                              </div>
+                            </TD>
+                            <TD className="px-4 py-4">
+                              <span className="text-slate-500 font-medium">{firstProduct.supplier}</span>
+                            </TD>
+                            <TD className="px-4 py-4">
+                              {isMultiFlavour ? (
+                                <div className="relative">
+                                  <button
+                                    onClick={() => setFlavourPickerProduct(isPickerOpen ? null : groupName)}
+                                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                                      isPickerOpen
+                                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
+                                        : totalQtyInCart > 0
+                                        ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                    }`}
+                                  >
+                                    {totalQtyInCart > 0 ? (
+                                      <>
+                                        <span className="bg-white/20 rounded-full h-5 w-5 flex items-center justify-center text-xs">{totalQtyInCart}</span>
+                                        {flavoursInCart} flavour{flavoursInCart > 1 ? 's' : ''}
+                                      </>
+                                    ) : (
+                                      <>Select Flavours</>
+                                    )}
+                                    {isPickerOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => handleAddToCart(firstProduct, -1)}
+                                    className="w-8 h-8 flex items-center justify-center bg-slate-100 rounded text-slate-400 hover:text-indigo-600 transition-colors"
+                                    disabled={!cart[firstProduct.id]}
+                                  >
+                                    <Minus className="h-4 w-4" />
+                                  </button>
+                                  <div className="w-16 h-10 border border-slate-200 rounded flex items-center justify-center font-bold text-slate-900 bg-white">
+                                    {cart[firstProduct.id]?.qty || 0}
+                                  </div>
+                                  <button
+                                    onClick={() => handleAddToCart(firstProduct, 1)}
+                                    className="w-8 h-8 flex items-center justify-center bg-indigo-50 rounded text-indigo-600 hover:bg-indigo-100 transition-colors"
+                                    disabled={firstProduct.stock > 0 && (cart[firstProduct.id]?.qty || 0) >= firstProduct.stock}
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              )}
+                            </TD>
+                            <TD className="px-4 py-4">
+                              <p className="text-sm font-black text-slate-900">{priceDisplay}</p>
+                            </TD>
+                            <TD className="px-4 py-4 text-slate-400">£0.00</TD>
+                            <TD className="px-4 py-4 text-slate-400">{priceDisplay}</TD>
+                            <TD className="px-4 py-4 text-slate-500 font-medium">{firstProduct.unitsPerCarton || 1}</TD>
+                            <TD className="px-4 py-4">
+                              <span className={`font-bold ${totalStock === 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                {totalStock}
+                              </span>
+                            </TD>
+                            <TD className="px-4 py-4">
+                              <p className="text-sm font-bold text-emerald-600">£{cartonPrice.toFixed(2)}</p>
+                            </TD>
+                          </TR>
+
+                          {/* Flavour Sub-Rows */}
+                          {isMultiFlavour && isPickerOpen && variants.map((variant, vIdx) => {
+                            const variantInCart = cart[variant.id];
+                            const variantQty = variantInCart?.qty || 0;
+                            const isLast = vIdx === variants.length - 1;
+                            const variantCartonPrice = variant.price * (variant.unitsPerCarton || 1);
+                            return (
+                              <TR key={variant.id} className={`bg-slate-50/60 ${!isLast ? '' : ''}`}>
+                                <TD className="px-4 py-2">
+                                  <div className="flex items-center justify-center">
+                                    <CornerDownRight className="h-4 w-4 text-slate-300" />
+                                  </div>
+                                </TD>
+                                <TD className="px-4 py-2">
+                                  <div className="flex items-center gap-2.5">
+                                    <img src={variant.image} alt="" className="h-8 w-8 rounded-md border border-slate-200 object-cover flex-shrink-0" referrerPolicy="no-referrer" />
+                                    <div className="flex items-center gap-1.5">
+                                      <div className={`h-2 w-2 rounded-full flex-shrink-0 ${
+                                        variant.stock === 0 ? 'bg-rose-400' : variant.stock < 50 ? 'bg-amber-400' : 'bg-emerald-400'
+                                      }`} />
+                                      <span className="text-sm font-semibold text-slate-700">{variant.flavour}</span>
+                                    </div>
+                                  </div>
+                                </TD>
+                                <TD className="px-4 py-2">
+                                  <span className="text-xs text-slate-400">{variant.supplier}</span>
+                                </TD>
+                                <TD className="px-4 py-2">
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      onClick={() => handleAddToCart(variant, -1)}
+                                      className="w-7 h-7 flex items-center justify-center bg-white border border-slate-200 rounded text-slate-400 hover:text-indigo-600 hover:border-indigo-300 transition-colors"
+                                      disabled={!variantInCart}
+                                    >
+                                      <Minus className="h-3 w-3" />
+                                    </button>
+                                    <div className={`w-12 h-7 border rounded flex items-center justify-center font-bold text-xs bg-white ${
+                                      variantQty > 0 ? 'border-indigo-300 text-indigo-700' : 'border-slate-200 text-slate-900'
+                                    }`}>
+                                      {variantQty}
+                                    </div>
+                                    <button
+                                      onClick={() => handleAddToCart(variant, 1)}
+                                      className="w-7 h-7 flex items-center justify-center bg-indigo-50 border border-indigo-100 rounded text-indigo-600 hover:bg-indigo-100 transition-colors"
+                                      disabled={variant.stock === 0 || variantQty >= variant.stock}
+                                    >
+                                      <Plus className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                </TD>
+                                <TD className="px-4 py-2">
+                                  <span className="text-xs font-bold text-slate-700">£{variant.price.toFixed(2)}</span>
+                                </TD>
+                                <TD className="px-4 py-2 text-xs text-slate-400">£0.00</TD>
+                                <TD className="px-4 py-2 text-xs text-slate-400">£{variant.price.toFixed(2)}</TD>
+                                <TD className="px-4 py-2 text-xs text-slate-400">{variant.unitsPerCarton || 1}</TD>
+                                <TD className="px-4 py-2">
+                                  <span className={`text-xs font-bold ${variant.stock === 0 ? 'text-rose-500' : variant.stock < 50 ? 'text-amber-500' : 'text-emerald-500'}`}>
+                                    {variant.stock}
+                                  </span>
+                                </TD>
+                                <TD className="px-4 py-2">
+                                  <span className="text-xs font-bold text-emerald-600">£{variantCartonPrice.toFixed(2)}</span>
+                                </TD>
+                              </TR>
+                            );
+                          })}
+                        </React.Fragment>
                       );
                     })}
                   </TBody>
                 </Table>
                 {totalPages > 1 && (
                   <div className="p-4 border-t border-slate-100">
-                    <Pagination 
-                      currentPage={productPage} 
-                      totalItems={filteredProducts.length} 
-                      itemsPerPage={productsPerPage} 
-                      onPageChange={setProductPage} 
+                    <Pagination
+                      currentPage={productPage}
+                      totalItems={groupedProducts.length}
+                      itemsPerPage={productsPerPage}
+                      onPageChange={setProductPage}
                       entityName="products"
                     />
                   </div>
