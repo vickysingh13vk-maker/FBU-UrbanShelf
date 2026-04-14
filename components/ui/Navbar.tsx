@@ -65,20 +65,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <Menu className="h-5 w-5" />
           </button>
-          {!isSupplier && (
-            <div className="hidden md:flex items-center gap-3">
-              <button className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200 group">
-                <PlusCircle className="h-4 w-4 group-hover:rotate-90 transition-transform" />
-                <span className="text-xs font-bold uppercase tracking-wider">New Order</span>
-              </button>
-              <div className="h-6 w-px bg-slate-200 mx-1"></div>
-              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 text-slate-600 rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors group">
-                <Calendar className="h-3.5 w-3.5 text-slate-400 group-hover:text-indigo-500" />
-                <span className="text-[11px] font-bold uppercase tracking-wider">Last 30 Days</span>
-                <ChevronDown className="h-3 w-3 text-slate-400" />
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Global Search */}

@@ -13,3 +13,4 @@ export * from './Layout';
 export * from './Sidebar';
 export * from './Navbar';
 export * from './Drawer';
+export * from './ViewModeToggle';
