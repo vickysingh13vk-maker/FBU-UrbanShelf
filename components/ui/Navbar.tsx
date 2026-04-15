@@ -81,7 +81,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Role Switcher Tabs */}
-          {isDashboard && user?.roleName === 'Admin' && (
+          {isDashboard && (user?.roleName === 'Admin' || user?.roleName === 'Manager') && (
             <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
               {roles.map((role) => {
                 const Icon = role.icon;

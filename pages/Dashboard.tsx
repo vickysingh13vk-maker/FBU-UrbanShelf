@@ -63,6 +63,7 @@ import { parseFormattedValue, formatValue } from '../utils/historicDataUtils';
 import { useAuth } from '../context/AuthContext';
 import { useProducts } from '../context/ProductContext';
 import SupplierPanel from './supplier/SupplierDashboard';
+import { CUSTOMERS } from '../data';
 
 // --- Mock Data imported from data/dashboardData.ts ---
 import {
@@ -433,6 +434,49 @@ const FieldOpsSection = () => (
     </div>
   </div>
 );
+
+const StockMovementTooltip = ({ active, payload, label, labelKey = 'Item' }: any) => {
+  if (!active || !payload || !payload.length) return null;
+  const row = payload[0].payload || {};
+  const fast = row.fast || 0;
+  const slow = row.slow || 0;
+  const dead = row.dead || 0;
+  const total = fast + slow + dead;
+  const pct = (v: number) => total > 0 ? `${Math.round((v / total) * 100)}%` : '0%';
+
+  const rows = [
+    { label: 'Fast', value: fast, color: '#10b981' },
+    { label: 'Slow', value: slow, color: '#fb923c' },
+    { label: 'Dead', value: dead, color: '#ef4444' },
+  ];
+
+  return (
+    <div className="bg-white rounded-xl shadow-2xl border border-slate-100 min-w-[220px] overflow-hidden">
+      <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/60">
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{labelKey}</p>
+        <p className="text-sm font-bold text-slate-900 mt-0.5">{label || row.brand || row.product}</p>
+      </div>
+      <div className="px-4 py-3 space-y-2">
+        {rows.map(r => (
+          <div key={r.label} className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: r.color }} />
+              <span className="text-xs font-semibold text-slate-600">{r.label}</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-xs font-bold text-slate-900 font-mono">{r.value.toLocaleString()}</span>
+              <span className="text-[10px] font-medium text-slate-400 w-8 text-right">{pct(r.value)}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="px-4 py-2.5 border-t border-slate-100 bg-slate-50/60 flex items-center justify-between">
+        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total SKUs</span>
+        <span className="text-sm font-bold text-slate-900 font-mono">{total.toLocaleString()}</span>
+      </div>
+    </div>
+  );
+};
 
 const InventoryHoverTooltip = ({ active, payload, data }: any) => {
   const item = data || (active && payload && payload.length ? payload[0].payload : null);
@@ -1331,6 +1375,372 @@ const AdminPanel: React.FC = () => {
   );
 };
 
+// ---- Customer Ledger Tab (sales-rep-scoped customers + payouts) ----
+
+const commissionBadge = (status: CommissionStatus): string => {
+  switch (status) {
+    case 'Paid': return 'bg-emerald-50 text-emerald-600 border border-emerald-100';
+    case 'Released': return 'bg-indigo-50 text-indigo-600 border border-indigo-100';
+    case 'Matured': return 'bg-blue-50 text-blue-600 border border-blue-100';
+    case 'Pending':
+    default: return 'bg-amber-50 text-amber-600 border border-amber-100';
+  }
+};
+
+interface CustomerLedgerTabProps {
+  reps: SalesRep[];
+  activeRep: SalesRep | null;
+  isSalesRepUser: boolean;
+  canReleasePayouts: boolean;
+  ledgerRepOverride: string | null;
+  onRepChange: (id: string | null) => void;
+  selectedCustomer: string | null;
+  onSelectCustomer: (name: string | null) => void;
+  onRequestRelease: (repId: string, entryId: string) => void;
+  repLinkedByEmail: boolean;
+}
+
+const CustomerLedgerTab: React.FC<CustomerLedgerTabProps> = ({
+  reps, activeRep, isSalesRepUser, canReleasePayouts,
+  ledgerRepOverride, onRepChange, selectedCustomer, onSelectCustomer, onRequestRelease, repLinkedByEmail,
+}) => {
+  // Build per-customer aggregates for the active rep
+  const customers = useMemo(() => {
+    if (!activeRep) return [];
+    const map = new Map<string, {
+      name: string;
+      entries: CommissionEntry[];
+      totalSales: number;
+      outstanding: number;
+      commissionPaid: number;
+      commissionPending: number;
+      image?: string;
+    }>();
+    activeRep.commissionLedger.forEach(e => {
+      const prev = map.get(e.customerName) || {
+        name: e.customerName, entries: [], totalSales: 0, outstanding: 0,
+        commissionPaid: 0, commissionPending: 0,
+      };
+      prev.entries.push(e);
+      prev.totalSales += e.saleAmount;
+      prev.outstanding += Math.max(0, e.saleAmount - e.paymentReceived);
+      prev.commissionPaid += e.commissionPaid;
+      if (e.status !== 'Paid') prev.commissionPending += (e.commissionAmount - e.commissionPaid);
+      map.set(e.customerName, prev);
+    });
+    // Attach avatars from CUSTOMERS by name match
+    const arr = Array.from(map.values());
+    arr.forEach(c => {
+      const match = CUSTOMERS.find(cu => cu.name.toLowerCase() === c.name.toLowerCase() || cu.companyName?.toLowerCase() === c.name.toLowerCase());
+      if (match?.image) c.image = match.image;
+    });
+    return arr.sort((a, b) => b.totalSales - a.totalSales);
+  }, [activeRep]);
+
+  // Auto-select first customer when rep/scope changes
+  useEffect(() => {
+    if (customers.length > 0 && (!selectedCustomer || !customers.find(c => c.name === selectedCustomer))) {
+      onSelectCustomer(customers[0].name);
+    } else if (customers.length === 0) {
+      onSelectCustomer(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeRep?.id]);
+
+  const activeCustomer = customers.find(c => c.name === selectedCustomer) || null;
+
+  // Empty states
+  if (isSalesRepUser && !repLinkedByEmail) {
+    return (
+      <Card padding="none" className="p-10 text-center">
+        <Users className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+        <h3 className="text-base font-bold text-slate-900 mb-1">No rep profile linked</h3>
+        <p className="text-sm text-slate-500">Your account isn't linked to a sales rep profile yet. Contact an administrator.</p>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-12 gap-6">
+      {/* LEFT: customer list */}
+      <Card padding="none" className="col-span-12 lg:col-span-4 flex flex-col">
+        <div className="px-5 py-4 border-b border-slate-100 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+              <Users className="h-4 w-4 text-indigo-500" />
+              Customers
+            </h3>
+            <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-md border border-slate-200">{customers.length}</span>
+          </div>
+          {!isSalesRepUser && (
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Sales Rep</label>
+              <select
+                value={ledgerRepOverride ?? activeRep?.id ?? ''}
+                onChange={(e) => onRepChange(e.target.value)}
+                className="w-full text-xs font-medium bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none"
+              >
+                {reps.map(r => (
+                  <option key={r.id} value={r.id}>{r.name} · {r.territory}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {isSalesRepUser && activeRep && (
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-indigo-50/60 border border-indigo-100">
+              <img src={activeRep.photo} alt="" className="h-7 w-7 rounded-full object-cover" />
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-900 truncate">{activeRep.name}</p>
+                <p className="text-[10px] text-slate-500 truncate">{activeRep.territory}</p>
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="flex-1 overflow-y-auto max-h-[640px]">
+          {customers.length === 0 ? (
+            <div className="p-10 text-center">
+              <Users className="h-8 w-8 text-slate-300 mx-auto mb-3" />
+              <p className="text-sm font-medium text-slate-500">No customers assigned yet</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {customers.map(c => {
+                const isActive = c.name === selectedCustomer;
+                return (
+                  <li key={c.name}>
+                    <button
+                      onClick={() => onSelectCustomer(c.name)}
+                      className={`w-full flex items-start gap-3 px-5 py-3.5 text-left transition-colors ${isActive ? 'bg-indigo-50/60 border-l-[3px] border-l-indigo-500' : 'hover:bg-slate-50 border-l-[3px] border-l-transparent'}`}
+                    >
+                      {c.image ? (
+                        <img src={c.image} alt="" className="h-9 w-9 rounded-full object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-bold text-slate-500">{c.name.slice(0, 2).toUpperCase()}</span>
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-slate-900 truncate">{c.name}</p>
+                        <p className="text-[11px] text-slate-500 font-medium mt-0.5">{c.entries.length} order{c.entries.length !== 1 ? 's' : ''} · <span className="font-mono">£{c.totalSales.toLocaleString()}</span></p>
+                        {c.outstanding > 0 && (
+                          <p className="text-[10px] font-bold text-rose-500 mt-0.5">£{c.outstanding.toLocaleString()} outstanding</p>
+                        )}
+                      </div>
+                      <ChevronRight className={`h-4 w-4 flex-shrink-0 mt-1 ${isActive ? 'text-indigo-500' : 'text-slate-300'}`} />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </Card>
+
+      {/* RIGHT: customer detail */}
+      <div className="col-span-12 lg:col-span-8 space-y-6">
+        {!activeCustomer ? (
+          <Card padding="none" className="p-10 text-center">
+            <Wallet className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+            <h3 className="text-base font-bold text-slate-900 mb-1">Select a customer</h3>
+            <p className="text-sm text-slate-500">Pick a customer from the list to view their ledger.</p>
+          </Card>
+        ) : (
+          <>
+            {/* Summary */}
+            <Card padding="none" className="p-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5 pb-5 border-b border-slate-100">
+                <div className="flex items-center gap-4">
+                  {activeCustomer.image ? (
+                    <img src={activeCustomer.image} alt="" className="h-12 w-12 rounded-xl object-cover" />
+                  ) : (
+                    <div className="h-12 w-12 rounded-xl bg-slate-100 flex items-center justify-center">
+                      <span className="text-sm font-bold text-slate-500">{activeCustomer.name.slice(0, 2).toUpperCase()}</span>
+                    </div>
+                  )}
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900">{activeCustomer.name}</h2>
+                    <p className="text-xs text-slate-500 font-medium">{activeCustomer.entries.length} order{activeCustomer.entries.length !== 1 ? 's' : ''} · rep {activeRep?.name}</p>
+                  </div>
+                </div>
+                {!canReleasePayouts && !isSalesRepUser && (
+                  <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-md border border-slate-200 uppercase tracking-widest">View Only</span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Sales</p>
+                  <p className="text-xl font-bold text-slate-900 font-mono">£{activeCustomer.totalSales.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Outstanding</p>
+                  <p className={`text-xl font-bold font-mono ${activeCustomer.outstanding > 0 ? 'text-rose-600' : 'text-slate-900'}`}>£{activeCustomer.outstanding.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Commission Paid</p>
+                  <p className="text-xl font-bold text-emerald-600 font-mono">£{activeCustomer.commissionPaid.toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Commission Pending</p>
+                  <p className="text-xl font-bold text-amber-600 font-mono">£{activeCustomer.commissionPending.toLocaleString()}</p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Orders */}
+            <Card padding="none" className="overflow-hidden">
+              <CardHeader title="Customer Orders" description="Orders placed by this customer" className="px-5 py-4 border-b border-slate-100 mb-0" />
+              <div className="overflow-x-auto">
+                <Table className="w-full">
+                  <THead>
+                    <TR>
+                      <TH className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Order ID</TH>
+                      <TH className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date</TH>
+                      <TH className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sale Amount</TH>
+                      <TH className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Received</TH>
+                      <TH align="right" className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Balance</TH>
+                    </TR>
+                  </THead>
+                  <TBody>
+                    {activeCustomer.entries.map(e => {
+                      const balance = e.saleAmount - e.paymentReceived;
+                      return (
+                        <TR key={`ord-${e.id}`} className="border-t border-slate-50 hover:bg-slate-50/60 transition-colors">
+                          <TD className="px-5 py-3 text-xs font-bold text-slate-900 font-mono">{e.orderId}</TD>
+                          <TD className="px-5 py-3 text-xs text-slate-600 font-medium">{e.date}</TD>
+                          <TD className="px-5 py-3 text-xs font-bold text-slate-900 font-mono">£{e.saleAmount.toLocaleString()}</TD>
+                          <TD className="px-5 py-3 text-xs font-bold text-emerald-600 font-mono">£{e.paymentReceived.toLocaleString()}</TD>
+                          <TD align="right" className={`px-5 py-3 text-xs font-bold font-mono ${balance > 0 ? 'text-rose-600' : 'text-slate-400'}`}>£{balance.toLocaleString()}</TD>
+                        </TR>
+                      );
+                    })}
+                  </TBody>
+                </Table>
+              </div>
+            </Card>
+
+            {/* Payments Received */}
+            <Card padding="none" className="overflow-hidden">
+              <CardHeader title="Payments Received" description="Customer payments against orders" className="px-5 py-4 border-b border-slate-100 mb-0" />
+              <div className="overflow-x-auto">
+                <Table className="w-full">
+                  <THead>
+                    <TR>
+                      <TH className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date</TH>
+                      <TH className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Order</TH>
+                      <TH align="right" className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Amount</TH>
+                    </TR>
+                  </THead>
+                  <TBody>
+                    {activeCustomer.entries.filter(e => e.paymentReceived > 0).length === 0 ? (
+                      <TR><TD colSpan={3} className="px-5 py-6 text-center text-xs text-slate-400">No payments received yet.</TD></TR>
+                    ) : activeCustomer.entries.filter(e => e.paymentReceived > 0).map(e => (
+                      <TR key={`pay-${e.id}`} className="border-t border-slate-50 hover:bg-slate-50/60 transition-colors">
+                        <TD className="px-5 py-3 text-xs text-slate-600 font-medium">{e.paymentReceivedDate || '—'}</TD>
+                        <TD className="px-5 py-3 text-xs font-bold text-slate-900 font-mono">{e.orderId}</TD>
+                        <TD align="right" className="px-5 py-3 text-xs font-bold text-emerald-600 font-mono">£{e.paymentReceived.toLocaleString()}</TD>
+                      </TR>
+                    ))}
+                  </TBody>
+                </Table>
+              </div>
+            </Card>
+
+            {/* Commission Payouts to Rep */}
+            <Card padding="none" className="overflow-hidden">
+              <CardHeader
+                title="Commission Payouts to Rep"
+                description={canReleasePayouts ? 'Release matured payouts for this rep' : 'Payouts triggered by this customer\'s orders'}
+                className="px-5 py-4 border-b border-slate-100 mb-0"
+                action={canReleasePayouts ? (
+                  <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md border border-indigo-100 uppercase tracking-wider flex items-center gap-1">
+                    <ShieldCheck className="h-3 w-3" /> Superadmin
+                  </span>
+                ) : null}
+              />
+              <div className="overflow-x-auto">
+                <Table className="w-full">
+                  <THead>
+                    <TR>
+                      <TH className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Order</TH>
+                      <TH className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Rate</TH>
+                      <TH className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Commission</TH>
+                      <TH className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</TH>
+                      <TH align="right" className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Action</TH>
+                    </TR>
+                  </THead>
+                  <TBody>
+                    {activeCustomer.entries.map(e => (
+                      <TR key={`pay2-${e.id}`} className="border-t border-slate-50 hover:bg-slate-50/60 transition-colors">
+                        <TD className="px-5 py-3 text-xs font-bold text-slate-900 font-mono">{e.orderId}</TD>
+                        <TD className="px-5 py-3 text-xs text-slate-600 font-medium">{e.commissionPercentage}%</TD>
+                        <TD className="px-5 py-3 text-xs font-bold text-slate-900 font-mono">£{e.commissionAmount.toLocaleString()}</TD>
+                        <TD className="px-5 py-3">
+                          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md ${commissionBadge(e.status)}`}>{e.status}</span>
+                        </TD>
+                        <TD align="right" className="px-5 py-3">
+                          {canReleasePayouts && e.status === 'Matured' ? (
+                            <button
+                              onClick={() => activeRep && onRequestRelease(activeRep.id, e.id)}
+                              className="text-[11px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors px-3 py-1.5 rounded-lg shadow-sm"
+                            >
+                              Release Payout
+                            </button>
+                          ) : canReleasePayouts && e.status === 'Pending' ? (
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider" title="Awaiting maturation">Not yet matured</span>
+                          ) : (
+                            <span className="text-[10px] font-medium text-slate-400">—</span>
+                          )}
+                        </TD>
+                      </TR>
+                    ))}
+                  </TBody>
+                </Table>
+              </div>
+            </Card>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const ReleasePayoutModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  entry: CommissionEntry | null;
+  onConfirm: () => void;
+}> = ({ isOpen, onClose, entry, onConfirm }) => {
+  if (!entry) return null;
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Release Payout">
+      <div className="space-y-4">
+        <p className="text-sm text-slate-600">
+          You are about to release a commission payout. This will mark the entry as
+          <span className="font-bold text-indigo-600"> Released</span> and authorise payment.
+        </p>
+        <div className="rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-2">
+          <div className="flex justify-between text-xs">
+            <span className="text-slate-500 font-medium">Order</span>
+            <span className="font-bold text-slate-900 font-mono">{entry.orderId}</span>
+          </div>
+          <div className="flex justify-between text-xs">
+            <span className="text-slate-500 font-medium">Customer</span>
+            <span className="font-bold text-slate-900">{entry.customerName}</span>
+          </div>
+          <div className="flex justify-between text-xs">
+            <span className="text-slate-500 font-medium">Commission Amount</span>
+            <span className="font-bold text-emerald-600 font-mono">£{entry.commissionAmount.toLocaleString()}</span>
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" icon={<Check className="h-4 w-4" />} onClick={onConfirm}>Confirm Release</Button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
 const CreateSalesRepModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -1810,8 +2220,25 @@ const SalesPanel: React.FC = () => {
     return p ? formatValue(p.num * factor, p) : val;
   };
   const [reps, setReps] = useState<SalesRep[]>(SALES_REPRESENTATIVES_DATA);
-  const [activeTab, setActiveTab] = useState<'overview' | 'reps'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'reps' | 'customerLedger'>('overview');
   const [selectedRep, setSelectedRep] = useState<string | null>(null);
+  const { user } = useAuth();
+  const canReleasePayouts = user?.roleName === 'Admin';
+  // Rep whose customers we're viewing: sales users get their own (by email); admins/managers pick from all
+  const ledgerRepId = useMemo(() => {
+    if (user?.roleName === 'Sales') {
+      const match = reps.find(r => r.email.toLowerCase() === user.email.toLowerCase());
+      return match?.id ?? null;
+    }
+    return null; // admin/manager choose via dropdown
+  }, [user, reps]);
+  const [ledgerRepOverride, setLedgerRepOverride] = useState<string | null>(null);
+  const activeLedgerRep = useMemo(() => {
+    const id = ledgerRepId ?? ledgerRepOverride ?? reps[0]?.id;
+    return reps.find(r => r.id === id) ?? null;
+  }, [reps, ledgerRepId, ledgerRepOverride]);
+  const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
+  const [releaseTarget, setReleaseTarget] = useState<{ repId: string; entryId: string } | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
@@ -1952,11 +2379,17 @@ const SalesPanel: React.FC = () => {
           >
             Sales Representatives
           </button>
+          <button
+            onClick={() => setActiveTab('customerLedger')}
+            className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${activeTab === 'customerLedger' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Customer Ledger
+          </button>
         </div>
       </div>
 
       <AnimatePresence mode="wait">
-        {activeTab === 'overview' ? (
+        {activeTab === 'overview' && (
           <motion.div
             key="overview"
             initial={{ opacity: 0, x: -10 }}
@@ -2176,7 +2609,8 @@ const SalesPanel: React.FC = () => {
                 </ScrollContainer>
               </Card>
             </motion.div>
-        ) : (
+        )}
+        {activeTab === 'reps' && (
           <motion.div
             key="reps"
             initial={{ opacity: 0, x: 10 }}
@@ -2692,9 +3126,50 @@ const SalesPanel: React.FC = () => {
             )}
           </motion.div>
         )}
+        {activeTab === 'customerLedger' && (
+          <motion.div
+            key="customerLedger"
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-6"
+          >
+            <CustomerLedgerTab
+              reps={reps}
+              activeRep={activeLedgerRep}
+              isSalesRepUser={user?.roleName === 'Sales'}
+              canReleasePayouts={canReleasePayouts}
+              ledgerRepOverride={ledgerRepOverride}
+              onRepChange={setLedgerRepOverride}
+              selectedCustomer={selectedCustomer}
+              onSelectCustomer={setSelectedCustomer}
+              onRequestRelease={(repId, entryId) => setReleaseTarget({ repId, entryId })}
+              repLinkedByEmail={ledgerRepId !== null}
+            />
+          </motion.div>
+        )}
       </AnimatePresence>
 
-      <CreateSalesRepModal 
+      <ReleasePayoutModal
+        isOpen={releaseTarget !== null}
+        onClose={() => setReleaseTarget(null)}
+        entry={releaseTarget ? reps.find(r => r.id === releaseTarget.repId)?.commissionLedger.find(e => e.id === releaseTarget.entryId) || null : null}
+        onConfirm={() => {
+          if (!releaseTarget) return;
+          setReps(prev => prev.map(r => r.id !== releaseTarget.repId ? r : {
+            ...r,
+            commissionLedger: r.commissionLedger.map(e => e.id === releaseTarget.entryId ? {
+              ...e,
+              status: 'Released' as CommissionStatus,
+              releaseDate: new Date().toISOString().slice(0, 10),
+            } : e),
+          }));
+          setReleaseTarget(null);
+        }}
+      />
+
+      <CreateSalesRepModal
         isOpen={isCreateModalOpen} 
         onClose={() => setIsCreateModalOpen(false)} 
         onSave={(newRep) => {
@@ -2903,49 +3378,111 @@ const InventoryPanel: React.FC = () => {
       </div>
       <ViewModeToggle />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        {GROUPED_KPI_DATA.inventory.items.map((kpi, idx) => (
-          <AdminKpiCard 
-            key={idx}
-            label={kpi.label}
-            value={kpi.value}
-            trend={kpi.trend}
-            color="emerald"
-            trendColor={kpi.trendColor}
-          />
-        ))}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        {GROUPED_KPI_DATA.inventory.items.map((kpi, idx) => {
+          const meta: Record<string, { color: string; icon: any }> = {
+            'TOTAL SKUS': { color: 'indigo', icon: Package },
+            'UNITS IN STOCK': { color: 'blue', icon: Warehouse },
+            'INVENTORY VALUE': { color: 'emerald', icon: Wallet },
+            'LOW STOCK SKUS': { color: 'amber', icon: AlertTriangle },
+            'OUT OF STOCK': { color: 'rose', icon: AlertCircle },
+            'OVERSTOCK SKUS': { color: 'purple', icon: TrendingUp },
+          };
+          const m = meta[kpi.label] || { color: 'indigo', icon: Package };
+          return (
+            <KpiCard
+              key={idx}
+              label={kpi.label}
+              value={kpi.value}
+              trend={kpi.trend}
+              color={m.color}
+              icon={m.icon}
+            />
+          );
+        })}
       </div>
 
-      <div className="grid grid-cols-12 gap-8">
-        <Card padding="none" className="col-span-12 flex flex-col">
-          <CardHeader title="Inventory Stock Overview" description="Stock levels per product line" className="p-6 border-b border-slate-100 mb-0" />
-          <div className="py-6 h-[500px] pl-[1px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart 
-                layout="vertical" 
-                data={sortedInventoryData} 
-                margin={{ top: 10, right: 80, left: 0, bottom: 10 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                <XAxis type="number" hide />
-                <YAxis dataKey="product" type="category" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 13, fontWeight: 500 }} width={200} />
-                <Tooltip cursor={{ fill: '#f8fafc' }} content={<InventoryHoverTooltip />} />
-                <Bar 
-                  dataKey="total" 
-                  fill="#22c55e" 
-                  radius={[0, 4, 4, 0]} 
-                  barSize={20}
-                >
-                  {sortedInventoryData.map((entry, index) => {
-                    const ratio = entry.total / entry.required;
-                    let fill = '#10b981'; // emerald-500
-                    if (ratio <= 0.15) fill = '#ef4444'; // rose-500
-                    else if (ratio <= 0.35) fill = '#f59e0b'; // amber-500
-                    return <Cell key={`cell-${index}`} fill={fill} />;
-                  })}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+      <div className="grid grid-cols-12 gap-6">
+        <Card padding="none" className="col-span-12 flex flex-col p-6 hover:shadow-xl transition-all duration-300 border-slate-100 group">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                <Warehouse className="h-4 w-4 text-indigo-500" />
+                Inventory Stock Overview
+              </h3>
+              <p className="text-xs text-slate-500 font-medium mt-1">Stock levels per product line. Hover for breakdown.</p>
+            </div>
+            <Link to="/inventory" className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors uppercase tracking-wider">Manage Inventory</Link>
+          </div>
+
+          <div className="flex-1 space-y-4">
+            {sortedInventoryData.map((item: any) => {
+              const ratio = item.total / item.required;
+              let barColor = 'bg-emerald-500';
+              let glowColor = 'shadow-[0_0_10px_rgba(16,185,129,0.3)]';
+              if (ratio <= 0.15) {
+                barColor = 'bg-rose-500';
+                glowColor = 'shadow-[0_0_10px_rgba(244,63,94,0.3)]';
+              } else if (ratio <= 0.35) {
+                barColor = 'bg-amber-500';
+                glowColor = 'shadow-[0_0_10px_rgba(245,158,11,0.3)]';
+              }
+
+              return (
+                <div key={item.product} className="flex items-center gap-4 group/row relative">
+                  <span className="text-xs text-slate-600 font-bold w-48 text-right truncate group-hover/row:text-slate-900 transition-colors" title={item.product}>{item.product}</span>
+                  <div className="flex-1 h-3 bg-slate-100 rounded-full relative overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(100, ratio * 100)}%` }}
+                      transition={{ duration: 1, ease: "easeOut" }}
+                      className={`h-full rounded-full ${barColor} ${glowColor} transition-all duration-500`}
+                    />
+                    <div className="absolute top-0 left-[30%] h-full border-l border-dashed border-white/30 z-10" />
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-400 w-16 text-right font-mono">{item.total.toLocaleString()}</span>
+
+                  {/* Tooltip on hover */}
+                  <div className="absolute left-48 bottom-full mb-2 hidden group-hover/row:block z-50">
+                    <InventoryHoverTooltip data={item} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-8 pt-4 border-t border-slate-50 flex justify-between items-center">
+            <div className="flex gap-6">
+              <div className="flex items-center gap-2">
+                <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Healthy</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-2.5 w-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Low</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-2.5 w-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]" />
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Critical</span>
+              </div>
+            </div>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-1 rounded-md">Target: 30% Buffer</span>
+          </div>
+
+          {/* STOCK RISK INDICATOR PANEL */}
+          <div className="mt-6 grid grid-cols-3 gap-4">
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-100">
+              <p className="text-[10px] font-bold text-rose-600 uppercase tracking-wider mb-1">Critical Stock</p>
+              <p className="text-xl font-bold text-rose-700">12 <span className="text-xs font-medium">SKUs</span></p>
+            </div>
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-100">
+              <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">Low Stock</p>
+              <p className="text-xl font-bold text-amber-700">38 <span className="text-xs font-medium">SKUs</span></p>
+            </div>
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1">Overstock</p>
+              <p className="text-xl font-bold text-emerald-700">9 <span className="text-xs font-medium">SKUs</span></p>
+            </div>
           </div>
         </Card>
       </div>
@@ -3020,12 +3557,13 @@ const InventoryPanel: React.FC = () => {
         </div>
       </Card>
 
-      {/* Fast vs Slow Moving SKUs by Brand */}
-      <div className="grid grid-cols-12 gap-8">
-        <Card padding="none" className="col-span-12 flex flex-col">
-          <CardHeader title="Fast vs Slow Moving SKUs by Brand" description="Stock movement analysis across brands" className="p-6 border-b border-slate-100 mb-0" action={
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider">
+      {/* Stock Movement — two charts 50/50 */}
+      <div className="grid grid-cols-12 gap-6">
+        {/* Fast vs Slow Moving SKUs by Brand (vertical stacked bars) */}
+        <Card padding="none" className="col-span-12 lg:col-span-6 flex flex-col">
+          <CardHeader title="Fast vs Slow Moving SKUs by Brand" description="Stock movement analysis across brands" className="px-5 py-4 border-b border-slate-100 mb-0" action={
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5 text-[10px] font-bold uppercase tracking-wider">
                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500" />Fast</span>
                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-orange-400" />Slow</span>
                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-red-500" />Dead</span>
@@ -3033,13 +3571,13 @@ const InventoryPanel: React.FC = () => {
               <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-md border border-slate-200">Last 30 Days</span>
             </div>
           } />
-          <div className="p-6 h-[400px]">
+          <div className="p-5 h-[360px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={BRAND_SKU_MOVEMENT_DATA} barSize={48}>
+              <BarChart data={BRAND_SKU_MOVEMENT_DATA} barSize={36}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                 <XAxis dataKey="brand" tick={{ fontSize: 11, fontWeight: 600, fill: '#64748b' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}K`} />
-                <Tooltip formatter={(value: number) => value.toLocaleString()} />
+                <Tooltip content={<StockMovementTooltip labelKey="Brand" />} cursor={{ fill: '#f1f5f9' }} />
                 <Bar dataKey="fast" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} name="Fast" />
                 <Bar dataKey="slow" stackId="a" fill="#fb923c" radius={[0, 0, 0, 0]} name="Slow" />
                 <Bar dataKey="dead" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} name="Dead" />
@@ -3047,53 +3585,68 @@ const InventoryPanel: React.FC = () => {
             </ResponsiveContainer>
           </div>
         </Card>
-      </div>
 
-      {/* Breakdown + AI Insights */}
-      <div className="grid grid-cols-12 gap-8">
-        {/* Top Brand Breakdown */}
-        <Card padding="none" className="col-span-12 lg:col-span-7 flex flex-col">
+        {/* Top Brand Breakdown (horizontal grouped bars — differentiated style) */}
+        <Card padding="none" className="col-span-12 lg:col-span-6 flex flex-col">
           <CardHeader
             title={`${BRAND_SKU_MOVEMENT_DATA[0]?.brand || 'Top Brand'} Breakdown`}
             description="Sub-product stock movement analysis"
-            className="p-6 border-b border-slate-100 mb-0"
+            className="px-5 py-4 border-b border-slate-100 mb-0"
+            action={
+              <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md border border-indigo-100 uppercase tracking-wider">Top Brand</span>
+            }
           />
-          <div className="p-6 h-[350px]">
+          <div className="p-5 h-[360px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={TOP_BRAND_BREAKDOWN_DATA} barSize={40}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="product" tick={{ fontSize: 10, fontWeight: 600, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}K`} />
-                <Tooltip formatter={(value: number) => value.toLocaleString()} />
-                <Bar dataKey="fast" stackId="a" fill="#10b981" name="Fast" />
-                <Bar dataKey="slow" stackId="a" fill="#fb923c" name="Slow" />
-                <Bar dataKey="dead" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} name="Dead" />
+              <BarChart
+                data={TOP_BRAND_BREAKDOWN_DATA}
+                layout="vertical"
+                barSize={12}
+                barGap={2}
+                margin={{ top: 4, right: 24, left: 0, bottom: 4 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}K`} />
+                <YAxis type="category" dataKey="product" tick={{ fontSize: 11, fontWeight: 600, fill: '#475569' }} axisLine={false} tickLine={false} width={110} />
+                <Tooltip content={<StockMovementTooltip labelKey="Product" />} cursor={{ fill: '#f8fafc' }} />
+                <Bar dataKey="fast" fill="#10b981" name="Fast" radius={[4, 4, 4, 4]} />
+                <Bar dataKey="slow" fill="#fb923c" name="Slow" radius={[4, 4, 4, 4]} />
+                <Bar dataKey="dead" fill="#ef4444" name="Dead" radius={[4, 4, 4, 4]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </Card>
-
-        {/* AI Stock Insights */}
-        <Card padding="none" className="col-span-12 lg:col-span-5 flex flex-col overflow-hidden">
-          <div className="bg-gradient-to-r from-slate-800 to-indigo-900 px-6 py-5 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-amber-400" />
-              <h3 className="text-base font-bold text-white">AI Stock Insights</h3>
-            </div>
-            <p className="text-xs text-slate-300 mt-1">Automated recommendations based on stock velocity</p>
-          </div>
-          <div className="p-6 flex-1 flex flex-col justify-center space-y-5">
-            {AI_STOCK_INSIGHTS.map((insight, idx) => (
-              <div key={idx} className="flex items-start gap-3">
-                <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-slate-700 leading-relaxed" dangerouslySetInnerHTML={{
-                  __html: insight.text.replace(/\*\*(.*?)\*\*/g, '<strong class="text-slate-900">$1</strong>')
-                }} />
-              </div>
-            ))}
-          </div>
-        </Card>
       </div>
+
+      {/* AI Stock Insights */}
+      <Card padding="none" className="col-span-12 overflow-hidden flex flex-col hover:shadow-xl transition-all duration-300 border-slate-100">
+        <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50">
+          <h3 className="text-xs font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <Zap className="h-3.5 w-3.5 text-indigo-500" />
+            AI Stock Insights
+          </h3>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Recommendations</span>
+        </div>
+        <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {AI_STOCK_INSIGHTS.map((insight, idx) => (
+            <div key={idx} className="flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:border-indigo-100 transition-colors">
+              <div className={`mt-1 h-2 w-2 rounded-full shrink-0 ${
+                insight.type === 'warning' ? 'bg-amber-500' :
+                insight.type === 'critical' ? 'bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' :
+                'bg-emerald-500'
+              }`} />
+              <div className="space-y-1">
+                <p className="text-[11px] font-medium text-slate-700 leading-tight" dangerouslySetInnerHTML={{
+                  __html: insight.text.replace(/\*\*(.*?)\*\*/g, '<strong class="text-slate-900 font-bold">$1</strong>')
+                }} />
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                  {insight.type === 'warning' ? 'Warning' : insight.type === 'critical' ? 'Critical' : 'Action'}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
 
       {/* Worst Performing SKUs */}
       <Card padding="none" className="overflow-hidden flex flex-col">

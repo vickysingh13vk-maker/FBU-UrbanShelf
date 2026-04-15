@@ -222,12 +222,12 @@ export const USERS: User[] = [
     status: 'Suspended',
     createdDate: '2023-03-10'
   },
-  { 
-    id: 'U004', 
-    name: 'Alice Williams', 
-    email: 'sales@urbanshelf.com', 
+  {
+    id: 'U004',
+    name: 'John Smith',
+    email: 'john.smith@demand.com',
     password: 'sales123',
-    roleId: 'R003', 
+    roleId: 'R003',
     roleName: 'Sales',
     status: 'Active',
     createdDate: '2023-04-20'

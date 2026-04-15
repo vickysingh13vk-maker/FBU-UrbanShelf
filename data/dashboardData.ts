@@ -538,19 +538,19 @@ export const CUSTOMER_LOCATIONS = [
 // --- Inventory Analytics Data ---
 
 export const BRAND_SKU_MOVEMENT_DATA = [
-  { brand: 'Lost Mary Nera', fast: 82000, slow: 12000, dead: 4500 },
-  { brand: 'HAWCOS CRYSTAL', fast: 48000, slow: 8500, dead: 2800 },
-  { brand: 'ELFBAR 600', fast: 45000, slow: 9200, dead: 3100 },
-  { brand: 'ELFBAR PLUS', fast: 28000, slow: 6800, dead: 2200 },
-  { brand: 'VELO', fast: 22000, slow: 5400, dead: 1800 },
+  { brand: 'Lost Mary', fast: 82000, slow: 12000, dead: 4500 },
+  { brand: 'Elfbar', fast: 73000, slow: 16000, dead: 5300 },
+  { brand: 'Hawcos', fast: 48000, slow: 8500, dead: 2800 },
+  { brand: 'Velo', fast: 22000, slow: 5400, dead: 1800 },
+  { brand: 'Geekvape', fast: 18500, slow: 4200, dead: 1400 },
 ];
 
 export const TOP_BRAND_BREAKDOWN_DATA = [
-  { product: '30K KIT', fast: 85000, slow: 8000, dead: 2000 },
-  { product: '15K POD', fast: 62000, slow: 12000, dead: 4500 },
-  { product: 'BM6000 KIT', fast: 38000, slow: 6500, dead: 1800 },
-  { product: 'BM6000 POD', fast: 32000, slow: 5200, dead: 1500 },
-  { product: 'BM600 KIT', fast: 8000, slow: 3800, dead: 2200 },
+  { product: 'Nera 30K Kit', fast: 42000, slow: 5800, dead: 1500 },
+  { product: 'Nera 15K Pod', fast: 28000, slow: 4200, dead: 1200 },
+  { product: 'BM6000 Kit', fast: 18000, slow: 3200, dead: 900 },
+  { product: 'BM6000 Pod', fast: 14000, slow: 2400, dead: 700 },
+  { product: 'BM600 Kit', fast: 8000, slow: 3800, dead: 2200 },
 ];
 
 export const AI_STOCK_INSIGHTS = [
