@@ -24,6 +24,9 @@ export interface Product {
   status: 'Active' | 'Draft' | 'Low Stock';
   image: string;
   unitsPerCarton?: number;
+  cbmPerCarton?: number;
+  units_per_carton?: number;
+  cbm_per_carton?: number;
   weight?: string;
   warehouseLocation?: string; // e.g., "Rack A-12"
   batchNumber?: string;
@@ -318,6 +321,10 @@ export interface SupplierShipment {
   trackingNumber?: string;
   productIds?: string[];
   quantities?: Record<string, number>;
+  totalCbm?: number;
+  monthlyStorageEstimate?: number;
+  receivedUnits?: number;
+  receivedDate?: string;
 }
 
 export interface SupplierFinanceData {

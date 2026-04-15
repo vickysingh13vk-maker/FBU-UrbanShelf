@@ -14,7 +14,7 @@ import { SHIPMENT_STATUS_CONFIG } from '../../constants/supplierStatus';
 import type { SupplierShipment, Product } from '../../types';
 
 const WAREHOUSES = [
-  { id: 'W1', name: 'London Hub', address: '123 Logistics Way, London, E1 4NS' },
+  { id: 'W1', name: 'London Central Hub', address: '123 Logistics Way, London, E1 4NS' },
   { id: 'W2', name: 'Manchester North', address: '45 Industrial Park, Manchester, M17 1BR' },
   { id: 'W3', name: 'Birmingham Logistics', address: '88 Distribution Rd, Birmingham, B11 2AL' },
 ];
@@ -30,6 +30,24 @@ const CARRIERS = [
   'Palletways',
   'Other'
 ];
+
+const MONTHLY_STORAGE_RATE_PER_CBM = 18;
+const OVERAGE_RATE_PER_CBM_PER_DAY = 0.85;
+const DEFAULT_UNITS_PER_CARTON = 60;
+const DEFAULT_CBM_PER_CARTON = 0.045;
+
+const formatDate = (date: Date) => date.toISOString().split('T')[0];
+const formatCbm = (value: number) => value.toFixed(value >= 10 ? 1 : 3).replace(/\.?0+$/, '');
+const formatCurrency = (value: number) => `£${value.toFixed(2)}`;
+
+const getDefaultEta = () => {
+  const eta = new Date();
+  eta.setDate(eta.getDate() + 5);
+  return formatDate(eta);
+};
+
+const getUnitsPerCarton = (product: Product) => product.unitsPerCarton || product.units_per_carton || DEFAULT_UNITS_PER_CARTON;
+const getCbmPerCarton = (product: Product) => product.cbmPerCarton || product.cbm_per_carton || DEFAULT_CBM_PER_CARTON;
 
 const SupplierInbound: React.FC = () => {
   const { shipments, products, addShipment, updateShipment, deleteShipment, isLoading } = useSupplier();
@@ -68,29 +86,78 @@ const SupplierInbound: React.FC = () => {
     setQuantities(prev => ({ ...prev, [productId]: isNaN(qty) ? 0 : Math.max(0, qty) }));
   };
 
-  const handleConfirmShipment = () => {
+  const selectedShipmentLines = useMemo(() => {
+    return selectedProductIds
+      .map(id => {
+        const product = products.find(item => item.id === id);
+        if (!product) return null;
+        const cartons = quantities[id] || 0;
+        const unitsPerCarton = getUnitsPerCarton(product);
+        const cbmPerCarton = getCbmPerCarton(product);
+        const totalCbm = cartons * cbmPerCarton;
+        const monthlyStorage = totalCbm * MONTHLY_STORAGE_RATE_PER_CBM;
+
+        return { product, cartons, unitsPerCarton, cbmPerCarton, totalCbm, monthlyStorage };
+      })
+      .filter((item): item is {
+        product: Product;
+        cartons: number;
+        unitsPerCarton: number;
+        cbmPerCarton: number;
+        totalCbm: number;
+        monthlyStorage: number;
+      } => Boolean(item));
+  }, [products, quantities, selectedProductIds]);
+
+  const shipmentSpaceSummary = useMemo(() => {
+    const totalCartons = selectedShipmentLines.reduce((sum, item) => sum + item.cartons, 0);
+    const totalCbm = selectedShipmentLines.reduce((sum, item) => sum + item.totalCbm, 0);
+    const monthlyStorage = selectedShipmentLines.reduce((sum, item) => sum + item.monthlyStorage, 0);
+
+    return {
+      totalSkus: selectedProductIds.length,
+      totalCartons,
+      totalCbm,
+      monthlyStorage,
+    };
+  }, [selectedProductIds.length, selectedShipmentLines]);
+
+  const buildShipmentData = (status?: string): Partial<SupplierShipment> | null => {
     const warehouse = WAREHOUSES.find(w => w.id === selectedWarehouseId);
     if (!warehouse) {
       setToast({ message: 'Please select a destination warehouse', type: 'error' });
-      return;
+      return null;
     }
+
+    const cartonCounts = selectedProductIds.reduce<Record<string, number>>((acc, id) => {
+      acc[id] = quantities[id] || 0;
+      return acc;
+    }, {});
+    const existingShipment = editingShipmentId ? shipments.find(shipment => shipment.id === editingShipmentId) : null;
+
+    return {
+      warehouse: warehouse.name,
+      carrier,
+      trackingNumber,
+      productsCount: selectedProductIds.length,
+      totalUnits: shipmentSpaceSummary.totalCartons,
+      eta: existingShipment?.eta || getDefaultEta(),
+      productIds: selectedProductIds,
+      quantities: cartonCounts,
+      totalCbm: shipmentSpaceSummary.totalCbm,
+      monthlyStorageEstimate: shipmentSpaceSummary.monthlyStorage,
+      ...(status ? { status } : {})
+    };
+  };
+
+  const handleConfirmShipment = () => {
     if (!carrier) {
       setToast({ message: 'Please select a carrier before confirming', type: 'error' });
       return;
     }
 
-    const totalUnits = Object.values(quantities).reduce((a, b) => (a as number) + (b as number), 0);
-    const productCount = selectedProductIds.length;
-
-    const shipmentData = {
-      warehouse: warehouse.name,
-      carrier,
-      trackingNumber,
-      productsCount: productCount,
-      totalUnits,
-      eta: 'Apr 12, 2024', // Mock ETA
-      status: editingShipmentId ? undefined : 'IN_TRANSIT' // Default to IN_TRANSIT on confirm
-    };
+    const shipmentData = buildShipmentData(editingShipmentId ? undefined : 'IN_TRANSIT');
+    if (!shipmentData) return;
 
     if (editingShipmentId) {
       updateShipment(editingShipmentId, shipmentData);
@@ -117,11 +184,13 @@ const SupplierInbound: React.FC = () => {
     
     // For mock data that doesn't have productIds/quantities, we'll pre-fill some
     const productIds = shipment.productIds || products.slice(0, shipment.productsCount || 1).map(p => p.id);
-    const shipmentQuantities = shipment.quantities || {};
+    const shipmentQuantities = { ...(shipment.quantities || {}) };
     
     if (Object.keys(shipmentQuantities).length === 0) {
       productIds.forEach((id: string) => {
-        shipmentQuantities[id] = Math.floor(shipment.totalUnits / productIds.length);
+        const product = products.find(item => item.id === id);
+        const estimatedUnits = shipment.productsCount > 0 ? Math.floor(shipment.totalUnits / productIds.length) : 0;
+        shipmentQuantities[id] = Math.max(1, Math.ceil(estimatedUnits / (product ? getUnitsPerCarton(product) : DEFAULT_UNITS_PER_CARTON)));
       });
     }
 
@@ -145,24 +214,8 @@ const SupplierInbound: React.FC = () => {
   };
 
   const handleSaveDraft = () => {
-    const warehouse = WAREHOUSES.find(w => w.id === selectedWarehouseId);
-    if (!warehouse) {
-      setToast({ message: 'Please select a destination warehouse', type: 'error' });
-      return;
-    }
-
-    const totalUnits = Object.values(quantities).reduce((a, b) => (a as number) + (b as number), 0);
-    const productCount = selectedProductIds.length;
-
-    const shipmentData = {
-      warehouse: warehouse.name,
-      carrier,
-      trackingNumber,
-      productsCount: productCount,
-      totalUnits,
-      eta: 'Apr 12, 2024',
-      status: 'DRAFT'
-    };
+    const shipmentData = buildShipmentData('DRAFT');
+    if (!shipmentData) return;
 
     if (editingShipmentId) {
       updateShipment(editingShipmentId, shipmentData);
@@ -200,36 +253,73 @@ const SupplierInbound: React.FC = () => {
     return filteredShipments.slice(start, start + itemsPerPage);
   }, [filteredShipments, currentPage, itemsPerPage]);
 
+  const calculateShipmentSpace = (shipment: SupplierShipment) => {
+    if (shipment.productIds?.length) {
+      return shipment.productIds.reduce((acc, id) => {
+        const product = products.find(item => item.id === id);
+        const cartons = shipment.quantities?.[id] || 0;
+        const cbm = cartons * (product ? getCbmPerCarton(product) : DEFAULT_CBM_PER_CARTON);
+        return {
+          cartons: acc.cartons + cartons,
+          cbm: acc.cbm + cbm,
+          monthlyStorage: acc.monthlyStorage + (cbm * MONTHLY_STORAGE_RATE_PER_CBM),
+        };
+      }, { cartons: 0, cbm: 0, monthlyStorage: 0 });
+    }
+
+    const cartons = shipment.totalUnits || 0;
+    const cbm = shipment.totalCbm || cartons * DEFAULT_CBM_PER_CARTON;
+    return {
+      cartons,
+      cbm,
+      monthlyStorage: shipment.monthlyStorageEstimate || cbm * MONTHLY_STORAGE_RATE_PER_CBM,
+    };
+  };
+
   const stats = useMemo(() => {
     const total = shipments.length;
     const inTransit = shipments.filter(s => s.status === 'IN_TRANSIT').length;
     const received = shipments.filter(s => ['RECEIVED', 'QC_DONE', 'PUTAWAY_DONE', 'CLOSED'].includes(s.status)).length;
     const draft = shipments.filter(s => s.status === 'DRAFT').length;
 
-    // Units calculations
-    let unitsInTransit = 0;
-    let unitsReceived = 0;
-    let totalSentUnitsForReceived = 0;
+    let cartonsInTransit = 0;
+    let cbmInTransit = 0;
+    let totalReservedCbm = 0;
+    let monthlyStorage = 0;
 
     shipments.forEach(s => {
-      const sentQty = s.totalUnits || 0;
-      const receivedQty = s.receivedUnits || 0; // Assuming this field exists or we calculate it
+      const space = calculateShipmentSpace(s);
+      totalReservedCbm += space.cbm;
+      monthlyStorage += space.monthlyStorage;
 
       if (s.status === 'IN_TRANSIT') {
-        unitsInTransit += sentQty;
-      }
-      if (['RECEIVED', 'QC_DONE', 'PUTAWAY_DONE', 'CLOSED'].includes(s.status)) {
-        unitsReceived += receivedQty || sentQty; // Fallback to sentQty for mock
-        totalSentUnitsForReceived += sentQty;
+        cartonsInTransit += space.cartons;
+        cbmInTransit += space.cbm;
       }
     });
 
-    const accuracy = totalSentUnitsForReceived > 0 
-      ? Math.round((unitsReceived / totalSentUnitsForReceived) * 100) 
-      : 100;
+    return { total, inTransit, received, draft, cartonsInTransit, cbmInTransit, totalReservedCbm, monthlyStorage };
+  }, [shipments, products]);
 
-    return { total, inTransit, received, draft, unitsInTransit, unitsReceived, accuracy };
-  }, [shipments]);
+  const getShipmentLineItems = (shipment: SupplierShipment) => {
+    if (shipment.productIds?.length) {
+      return shipment.productIds
+        .map(id => {
+          const product = products.find(item => item.id === id);
+          if (!product) return null;
+          const sent = shipment.quantities?.[id] || 0;
+          const received = ['RECEIVED', 'QC_DONE', 'PUTAWAY_DONE', 'CLOSED'].includes(shipment.status) ? sent : 0;
+          return { ...product, quantity: sent, receivedQuantity: received };
+        })
+        .filter((item): item is Product & { quantity: number; receivedQuantity: number } => Boolean(item));
+    }
+
+    return products.slice(0, shipment.productsCount).map(product => {
+      const sent = shipment.productsCount > 0 ? Math.floor(shipment.totalUnits / shipment.productsCount) : 0;
+      const received = ['RECEIVED', 'QC_DONE', 'PUTAWAY_DONE', 'CLOSED'].includes(shipment.status) ? sent : 0;
+      return { ...product, quantity: sent, receivedQuantity: received };
+    });
+  };
 
 
 
@@ -326,233 +416,196 @@ const SupplierInbound: React.FC = () => {
         );
       case 3:
         return (
-          <div className="space-y-4 py-4">
-            <h3 className="text-sm font-bold text-slate-900">Set Quantities</h3>
-            <p className="text-sm text-slate-500 font-medium">Specify the number of units for each product.</p>
-            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-              {selectedProductIds.map(id => {
-                const p = products.find(item => item.id === id)!;
-                return (
-                  <div key={id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <img src={p.image} alt="" className="h-10 w-10 rounded-lg border border-slate-200 object-cover" referrerPolicy="no-referrer" />
-                      <div>
-                        <p className="font-bold text-slate-900 text-sm">{p.name}</p>
-                        <p className="text-xs text-slate-500 font-mono">SKU: {p.sku}</p>
+          <div className="py-4">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-5 items-start">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Cartons & Space</h3>
+                  <p className="text-sm text-slate-500 font-medium mt-1">
+                    Enter cartons for each SKU. Warehouse space is calculated from carton volume in CBM.
+                  </p>
+                </div>
+
+                <div className="space-y-3 max-h-[470px] overflow-y-auto pr-2">
+                  {selectedShipmentLines.map(({ product, cartons, unitsPerCarton, cbmPerCarton, totalCbm }) => (
+                    <div key={product.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                      <div className="grid grid-cols-1 xl:grid-cols-[1fr_190px] gap-4">
+                        <div className="flex gap-3 min-w-0">
+                          <img src={product.image} alt="" className="h-12 w-12 rounded-lg border border-slate-200 object-cover shrink-0" referrerPolicy="no-referrer" />
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-900 text-sm line-clamp-1">{product.name}</p>
+                            <p className="text-xs text-slate-500 font-mono mt-0.5">SKU: {product.sku}</p>
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600 uppercase">
+                                <Package className="h-3 w-3" />
+                                {unitsPerCarton} units / carton
+                              </span>
+                              <span className="inline-flex items-center gap-1.5 rounded-md bg-cyan-50 px-2 py-1 text-[10px] font-bold text-cyan-700 uppercase">
+                                <Warehouse className="h-3 w-3" />
+                                {formatCbm(cbmPerCarton)} CBM / carton
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Cartons</label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={cartons || ''}
+                            onChange={(e) => updateQuantity(product.id, parseInt(e.target.value))}
+                            placeholder="0"
+                            className="font-bold text-right"
+                          />
+                          <p className="text-[11px] font-semibold text-slate-500 text-right">
+                            {cartons || 0} cartons x {formatCbm(cbmPerCarton)} CBM = <span className="text-slate-900">{formatCbm(totalCbm)} CBM</span>
+                          </p>
+                        </div>
                       </div>
                     </div>
-                    <div className="w-32">
-                      <Input 
-                        type="number" 
-                        min="1"
-                        value={quantities[id] || ''} 
-                        onChange={(e) => updateQuantity(id, parseInt(e.target.value))}
-                        placeholder="Qty"
-                        className="font-bold"
-                      />
-                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-slate-950 text-white rounded-xl border border-slate-900 p-5 sticky top-4 shadow-lg">
+                <div className="flex items-center gap-2 mb-5">
+                  <div className="h-8 w-8 rounded-lg bg-cyan-500/20 text-cyan-300 flex items-center justify-center">
+                    <Warehouse className="h-4 w-4" />
                   </div>
-                );
-              })}
+                  <div>
+                    <h4 className="text-sm font-black">Shipment Space Summary</h4>
+                    <p className="text-[11px] text-slate-400 font-medium">Live CBM calculation</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <span className="text-xs font-semibold text-slate-400">Products</span>
+                    <span className="text-sm font-black">{shipmentSpaceSummary.totalSkus} SKUs</span>
+                  </div>
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <span className="text-xs font-semibold text-slate-400">Cartons</span>
+                    <span className="text-sm font-black">{shipmentSpaceSummary.totalCartons}</span>
+                  </div>
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <span className="text-xs font-semibold text-slate-400">Warehouse Space</span>
+                    <span className="text-sm font-black text-cyan-300">{formatCbm(shipmentSpaceSummary.totalCbm)} CBM</span>
+                  </div>
+                  <div className="rounded-lg bg-white/5 border border-white/10 p-3">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Estimated Monthly Storage</p>
+                    <p className="text-2xl font-black text-white mt-1">{formatCurrency(shipmentSpaceSummary.monthlyStorage)}</p>
+                    <p className="text-[11px] text-slate-400 mt-1">Based on {formatCurrency(MONTHLY_STORAGE_RATE_PER_CBM)} / CBM / month</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         );
       case 4:
         const selectedWarehouse = WAREHOUSES.find(w => w.id === selectedWarehouseId);
-        const totalUnits = Object.values(quantities).reduce((a, b) => (a as number) + (b as number), 0);
         return (
           <div className="space-y-6 py-4">
-            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200">
-              <div className="grid grid-cols-2 gap-5">
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Destination</p>
-                    <p className="text-sm font-bold text-slate-900">{selectedWarehouse?.name}</p>
-                    <p className="text-xs text-slate-500 font-medium">{selectedWarehouse?.address}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Carrier Details</p>
-                    <p className="text-sm font-bold text-slate-900">{carrier || 'Not specified'}</p>
-                    <p className="text-xs text-slate-500 font-medium font-mono">{trackingNumber || 'No tracking number'}</p>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Storage Summary</h3>
+              <p className="text-sm text-slate-500 font-medium mt-1">
+                Review the reserved warehouse space and monthly storage estimate before creating the inbound shipment.
+              </p>
+            </div>
+
+            <div className="bg-slate-950 text-white rounded-xl p-6 border border-slate-900">
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-6">
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Destination Warehouse</p>
+                  <p className="text-lg font-black">{selectedWarehouse?.name}</p>
+                  <p className="text-xs text-slate-400 font-medium mt-1">{selectedWarehouse?.address}</p>
+                  <div className="mt-5 pt-5 border-t border-white/10">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Carrier Details</p>
+                    <p className="text-sm font-bold">{carrier || 'Not specified'}</p>
+                    <p className="text-xs text-cyan-300 font-mono mt-1">{trackingNumber || 'No tracking number'}</p>
                   </div>
                 </div>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Shipment Summary</p>
-                    <div className="flex items-center gap-4">
-                      <div>
-                        <p className="text-2xl font-black text-slate-900">{selectedProductIds.length}</p>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">SKUs</p>
-                      </div>
-                      <div className="h-8 w-px bg-slate-200" />
-                      <div>
-                        <p className="text-2xl font-black text-slate-900">{totalUnits}</p>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Total Units</p>
-                      </div>
-                    </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="rounded-lg bg-white/5 border border-white/10 p-4">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total SKUs</p>
+                    <p className="text-2xl font-black mt-2">{shipmentSpaceSummary.totalSkus}</p>
                   </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Estimated Arrival</p>
-                    <div className="flex items-center gap-2 text-sm font-bold text-indigo-600">
-                      <Calendar className="h-4 w-4" />
-                      <span>Apr 12, 2024</span>
-                    </div>
+                  <div className="rounded-lg bg-white/5 border border-white/10 p-4">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cartons</p>
+                    <p className="text-2xl font-black mt-2">{shipmentSpaceSummary.totalCartons}</p>
+                  </div>
+                  <div className="rounded-lg bg-cyan-500/10 border border-cyan-400/20 p-4">
+                    <p className="text-[10px] font-bold text-cyan-200 uppercase tracking-wider">Warehouse Space</p>
+                    <p className="text-2xl font-black mt-2 text-cyan-200">{formatCbm(shipmentSpaceSummary.totalCbm)}</p>
+                    <p className="text-[10px] text-cyan-200/70 font-bold uppercase">CBM</p>
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="space-y-3">
-              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Inventory Breakdown</h4>
+              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Storage Breakdown</h4>
               <div className="border border-slate-200 rounded-xl overflow-hidden">
                 <Table>
                   <THead>
                     <TR className="bg-slate-50/50">
                       <TH className="text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2">Product</TH>
-                      <TH className="text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2 text-right">Quantity</TH>
+                      <TH className="text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2 text-center">Cartons</TH>
+                      <TH className="text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2 text-center">CBM / Carton</TH>
+                      <TH className="text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2 text-center">Total CBM</TH>
+                      <TH className="text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2 text-right">Monthly Storage</TH>
                     </TR>
                   </THead>
                   <TBody>
-                    {selectedProductIds.map(id => {
-                      const product = products.find(p => p.id === id);
-                      return (
-                        <TR key={id}>
-                          <TD className="py-2">
+                    {selectedShipmentLines.map(({ product, cartons, cbmPerCarton, totalCbm, monthlyStorage }) => (
+                      <TR key={product.id}>
+                        <TD className="py-3">
                             <div className="flex items-center gap-2">
-                              <div className="h-8 w-8 rounded bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-400">
-                                IMG
-                              </div>
+                            <img src={product.image} alt="" className="h-8 w-8 rounded bg-slate-100 object-cover border border-slate-200" referrerPolicy="no-referrer" />
                               <div>
-                                <p className="text-xs font-bold text-slate-900 line-clamp-1">{product?.name}</p>
-                                <p className="text-[10px] text-slate-500 font-medium">SKU: {product?.sku}</p>
+                              <p className="text-xs font-bold text-slate-900 line-clamp-1">{product.name}</p>
+                              <p className="text-[10px] text-slate-500 font-medium">SKU: {product.sku}</p>
                               </div>
                             </div>
                           </TD>
-                          <TD className="text-right py-2">
-                            <span className="text-xs font-black text-slate-900">{quantities[id]}</span>
+                        <TD className="text-center py-3 font-bold text-slate-700">{cartons}</TD>
+                        <TD className="text-center py-3 font-bold text-slate-700">{formatCbm(cbmPerCarton)} CBM</TD>
+                        <TD className="text-center py-3 font-black text-cyan-700">{formatCbm(totalCbm)} CBM</TD>
+                        <TD className="text-right py-3">
+                          <span className="text-xs font-black text-slate-900">{formatCurrency(monthlyStorage)}</span>
                           </TD>
                         </TR>
-                      );
-                    })}
+                    ))}
                   </TBody>
                 </Table>
               </div>
             </div>
 
-            {/* Storage Estimate */}
-            {(() => {
-              const STORAGE_RATE_PER_CARTON_PER_DAY = 0.5;
-              const calculateStorage = (cartons: number, days: number) => cartons * STORAGE_RATE_PER_CARTON_PER_DAY * days;
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="rounded-xl border border-cyan-100 bg-cyan-50 p-5">
+                <p className="text-[10px] font-bold text-cyan-700 uppercase tracking-widest">Reserved Warehouse Space</p>
+                <p className="text-3xl font-black text-cyan-900 mt-2">{formatCbm(shipmentSpaceSummary.totalCbm)} CBM</p>
+                <p className="text-xs font-medium text-cyan-700 mt-1">{shipmentSpaceSummary.totalCartons} cartons across {shipmentSpaceSummary.totalSkus} SKUs</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Estimated Monthly Storage</p>
+                <p className="text-3xl font-black text-slate-900 mt-2">{formatCurrency(shipmentSpaceSummary.monthlyStorage)}</p>
+                <p className="text-xs font-medium text-slate-500 mt-1">{formatCurrency(MONTHLY_STORAGE_RATE_PER_CBM)} / CBM / month</p>
+              </div>
+            </div>
 
-              const storageItems = selectedProductIds.map(id => {
-                const product = products.find(p => p.id === id)!;
-                const unitQty = quantities[id] || 0;
-                const upc = product.unitsPerCarton || 60;
-                const cartons = Math.ceil(unitQty / upc);
-                return {
-                  product,
-                  unitsPerCarton: upc,
-                  cartons,
-                  weekEstimate: calculateStorage(cartons, 7),
-                  twoWeekEstimate: calculateStorage(cartons, 14),
-                };
-              });
-              const totalWeek = storageItems.reduce((sum, item) => sum + item.weekEstimate, 0);
-              const totalTwoWeek = storageItems.reduce((sum, item) => sum + item.twoWeekEstimate, 0);
-              const totalCartons = storageItems.reduce((sum, item) => sum + item.cartons, 0);
+            <div className="rounded-xl border border-amber-100 bg-amber-50 p-5 flex gap-3">
+              <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-black text-amber-900 uppercase tracking-wider">Storage Policy</p>
+                <p className="text-xs text-amber-800 leading-relaxed mt-1 font-medium">
+                  Storage is billed monthly based on warehouse space usage in CBM. If inventory exceeds the reserved warehouse space,
+                  additional storage will be charged daily based on CBM usage at {formatCurrency(OVERAGE_RATE_PER_CBM_PER_DAY)} / CBM / day.
+                </p>
+              </div>
+            </div>
 
-              return (
-                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-                  {/* Header */}
-                  <div className="flex items-center justify-between px-6 py-3.5 bg-gradient-to-r from-indigo-50 to-violet-50 border-b border-indigo-100">
-                    <div className="flex items-center gap-2.5">
-                      <div className="h-7 w-7 rounded-lg bg-indigo-600 flex items-center justify-center">
-                        <Warehouse className="h-3.5 w-3.5 text-white" />
-                      </div>
-                      <h4 className="text-xs font-bold text-indigo-700 uppercase tracking-widest">Storage Estimate</h4>
-                    </div>
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/80 rounded-full border border-indigo-100">
-                      <Package className="h-3 w-3 text-indigo-500" />
-                      <span className="text-[10px] font-bold text-indigo-600">{totalCartons} carton{totalCartons !== 1 ? 's' : ''}</span>
-                    </div>
-                  </div>
-
-                  <div className="px-6 py-5 space-y-5">
-                    {/* Line Items Table */}
-                    <div className="border border-slate-200/80 rounded-xl overflow-hidden">
-                      <Table>
-                        <THead>
-                          <TR className="bg-slate-50">
-                            <TH className="text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2.5 pl-4">Product</TH>
-                            <TH className="text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2.5 text-center">Carton Config</TH>
-                            <TH className="text-[10px] font-bold text-slate-500 uppercase tracking-wider py-2.5 text-center">Cartons</TH>
-                            <TH className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider py-2.5 text-right pr-4">Estimated Storage</TH>
-                          </TR>
-                        </THead>
-                        <TBody>
-                          {storageItems.map(({ product, unitsPerCarton, cartons, weekEstimate, twoWeekEstimate }) => (
-                            <TR key={product.id} className="border-t border-slate-100 hover:bg-slate-50/50 transition-colors">
-                              <TD className="py-3 pl-4">
-                                <p className="text-xs font-bold text-slate-900 line-clamp-1">{product.name}</p>
-                                <p className="text-[10px] text-slate-400 font-mono mt-0.5">SKU: {product.sku}</p>
-                              </TD>
-                              <TD className="text-center py-3">
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 rounded-md text-[10px] font-semibold text-slate-600">
-                                  <Package className="h-2.5 w-2.5" />
-                                  {unitsPerCarton} units/carton
-                                </span>
-                              </TD>
-                              <TD className="text-center py-3">
-                                <span className="inline-flex items-center justify-center h-6 w-8 bg-indigo-50 rounded-md text-xs font-black text-indigo-700">{cartons}</span>
-                              </TD>
-                              <TD className="text-right py-3 pr-4">
-                                <div className="flex flex-col items-end gap-1">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-[9px] font-medium text-slate-400 uppercase">1 wk</span>
-                                    <span className="text-xs font-bold text-indigo-600">£{weekEstimate.toFixed(2)}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-[9px] font-medium text-slate-400 uppercase">2 wk</span>
-                                    <span className="text-xs font-bold text-violet-600">£{twoWeekEstimate.toFixed(2)}</span>
-                                  </div>
-                                </div>
-                              </TD>
-                            </TR>
-                          ))}
-                        </TBody>
-                      </Table>
-                    </div>
-
-                    {/* Totals */}
-                    <div className="bg-gradient-to-r from-slate-50 to-indigo-50/30 rounded-xl border border-slate-200/80 p-4 space-y-3">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Estimated Storage Totals</p>
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full bg-indigo-500"></div>
-                          <span className="text-xs font-semibold text-slate-600">Estimated Storage (1 Week)</span>
-                        </div>
-                        <span className="text-base font-black text-indigo-600">£{totalWeek.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full bg-violet-500"></div>
-                          <span className="text-xs font-semibold text-slate-600">Estimated Storage (2 Weeks)</span>
-                        </div>
-                        <span className="text-base font-black text-violet-600">£{totalTwoWeek.toFixed(2)}</span>
-                      </div>
-                    </div>
-
-                    {/* Helper Note */}
-                    <div className="flex items-start gap-2 px-3 py-2.5 bg-slate-50 rounded-lg border border-slate-100">
-                      <Info className="h-3.5 w-3.5 text-slate-400 flex-shrink-0 mt-0.5" />
-                      <p className="text-[10px] text-slate-500 leading-relaxed">
-                        Storage estimates are calculated using £0.50 per carton per day. Final charges may vary based on actual storage duration.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
 
             <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-xl border border-amber-100">
               <Info className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -575,7 +628,7 @@ const SupplierInbound: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Inbound Shipments</h1>
-            <p className="text-slate-500 mt-1 font-medium">Track and manage your shipments to FBU warehouses.</p>
+            <p className="text-slate-500 mt-1 font-medium">Plan cartons, reserve warehouse space, and estimate monthly storage by CBM.</p>
           </div>
           <Button 
             variant="primary" 
@@ -600,22 +653,22 @@ const SupplierInbound: React.FC = () => {
           trend={{ value: '12%', isPositive: true }}
         />
         <KpiCard 
-          title="Units In Transit"
-          value={stats.unitsInTransit.toLocaleString()}
+          title="Cartons In Transit"
+          value={stats.cartonsInTransit.toLocaleString()}
           icon={Truck}
           color="blue"
           trend={{ value: '8%', isPositive: true }}
         />
         <KpiCard 
-          title="Units Received"
-          value={stats.unitsReceived.toLocaleString()}
-          icon={CheckCircle}
+          title="Reserved Space"
+          value={`${formatCbm(stats.totalReservedCbm)} CBM`}
+          icon={Warehouse}
           color="emerald"
           trend={{ value: '15%', isPositive: true }}
         />
         <KpiCard 
-          title="Receiving Accuracy"
-          value={`${stats.accuracy}%`}
+          title="Monthly Storage"
+          value={formatCurrency(stats.monthlyStorage)}
           icon={BarChart3}
           color="amber"
           trend={{ value: '0.2%', isPositive: true }}
@@ -660,15 +713,14 @@ const SupplierInbound: React.FC = () => {
                 <TH>Warehouse</TH>
                 <TH>Carrier / Tracking</TH>
                 <TH>Status</TH>
-                <TH align="center">Units (Rec/Sent)</TH>
+                <TH align="center">Space Reserved</TH>
                 <TH>Created Date</TH>
                 <TH align="right" className="pr-6">Actions</TH>
               </TR>
             </THead>
             <TBody>
               {paginatedShipments.length > 0 ? paginatedShipments.map((shp) => {
-                const totalSent = shp.totalUnits || 0;
-                const totalReceived = shp.receivedUnits || 0;
+                const shipmentSpace = calculateShipmentSpace(shp);
                 const status = STATUS_CONFIG[shp.status] || { label: shp.status, variant: 'neutral', icon: Info };
 
                 return (
@@ -700,18 +752,16 @@ const SupplierInbound: React.FC = () => {
                     <TD align="center">
                       <div className="flex flex-col gap-1 min-w-[100px]">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-slate-900">{totalReceived} / {totalSent}</span>
-                          <span className="text-[10px] font-bold text-slate-400">{totalSent > 0 ? Math.round((totalReceived/totalSent)*100) : 0}%</span>
+                          <span className="text-xs font-bold text-slate-900">{shipmentSpace.cartons} cartons</span>
+                          <span className="text-[10px] font-bold text-cyan-600">{formatCbm(shipmentSpace.cbm)} CBM</span>
                         </div>
                         <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
                           <div 
-                            className={`h-full rounded-full transition-all duration-500 ${
-                              totalReceived === totalSent ? 'bg-emerald-500' : 
-                              totalReceived > 0 ? 'bg-amber-500' : 'bg-slate-300'
-                            }`}
-                            style={{ width: `${totalSent > 0 ? Math.min((totalReceived / totalSent) * 100, 100) : 0}%` }}
+                            className="h-full rounded-full transition-all duration-500 bg-cyan-500"
+                            style={{ width: `${Math.min((shipmentSpace.cbm / 5) * 100, 100)}%` }}
                           />
                         </div>
+                        <span className="text-[10px] text-slate-400 font-semibold text-left">{formatCurrency(shipmentSpace.monthlyStorage)} / month</span>
                       </div>
                     </TD>
                     <TD>
@@ -774,7 +824,7 @@ const SupplierInbound: React.FC = () => {
         isOpen={isDetailDrawerOpen}
         onClose={() => setIsDetailDrawerOpen(false)}
         title={`Shipment Details: ${selectedShipment?.id}`}
-        size="lg"
+        size="xl"
         footer={
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
@@ -874,10 +924,10 @@ const SupplierInbound: React.FC = () => {
               </div>
             </div>
 
-            {/* Inventory Breakdown */}
+            {/* Storage Breakdown */}
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-slate-50 pb-2">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Inventory Breakdown</h4>
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Storage Breakdown</h4>
                 <Badge variant="primary" className="text-[10px]">
                   {selectedShipment.productsCount || 0} SKUs
                 </Badge>
@@ -888,17 +938,16 @@ const SupplierInbound: React.FC = () => {
                   <THead>
                     <TR className="bg-slate-50/50">
                       <TH className="text-[10px] uppercase tracking-wider">Product / SKU</TH>
-                      <TH className="text-[10px] uppercase tracking-wider text-center">Sent</TH>
-                      <TH className="text-[10px] uppercase tracking-wider text-center">Received</TH>
-                      <TH className="text-[10px] uppercase tracking-wider text-right">Accuracy</TH>
+                      <TH className="text-[10px] uppercase tracking-wider text-center">Cartons</TH>
+                      <TH className="text-[10px] uppercase tracking-wider text-center">CBM / Carton</TH>
+                      <TH className="text-[10px] uppercase tracking-wider text-right">Total CBM</TH>
                     </TR>
                   </THead>
                   <TBody>
-                    {/* Mocking breakdown if not available */}
-                    {((selectedShipment as SupplierShipment & { items?: Product[] }).items || products.slice(0, selectedShipment.productsCount)).map((item: Product & { quantity?: number; receivedQuantity?: number }, idx: number) => {
-                      const sent = item.quantity || Math.floor(selectedShipment.totalUnits / selectedShipment.productsCount);
-                      const received = item.receivedQuantity || (['RECEIVED', 'QC_DONE', 'PUTAWAY_DONE', 'CLOSED'].includes(selectedShipment.status) ? sent : 0);
-                      const accuracy = sent > 0 ? Math.round((received / sent) * 100) : 0;
+                    {getShipmentLineItems(selectedShipment).map((item, idx) => {
+                      const cartons = item.quantity;
+                      const cbmPerCarton = getCbmPerCarton(item);
+                      const totalCbm = cartons * cbmPerCarton;
                       return (
                         <TR key={idx}>
                           <TD>
@@ -907,16 +956,9 @@ const SupplierInbound: React.FC = () => {
                               <span className="text-[10px] text-slate-400 font-mono">SKU-{item.sku || item.id.split('-')[1]}</span>
                             </div>
                           </TD>
-                          <TD className="text-center font-bold text-slate-600">{sent}</TD>
-                          <TD className="text-center font-bold text-indigo-600">{received}</TD>
-                          <TD className="text-right">
-                            <span className={`text-xs font-bold ${
-                              accuracy === 100 ? 'text-emerald-600' : 
-                              accuracy > 0 ? 'text-amber-600' : 'text-slate-400'
-                            }`}>
-                              {accuracy}%
-                            </span>
-                          </TD>
+                          <TD className="text-center font-bold text-slate-600">{cartons}</TD>
+                          <TD className="text-center font-bold text-slate-600">{formatCbm(cbmPerCarton)} CBM</TD>
+                          <TD className="text-right font-black text-cyan-700">{formatCbm(totalCbm)} CBM</TD>
                         </TR>
                       );
                     })}
@@ -951,7 +993,7 @@ const SupplierInbound: React.FC = () => {
           resetForm();
         }}
         title={editingShipmentId ? "Edit Inbound Shipment" : "Create Inbound Shipment"}
-        size="lg"
+        size="xl"
         footer={
           <div className="flex justify-between w-full">
             <Button 
@@ -974,7 +1016,7 @@ const SupplierInbound: React.FC = () => {
                   disabled={
                     (currentStep === 1 && !selectedWarehouseId) ||
                     (currentStep === 2 && selectedProductIds.length === 0) ||
-                    (currentStep === 3 && selectedProductIds.some(id => !quantities[id]))
+                    (currentStep === 3 && selectedProductIds.some(id => !quantities[id] || quantities[id] <= 0))
                   }
                 >
                   Next Step <ChevronRight className="h-4 w-4 ml-1" />
@@ -1019,7 +1061,7 @@ const SupplierInbound: React.FC = () => {
                   {currentStep > step ? <CheckCircle className="h-5 w-5" /> : step}
                 </div>
                 <span className={`text-[10px] font-bold uppercase tracking-wider ${currentStep >= step ? 'text-indigo-600' : 'text-slate-400'}`}>
-                  {['Warehouse', 'Products', 'Quantities', 'Review'][step - 1]}
+                  {['Warehouse', 'Products', 'Cartons & Space', 'Storage Summary'][step - 1]}
                 </span>
               </div>
             ))}
