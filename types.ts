@@ -734,3 +734,153 @@ export interface ProductivityMetrics {
   leadConversionRate: number;
   productiveHours: number;
 }
+
+// ─── Phase 4: Sales Manager Intelligence ───────────────────────────────────
+
+export type TerritoryLevel = 'Region' | 'Zone' | 'Area';
+
+export interface Territory {
+  id: string;
+  name: string;
+  level: TerritoryLevel;
+  parentId?: string;
+  assignedRepId?: string;
+  assignedRepName?: string;
+  customerCount: number;
+  activeCustomers: number;
+  monthlyRevenue: number;
+}
+
+export interface TerritoryPerformance {
+  territoryId: string;
+  territoryName: string;
+  repId: string;
+  repName: string;
+  visitsThisMonth: number;
+  ordersThisMonth: number;
+  revenueThisMonth: number;
+  collectionsThisMonth: number;
+  activeLeads: number;
+  overdueCollections: number;
+}
+
+export type RepActivityStatus =
+  | 'Online – In Visit'
+  | 'Online – Travelling'
+  | 'Online – Idle'
+  | 'Offline';
+
+export interface RepStatus {
+  repId: string;
+  repName: string;
+  repImage?: string;
+  status: RepActivityStatus;
+  sessionStart?: string;
+  activeVisitCustomer?: string;
+  activeVisitStart?: string;
+  currentLat?: number;
+  currentLng?: number;
+  todayVisits: number;
+  todayOrders: number;
+  todayRevenue: number;
+  todayCollections: number;
+  routeProgress: { visited: number; total: number };
+  lastActivityAt?: string;
+}
+
+export type PeriodType = 'daily' | 'weekly' | 'monthly';
+
+export interface RepPerformanceMetrics {
+  repId: string;
+  repName: string;
+  period: PeriodType;
+  periodLabel: string;
+  visitsCompleted: number;
+  visitsTarget: number;
+  ordersCreated: number;
+  revenueGenerated: number;
+  revenueTarget: number;
+  collectionsRecovered: number;
+  followUpCompletionRate: number;
+  leadConversionRate: number;
+  productiveHours: number;
+  idleHours: number;
+  avgVisitDuration: number;
+  customersCovered: number;
+}
+
+export type CustomerHealthState = 'Healthy' | 'Warning' | 'High Risk' | 'Critical';
+
+export interface CustomerHealth {
+  customerId: string;
+  customerName: string;
+  assignedRepId: string;
+  assignedRepName: string;
+  healthState: CustomerHealthState;
+  healthScore: number;
+  lastVisitDaysAgo?: number;
+  daysSinceLastOrder?: number;
+  outstandingBalance: number;
+  overdueAmount: number;
+  openFollowUps: number;
+  missedVisits: number;
+  flags: string[];
+}
+
+export type AlertType =
+  | 'rep-idle'
+  | 'overdue-collection'
+  | 'inactive-customer'
+  | 'missed-visit'
+  | 'overdue-follow-up'
+  | 'low-productivity'
+  | 'churn-risk'
+  | 'unassigned-lead'
+  | 'stalled-lead';
+
+export type AlertSeverity = 'Info' | 'Warning' | 'Critical';
+
+export interface OperationalAlert {
+  id: string;
+  type: AlertType;
+  severity: AlertSeverity;
+  title: string;
+  description: string;
+  repId?: string;
+  repName?: string;
+  customerId?: string;
+  customerName?: string;
+  leadId?: string;
+  createdAt: string;
+  read: boolean;
+  dismissed: boolean;
+  actionUrl?: string;
+}
+
+export interface TeamAnalytics {
+  date: string;
+  totalReps: number;
+  onlineReps: number;
+  activeVisits: number;
+  todayVisits: number;
+  todayOrders: number;
+  todayRevenue: number;
+  todayCollections: number;
+  pendingFollowUps: number;
+  overdueTasks: number;
+  idleReps: number;
+  highRiskCustomers: number;
+}
+
+export interface LeadAnalytics {
+  repId: string;
+  repName: string;
+  totalLeads: number;
+  activeLeads: number;
+  stalledLeads: number;
+  convertedThisMonth: number;
+  lostThisMonth: number;
+  conversionRate: number;
+  avgDaysToConvert: number;
+  pipelineValue: number;
+}

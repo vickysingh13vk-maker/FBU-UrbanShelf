@@ -77,6 +77,10 @@ import { SupplierProvider } from './context/SupplierContext';
 import { WorkSessionProvider } from './context/WorkSessionContext';
 import { SalesCRMProvider } from './context/SalesCRMContext';
 import { SalesExecutionProvider } from './context/SalesExecutionContext';
+import { SalesManagerProvider } from './context/SalesManagerContext';
+// Phase 4 new pages
+import SMCustomerHealth from './pages/sales-manager/SMCustomerHealth';
+import SMAlerts from './pages/sales-manager/SMAlerts';
 
 const App: React.FC = () => {
   return (
@@ -87,6 +91,7 @@ const App: React.FC = () => {
             <WorkSessionProvider>
             <SalesCRMProvider>
             <SalesExecutionProvider>
+            <SalesManagerProvider>
             <CheckInProvider>
             <HashRouter>
             <Routes>
@@ -134,6 +139,8 @@ const App: React.FC = () => {
                     <Route path="/sales-manager/territories" element={<SMTerritories />} />
                     <Route path="/sales-manager/reports" element={<SMReports />} />
                     <Route path="/sales-manager/analytics" element={<SMAnalytics />} />
+                    <Route path="/sales-manager/customer-health" element={<SMCustomerHealth />} />
+                    <Route path="/sales-manager/alerts" element={<SMAlerts />} />
                     {/* Sales Rep CRM */}
                     <Route path="/sales/dashboard" element={<RepDashboard />} />
                     <Route path="/sales/customers" element={<RepCustomers />} />
@@ -175,6 +182,7 @@ const App: React.FC = () => {
             </Routes>
           </HashRouter>
         </CheckInProvider>
+            </SalesManagerProvider>
             </SalesExecutionProvider>
             </SalesCRMProvider>
             </WorkSessionProvider>
@@ -186,3 +194,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+

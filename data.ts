@@ -1,4 +1,4 @@
-import { Product, Order, Supplier, Category, User, Customer, Cart, Coupon, PricingStrategy, Campaign, Role, Warehouse, Lead, CustomerTimeline, WorkSession, Visit, FollowUp, Task, CollectionAttempt, RoutePlan } from './types';
+import { Product, Order, Supplier, Category, User, Customer, Cart, Coupon, PricingStrategy, Campaign, Role, Warehouse, Lead, CustomerTimeline, WorkSession, Visit, FollowUp, Task, CollectionAttempt, RoutePlan, Territory, TerritoryPerformance, RepStatus, RepPerformanceMetrics, CustomerHealth, OperationalAlert, TeamAnalytics, LeadAnalytics } from './types';
 
 export const PRODUCTS: Product[] = [
   { id: 'P101', name: 'LOST MARY BM6000 KIT', sku: '69af31c9f23b451a66fe8d05', barcode: '506090000101', category: 'Pre-filled Vape Kits + Pods', supplier: 'Lost Mary', flavour: 'Strawberry Lime', price: 3.85, mrp: 5.99, stock: 1200, reservedStock: 150, damagedStock: 5, status: 'Active', image: 'https://picsum.photos/40/40?random=101', unitsPerCarton: 200, weight: '150g', warehouseLocation: 'Rack A-01', batchNumber: 'B-2024-001', expiryDate: '2025-12-31' },
@@ -714,4 +714,79 @@ export const ROUTE_PLANS: RoutePlan[] = [
       { customerId: 'C005', customerName: 'X-Files Archive', address: '22 Basement Row, London SW1A 0AA', priority: 'High', estimatedVisitMinutes: 40, suggestedOrder: 3, hasOverdueCollection: true, hasOverdueFollowUp: true, lastVisitDaysAgo: 3, status: 'Pending' },
     ],
   },
+];
+
+// ─── Phase 4: Sales Manager Intelligence Mock Data ─────────────────────────
+
+export const TERRITORIES: Territory[] = [
+  { id: 'TR001', name: 'North London',  level: 'Area',   parentId: 'TR003', assignedRepId: 'U004', assignedRepName: 'John Smith',  customerCount: 8, activeCustomers: 6, monthlyRevenue: 12400 },
+  { id: 'TR002', name: 'East London',   level: 'Area',   parentId: 'TR003', assignedRepId: 'U010', assignedRepName: 'Emma Clarke', customerCount: 5, activeCustomers: 4, monthlyRevenue: 8750 },
+  { id: 'TR003', name: 'London Zone',   level: 'Zone',   parentId: 'TR004', customerCount: 13, activeCustomers: 10, monthlyRevenue: 21150 },
+  { id: 'TR004', name: 'South East',    level: 'Region', customerCount: 13, activeCustomers: 10, monthlyRevenue: 21150 },
+];
+
+export const TERRITORY_PERFORMANCE: TerritoryPerformance[] = [
+  { territoryId: 'TR001', territoryName: 'North London', repId: 'U004', repName: 'John Smith',  visitsThisMonth: 22, ordersThisMonth: 18, revenueThisMonth: 16400, collectionsThisMonth: 580, activeLeads: 3, overdueCollections: 1 },
+  { territoryId: 'TR002', territoryName: 'East London',  repId: 'U010', repName: 'Emma Clarke', visitsThisMonth: 18, ordersThisMonth: 14, revenueThisMonth: 11200, collectionsThisMonth: 890, activeLeads: 2, overdueCollections: 2 },
+];
+
+export const REP_STATUSES: RepStatus[] = [
+  {
+    repId: 'U004', repName: 'John Smith',
+    status: 'Online – In Visit',
+    sessionStart: '2026-05-07T08:30:00Z',
+    activeVisitCustomer: 'TechHub London',
+    activeVisitStart: '2026-05-07T09:00:00Z',
+    currentLat: 51.5074, currentLng: -0.1278,
+    todayVisits: 2, todayOrders: 1, todayRevenue: 1186, todayCollections: 0,
+    routeProgress: { visited: 2, total: 3 },
+    lastActivityAt: '2026-05-07T09:00:00Z',
+  },
+  {
+    repId: 'U010', repName: 'Emma Clarke',
+    status: 'Online – Travelling',
+    sessionStart: '2026-05-07T09:00:00Z',
+    currentLat: 51.5194, currentLng: -0.0795,
+    todayVisits: 1, todayOrders: 1, todayRevenue: 540, todayCollections: 120,
+    routeProgress: { visited: 1, total: 3 },
+    lastActivityAt: '2026-05-07T10:15:00Z',
+  },
+];
+
+export const REP_PERFORMANCE: RepPerformanceMetrics[] = [
+  { repId: 'U004', repName: 'John Smith',  period: 'daily',   periodLabel: 'Today',      visitsCompleted: 2,  visitsTarget: 5,  ordersCreated: 1,  revenueGenerated: 1186,  revenueTarget: 2000,  collectionsRecovered: 0,   followUpCompletionRate: 67, leadConversionRate: 25, productiveHours: 3.5, idleHours: 0.5, avgVisitDuration: 38, customersCovered: 2 },
+  { repId: 'U004', repName: 'John Smith',  period: 'weekly',  periodLabel: 'This Week',  visitsCompleted: 8,  visitsTarget: 20, ordersCreated: 5,  revenueGenerated: 4820,  revenueTarget: 8000,  collectionsRecovered: 160, followUpCompletionRate: 72, leadConversionRate: 25, productiveHours: 18,  idleHours: 2,   avgVisitDuration: 42, customersCovered: 6 },
+  { repId: 'U004', repName: 'John Smith',  period: 'monthly', periodLabel: 'This Month', visitsCompleted: 22, visitsTarget: 80, ordersCreated: 18, revenueGenerated: 16400, revenueTarget: 32000, collectionsRecovered: 580, followUpCompletionRate: 78, leadConversionRate: 25, productiveHours: 72,  idleHours: 8,   avgVisitDuration: 40, customersCovered: 8 },
+  { repId: 'U010', repName: 'Emma Clarke', period: 'daily',   periodLabel: 'Today',      visitsCompleted: 1,  visitsTarget: 5,  ordersCreated: 1,  revenueGenerated: 540,   revenueTarget: 2000,  collectionsRecovered: 120, followUpCompletionRate: 50, leadConversionRate: 33, productiveHours: 2,   idleHours: 1,   avgVisitDuration: 55, customersCovered: 1 },
+  { repId: 'U010', repName: 'Emma Clarke', period: 'weekly',  periodLabel: 'This Week',  visitsCompleted: 6,  visitsTarget: 20, ordersCreated: 4,  revenueGenerated: 3100,  revenueTarget: 8000,  collectionsRecovered: 340, followUpCompletionRate: 60, leadConversionRate: 33, productiveHours: 15,  idleHours: 3,   avgVisitDuration: 48, customersCovered: 4 },
+  { repId: 'U010', repName: 'Emma Clarke', period: 'monthly', periodLabel: 'This Month', visitsCompleted: 18, visitsTarget: 80, ordersCreated: 14, revenueGenerated: 11200, revenueTarget: 32000, collectionsRecovered: 890, followUpCompletionRate: 65, leadConversionRate: 33, productiveHours: 60,  idleHours: 12,  avgVisitDuration: 45, customersCovered: 5 },
+];
+
+export const CUSTOMER_HEALTH: CustomerHealth[] = [
+  { customerId: 'C001', customerName: 'TechHub London',       assignedRepId: 'U004', assignedRepName: 'John Smith',  healthState: 'Healthy',   healthScore: 82, lastVisitDaysAgo: 0,  daysSinceLastOrder: 0,  outstandingBalance: 1186,  overdueAmount: 0,    openFollowUps: 1, missedVisits: 0, flags: [] },
+  { customerId: 'C002', customerName: 'Cyberdyne Retail',     assignedRepId: 'U004', assignedRepName: 'John Smith',  healthState: 'Warning',   healthScore: 54, lastVisitDaysAgo: 2,  daysSinceLastOrder: 14, outstandingBalance: 45.5,  overdueAmount: 45.5, openFollowUps: 2, missedVisits: 1, flags: ['Balance overdue', 'Missed follow-up'] },
+  { customerId: 'C003', customerName: 'Nostromo Supplies',    assignedRepId: 'U010', assignedRepName: 'Emma Clarke', healthState: 'High Risk', healthScore: 31, lastVisitDaysAgo: 45, daysSinceLastOrder: 45, outstandingBalance: 0,     overdueAmount: 0,    openFollowUps: 0, missedVisits: 3, flags: ['No visit 45d', 'No orders 45d', 'Inactive'] },
+  { customerId: 'C004', customerName: 'Rick Deckard Imports', assignedRepId: 'U010', assignedRepName: 'Emma Clarke', healthState: 'Critical',  healthScore: 12, lastVisitDaysAgo: 60, daysSinceLastOrder: 60, outstandingBalance: 260,   overdueAmount: 260,  openFollowUps: 1, missedVisits: 4, flags: ['Overdue £260', 'No visit 60d', 'Churn risk'] },
+  { customerId: 'C005', customerName: 'X-Files Archive',      assignedRepId: 'U004', assignedRepName: 'John Smith',  healthState: 'Warning',   healthScore: 48, lastVisitDaysAgo: 2,  daysSinceLastOrder: 20, outstandingBalance: 120.5, overdueAmount: 60,   openFollowUps: 2, missedVisits: 0, flags: ['Partial payment dispute', 'Follow-up overdue'] },
+];
+
+export const OPERATIONAL_ALERTS: OperationalAlert[] = [
+  { id: 'AL001', type: 'churn-risk',         severity: 'Critical', title: 'Churn Risk — Rick Deckard Imports',    description: 'No visit or order in 60 days. £260 overdue.', repId: 'U010', repName: 'Emma Clarke', customerId: 'C004', customerName: 'Rick Deckard Imports', createdAt: '2026-05-07T07:00:00Z', read: false, dismissed: false },
+  { id: 'AL002', type: 'inactive-customer',  severity: 'Warning',  title: 'Inactive — Nostromo Supplies 45 days', description: 'No visit or order in 45 days. At-risk account.',  repId: 'U010', repName: 'Emma Clarke', customerId: 'C003', customerName: 'Nostromo Supplies',    createdAt: '2026-05-07T07:00:00Z', read: false, dismissed: false },
+  { id: 'AL003', type: 'overdue-collection', severity: 'Critical', title: 'Overdue Collection — Cyberdyne Retail', description: '£45.50 overdue. 2 failed attempts.',              repId: 'U004', repName: 'John Smith',  customerId: 'C002', customerName: 'Cyberdyne Retail',     createdAt: '2026-05-07T08:00:00Z', read: false, dismissed: false },
+  { id: 'AL004', type: 'overdue-follow-up',  severity: 'Warning',  title: 'Overdue Follow-Up — X-Files Archive',  description: 'Collection follow-up 2 days overdue.',           repId: 'U004', repName: 'John Smith',  customerId: 'C005', customerName: 'X-Files Archive',      createdAt: '2026-05-07T08:00:00Z', read: true,  dismissed: false },
+  { id: 'AL005', type: 'stalled-lead',       severity: 'Info',     title: 'Stalled Lead — Smoke Signal Co',       description: 'No activity for 14 days. Stage: Demo.',          repId: 'U004', repName: 'John Smith',  leadId: 'L001',                                               createdAt: '2026-05-06T10:00:00Z', read: false, dismissed: false },
+  { id: 'AL006', type: 'unassigned-lead',    severity: 'Warning',  title: '2 leads unassigned',                   description: 'Leads without rep assignment need action.',                                                                                                          createdAt: '2026-05-07T07:00:00Z', read: false, dismissed: false },
+];
+
+export const TEAM_ANALYTICS: TeamAnalytics = {
+  date: '2026-05-07',
+  totalReps: 2, onlineReps: 2, activeVisits: 1,
+  todayVisits: 3, todayOrders: 2, todayRevenue: 1726, todayCollections: 120,
+  pendingFollowUps: 4, overdueTasks: 2, idleReps: 0, highRiskCustomers: 2,
+};
+
+export const LEAD_ANALYTICS: LeadAnalytics[] = [
+  { repId: 'U004', repName: 'John Smith',  totalLeads: 4, activeLeads: 3, stalledLeads: 1, convertedThisMonth: 1, lostThisMonth: 0, conversionRate: 25, avgDaysToConvert: 45, pipelineValue: 14200 },
+  { repId: 'U010', repName: 'Emma Clarke', totalLeads: 3, activeLeads: 2, stalledLeads: 1, convertedThisMonth: 1, lostThisMonth: 1, conversionRate: 33, avgDaysToConvert: 38, pipelineValue: 9800 },
 ];

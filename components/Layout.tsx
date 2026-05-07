@@ -4,7 +4,7 @@ import {
   Users, Ticket, Tag, Megaphone, Heart, Settings, UsersRound, Shield,
   Mail, Wallet, Warehouse, RotateCcw, Truck, Activity,
   BarChart3, Map, Gift, FileText, UserCircle, Target, TrendingUp,
-  ClipboardList, MapPin, CreditCard, UserCheck
+  ClipboardList, MapPin, CreditCard, UserCheck, Bell, AlertTriangle
 } from 'lucide-react';
 import { Sidebar, Navbar } from './ui';
 import { useAuth } from '../context/AuthContext';
@@ -114,6 +114,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     { name: 'Territories', href: '/sales-manager/territories', icon: MapPin, group: 'analytics' },
     { name: 'Reports', href: '/sales-manager/reports', icon: FileText, group: 'analytics' },
     { name: 'Analytics', href: '/sales-manager/analytics', icon: BarChart3, group: 'analytics' },
+    { name: 'Customer Health', href: '/sales-manager/customer-health', icon: AlertTriangle, group: 'analytics' },
+    { name: 'Alerts', href: '/sales-manager/alerts', icon: Bell, group: 'analytics' },
   ];
 
   const salesRepNavigation = [
