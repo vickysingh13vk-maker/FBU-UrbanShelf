@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
+import {
   LayoutDashboard, PieChart, ShoppingBag, Layers, Box, ShoppingCart,
   Users, Ticket, Tag, Megaphone, Heart, Settings, UsersRound, Shield,
   Mail, Wallet, Warehouse, RotateCcw, Truck, Activity,
-  BarChart3, Map, Gift, FileText, UserCircle
+  BarChart3, Map, Gift, FileText, UserCircle, Target, TrendingUp,
+  ClipboardList, MapPin, CreditCard, UserCheck
 } from 'lucide-react';
 import { Sidebar, Navbar } from './ui';
 import { useAuth } from '../context/AuthContext';
@@ -62,8 +63,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   const allNavigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard, group: 'main', module: 'Dashboard' },
+    { name: 'Sales Rep Dashboard', href: '/sales-rep-dashboard', icon: Activity, group: 'main', module: 'Dashboard' },
     { name: 'Analytics', href: '/analytics', icon: PieChart, group: 'analytics', module: 'Analytics' },
-    { name: 'Rep Performance', href: '/rep-performance', icon: Users, group: 'analytics', module: 'Analytics' },
+    { name: 'Rep Performance', href: '/rep-performance', icon: BarChart3, group: 'analytics', module: 'Analytics' },
     { name: 'Orders', href: '/orders', icon: ShoppingCart, group: 'analytics', module: 'Orders' },
     
     { name: 'Products', href: '/products', icon: Box, group: 'analytics', module: 'Products' },
@@ -102,10 +104,46 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     { name: 'Settings', href: '/supplier/settings', icon: Settings, group: 'admin' },
   ];
 
-  const isSupplier = user?.roleName === 'Supplier';
-  const navigation = isSupplier 
-    ? supplierNavigation 
-    : allNavigation.filter(item => hasPermission(item.module, 'view'));
+  const salesManagerNavigation = [
+    { name: 'Dashboard', href: '/sales-manager/dashboard', icon: LayoutDashboard, group: 'main' },
+    { name: 'Team Monitoring', href: '/sales-manager/team', icon: UserCheck, group: 'main' },
+    { name: 'Customers', href: '/sales-manager/customers', icon: UsersRound, group: 'crm' },
+    { name: 'Leads Pipeline', href: '/sales-manager/leads', icon: Target, group: 'crm' },
+    { name: 'Team Orders', href: '/sales-manager/orders', icon: ShoppingCart, group: 'crm' },
+    { name: 'Payments', href: '/sales-manager/payments', icon: Wallet, group: 'crm' },
+    { name: 'Territories', href: '/sales-manager/territories', icon: MapPin, group: 'analytics' },
+    { name: 'Reports', href: '/sales-manager/reports', icon: FileText, group: 'analytics' },
+    { name: 'Analytics', href: '/sales-manager/analytics', icon: BarChart3, group: 'analytics' },
+  ];
+
+  const salesRepNavigation = [
+    { name: 'Dashboard', href: '/sales/dashboard', icon: LayoutDashboard, group: 'main' },
+    { name: 'Today\'s Route', href: '/sales/route', icon: Map, group: 'execution' },
+    { name: 'Visits', href: '/sales/visits', icon: MapPin, group: 'execution' },
+    { name: 'Follow-Ups', href: '/sales/follow-ups', icon: ClipboardList, group: 'execution' },
+    { name: 'Tasks', href: '/sales/tasks', icon: Activity, group: 'execution' },
+    { name: 'Collections', href: '/sales/collections', icon: CreditCard, group: 'execution' },
+    { name: 'My Customers', href: '/sales/customers', icon: UsersRound, group: 'crm' },
+    { name: 'Leads', href: '/sales/leads', icon: Target, group: 'crm' },
+    { name: 'My Orders', href: '/sales/orders', icon: ShoppingCart, group: 'crm' },
+    { name: 'My Reports', href: '/sales/reporting', icon: TrendingUp, group: 'analytics' },
+    { name: 'My Profile', href: '/sales/profile', icon: UserCircle, group: 'analytics' },
+  ];
+
+  let navigation: typeof allNavigation;
+  switch (user?.roleName) {
+    case 'Supplier':
+      navigation = supplierNavigation;
+      break;
+    case 'Sales Manager':
+      navigation = salesManagerNavigation;
+      break;
+    case 'Sales Rep':
+      navigation = salesRepNavigation;
+      break;
+    default:
+      navigation = allNavigation.filter(item => hasPermission(item.module, 'view'));
+  }
 
   const userData = {
     name: user?.name || 'Guest User',

@@ -45,11 +45,14 @@ export interface Product {
 export interface Order {
   id: string;
   customer: string;
+  customerId?: string;
   date: string;
   total: number;
   items: number;
   status: 'Pending' | 'Approved' | 'Picking' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled';
   paymentStatus: 'Paid' | 'Unpaid' | 'Pending' | 'Refunded';
+  repId?: string;
+  collectionAmount?: number;
 }
 
 export interface StockReversal {
@@ -86,6 +89,14 @@ export interface Customer {
   supplier?: string;
   lat?: number;
   lng?: number;
+  // CRM ownership
+  assignedRepId?: string;
+  assignedRepName?: string;
+  createdByRepId?: string;
+  ownershipStatus?: CustomerOwnershipStatus;
+  lifecycleStage?: CustomerLifecycleStage;
+  lastContactDate?: string;
+  nextFollowUp?: string;
 }
 
 export interface Cart {
@@ -449,4 +460,277 @@ export interface ReportHistoryItem {
 export interface SupplierReportsData {
   templates: ReportTemplate[];
   history: ReportHistoryItem[];
+}
+
+// ─── PHASE 2: SALES REP CRM ──────────────────────────────────────────────────
+
+export type WorkSessionStatus = 'active' | 'ended';
+
+export interface SessionSummary {
+  duration: number;
+  visits: number;
+  orders: number;
+  collections: number;
+  revenue: number;
+  leadsAdded: number;
+  followUpsCompleted: number;
+}
+
+export interface WorkSession {
+  id: string;
+  repId: string;
+  repName: string;
+  date: string;
+  startTime: string;
+  endTime?: string;
+  status: WorkSessionStatus;
+  totalVisits: number;
+  totalOrders: number;
+  totalCollections: number;
+  totalRevenue: number;
+  summary?: SessionSummary;
+}
+
+export type LeadStage =
+  | 'New Lead'
+  | 'Contacted'
+  | 'Interested'
+  | 'Meeting Scheduled'
+  | 'Trial Order'
+  | 'Converted'
+  | 'Lost';
+
+export type LeadPriority = 'High' | 'Medium' | 'Low';
+
+export type LeadActivityType =
+  | 'Call'
+  | 'Visit'
+  | 'Follow-Up'
+  | 'WhatsApp'
+  | 'Note'
+  | 'Stage Change';
+
+export interface LeadActivity {
+  id: string;
+  leadId: string;
+  type: LeadActivityType;
+  repId: string;
+  repName: string;
+  timestamp: string;
+  notes: string;
+  outcome?: string;
+  nextAction?: string;
+  stageFrom?: LeadStage;
+  stageTo?: LeadStage;
+}
+
+export interface Lead {
+  id: string;
+  repId: string;
+  repName: string;
+  businessName: string;
+  contactName: string;
+  phone: string;
+  email?: string;
+  address?: string;
+  category?: string;
+  stage: LeadStage;
+  priority: LeadPriority;
+  createdDate: string;
+  lastContactDate?: string;
+  nextFollowUp?: string;
+  notes: string;
+  activities: LeadActivity[];
+  convertedCustomerId?: string;
+  lostReason?: string;
+}
+
+export type TimelineEventType =
+  | 'Call'
+  | 'Visit'
+  | 'Follow-Up'
+  | 'Order'
+  | 'Payment'
+  | 'WhatsApp'
+  | 'Note';
+
+export interface CustomerTimeline {
+  id: string;
+  customerId: string;
+  type: TimelineEventType;
+  repId: string;
+  repName: string;
+  timestamp: string;
+  notes: string;
+  outcome?: string;
+  nextAction?: string;
+  orderId?: string;
+  amount?: number;
+}
+
+export type CustomerLifecycleStage =
+  | 'Lead'
+  | 'Prospect'
+  | 'Qualified'
+  | 'Active'
+  | 'At Risk'
+  | 'Inactive'
+  | 'Lost'
+  | 'Archived';
+
+export type CustomerOwnershipStatus = 'assigned' | 'self-created' | 'converted';
+
+// ─── Phase 3: Sales Execution Engine ────────────────────────────────────────
+
+// Visit
+export type VisitStatus = 'planned' | 'active' | 'completed' | 'cancelled';
+export type VisitObjectiveType = 'Order' | 'Collection' | 'Product Demo' | 'Relationship' | 'Sampling' | 'Merchandising';
+
+export interface VisitObjective {
+  id: string;
+  type: VisitObjectiveType;
+  description: string;
+  completed: boolean;
+}
+
+export interface VisitOutcome {
+  orderId?: string;
+  orderAmount?: number;
+  collectionAmount?: number;
+  productsDiscussed: string[];
+  notes: string;
+  customerSatisfaction?: 1 | 2 | 3 | 4 | 5;
+}
+
+export interface Visit {
+  id: string;
+  customerId: string;
+  customerName: string;
+  repId: string;
+  repName: string;
+  status: VisitStatus;
+  date: string;
+  startTime: string;
+  endTime?: string;
+  durationMinutes?: number;
+  gpsLat?: number;
+  gpsLng?: number;
+  objectives: VisitObjective[];
+  outcome?: VisitOutcome;
+  notes: string;
+  followUpId?: string;
+  sessionId?: string;
+}
+
+// Follow-Up
+export type FollowUpType =
+  | 'Callback'
+  | 'Payment Reminder'
+  | 'Revisit'
+  | 'Product Demo'
+  | 'Negotiation'
+  | 'Trial Follow-Up'
+  | 'Collection Follow-Up';
+
+export type FollowUpStatus = 'Pending' | 'Completed' | 'Overdue' | 'Cancelled';
+export type FollowUpPriority = 'High' | 'Medium' | 'Low';
+
+export interface FollowUp {
+  id: string;
+  type: FollowUpType;
+  repId: string;
+  customerId?: string;
+  customerName?: string;
+  leadId?: string;
+  leadName?: string;
+  dueDate: string;
+  status: FollowUpStatus;
+  priority: FollowUpPriority;
+  notes: string;
+  outcome?: string;
+  linkedVisitId?: string;
+  recurring?: boolean;
+  recurringIntervalDays?: number;
+  completedAt?: string;
+}
+
+// Task
+export type TaskType =
+  | 'Visit'
+  | 'Collection'
+  | 'Lead Follow-Up'
+  | 'Product Push'
+  | 'Merchandising'
+  | 'Admin';
+
+export type TaskStatus = 'Pending' | 'In Progress' | 'Completed' | 'Overdue';
+export type TaskPriority = 'High' | 'Medium' | 'Low';
+
+export interface Task {
+  id: string;
+  type: TaskType;
+  title: string;
+  description?: string;
+  customerId?: string;
+  customerName?: string;
+  repId: string;
+  priority: TaskPriority;
+  dueDate: string;
+  status: TaskStatus;
+  completedAt?: string;
+  linkedFollowUpId?: string;
+  linkedVisitId?: string;
+}
+
+// Collection
+export type CollectionStatus = 'Pending' | 'Partially Paid' | 'Paid' | 'Disputed' | 'Overdue';
+
+export interface CollectionAttempt {
+  id: string;
+  customerId: string;
+  customerName: string;
+  repId: string;
+  attemptDate: string;
+  amountRequested: number;
+  amountCollected: number;
+  status: CollectionStatus;
+  notes: string;
+  promisedDate?: string;
+  visitId?: string;
+}
+
+// Route Planning
+export interface RoutePlanStop {
+  customerId: string;
+  customerName: string;
+  address: string;
+  priority: 'High' | 'Medium' | 'Low';
+  estimatedVisitMinutes: number;
+  suggestedOrder: number;
+  hasOverdueCollection: boolean;
+  hasOverdueFollowUp: boolean;
+  lastVisitDaysAgo?: number;
+  status: 'Pending' | 'Visited' | 'Skipped';
+}
+
+export interface RoutePlan {
+  id: string;
+  repId: string;
+  date: string;
+  stops: RoutePlanStop[];
+  estimatedTotalMinutes?: number;
+}
+
+// Productivity
+export interface ProductivityMetrics {
+  repId: string;
+  date: string;
+  visitsCompleted: number;
+  visitsPlanned: number;
+  avgVisitDurationMinutes: number;
+  ordersPerVisit: number;
+  collectionsRecovered: number;
+  followUpCompletionRate: number;
+  leadConversionRate: number;
+  productiveHours: number;
 }
