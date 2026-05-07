@@ -4,6 +4,7 @@ import { Input } from './Input';
 import { useAuth } from '../../context/AuthContext';
 import { useDashboard, DashboardRole } from '../../context/DashboardContext';
 import { useLocation } from 'react-router-dom';
+import NotificationBell from '../notifications/NotificationBell';
 
 interface NavbarProps {
   onMenuClick: () => void;
@@ -115,50 +116,54 @@ export const Navbar: React.FC<NavbarProps> = ({
             {isFullScreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
           </button>
 
-          <div className="relative" ref={notificationsRef}>
-            <button 
-              className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors relative"
-              onClick={onToggleNotifications}
-            >
-              <Bell className="h-4 w-4" />
-              <span className="absolute top-2 right-2 h-1.5 w-1.5 bg-rose-500 rounded-full border border-white"></span>
-            </button>
+          {(user?.roleName === 'Sales Manager' || user?.roleName === 'Sales Rep' || user?.roleName === 'Admin') ? (
+            <NotificationBell />
+          ) : (
+            <div className="relative" ref={notificationsRef}>
+              <button
+                className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors relative"
+                onClick={onToggleNotifications}
+              >
+                <Bell className="h-4 w-4" />
+                <span className="absolute top-2 right-2 h-1.5 w-1.5 bg-rose-500 rounded-full border border-white"></span>
+              </button>
 
-            {showNotifications && (
-              <div className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                  <h3 className="font-bold text-slate-900 text-sm">Notifications</h3>
-                  <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-wider">3 New</span>
+              {showNotifications && (
+                <div className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <h3 className="font-bold text-slate-900 text-sm">Notifications</h3>
+                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-wider">3 New</span>
+                  </div>
+                  <div className="max-h-96 overflow-y-auto">
+                    <NotificationItem
+                      icon={<ShoppingCart className="h-4 w-4" />}
+                      iconBg="bg-blue-50 text-blue-600"
+                      title="New Order #ORD-092"
+                      description="Acme Corp placed a new order for $1,240.00"
+                      time="10 minutes ago"
+                    />
+                    <NotificationItem
+                      icon={<Box className="h-4 w-4" />}
+                      iconBg="bg-emerald-50 text-emerald-600"
+                      title="Low Stock Alert"
+                      description="Premium Widget is running low (5 items left)"
+                      time="1 hour ago"
+                    />
+                    <NotificationItem
+                      icon={<Users className="h-4 w-4" />}
+                      iconBg="bg-purple-50 text-purple-600"
+                      title="New Customer Registration"
+                      description="TechSolutions Inc. has registered an account"
+                      time="3 hours ago"
+                    />
+                  </div>
+                  <div className="p-3 border-t border-slate-100 text-center bg-slate-50/50">
+                    <button className="text-xs text-indigo-600 font-bold hover:text-indigo-700 uppercase tracking-wider">View All Notifications</button>
+                  </div>
                 </div>
-                <div className="max-h-96 overflow-y-auto">
-                  <NotificationItem 
-                    icon={<ShoppingCart className="h-4 w-4" />}
-                    iconBg="bg-blue-50 text-blue-600"
-                    title="New Order #ORD-092"
-                    description="Acme Corp placed a new order for $1,240.00"
-                    time="10 minutes ago"
-                  />
-                  <NotificationItem 
-                    icon={<Box className="h-4 w-4" />}
-                    iconBg="bg-emerald-50 text-emerald-600"
-                    title="Low Stock Alert"
-                    description="Premium Widget is running low (5 items left)"
-                    time="1 hour ago"
-                  />
-                  <NotificationItem 
-                    icon={<Users className="h-4 w-4" />}
-                    iconBg="bg-purple-50 text-purple-600"
-                    title="New Customer Registration"
-                    description="TechSolutions Inc. has registered an account"
-                    time="3 hours ago"
-                  />
-                </div>
-                <div className="p-3 border-t border-slate-100 text-center bg-slate-50/50">
-                  <button className="text-xs text-indigo-600 font-bold hover:text-indigo-700 uppercase tracking-wider">View All Notifications</button>
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
           
           <div className="h-4 w-px bg-slate-200 mx-2 hidden sm:block"></div>
 

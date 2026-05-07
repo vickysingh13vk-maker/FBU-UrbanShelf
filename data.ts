@@ -1,4 +1,4 @@
-import { Product, Order, Supplier, Category, User, Customer, Cart, Coupon, PricingStrategy, Campaign, Role, Warehouse, Lead, CustomerTimeline, WorkSession, Visit, FollowUp, Task, CollectionAttempt, RoutePlan, Territory, TerritoryPerformance, RepStatus, RepPerformanceMetrics, CustomerHealth, OperationalAlert, TeamAnalytics, LeadAnalytics } from './types';
+import { Product, Order, Supplier, Category, User, Customer, Cart, Coupon, PricingStrategy, Campaign, Role, Warehouse, Lead, CustomerTimeline, WorkSession, Visit, FollowUp, Task, CollectionAttempt, RoutePlan, Territory, TerritoryPerformance, RepStatus, RepPerformanceMetrics, CustomerHealth, OperationalAlert, TeamAnalytics, LeadAnalytics, CRMNotification, AutomationRule, Escalation, ApprovalRequest, AuditLog, CustomerDocument, CRMRecommendation } from './types';
 
 export const PRODUCTS: Product[] = [
   { id: 'P101', name: 'LOST MARY BM6000 KIT', sku: '69af31c9f23b451a66fe8d05', barcode: '506090000101', category: 'Pre-filled Vape Kits + Pods', supplier: 'Lost Mary', flavour: 'Strawberry Lime', price: 3.85, mrp: 5.99, stock: 1200, reservedStock: 150, damagedStock: 5, status: 'Active', image: 'https://picsum.photos/40/40?random=101', unitsPerCarton: 200, weight: '150g', warehouseLocation: 'Rack A-01', batchNumber: 'B-2024-001', expiryDate: '2025-12-31' },
@@ -789,4 +789,144 @@ export const TEAM_ANALYTICS: TeamAnalytics = {
 export const LEAD_ANALYTICS: LeadAnalytics[] = [
   { repId: 'U004', repName: 'John Smith',  totalLeads: 4, activeLeads: 3, stalledLeads: 1, convertedThisMonth: 1, lostThisMonth: 0, conversionRate: 25, avgDaysToConvert: 45, pipelineValue: 14200 },
   { repId: 'U010', repName: 'Emma Clarke', totalLeads: 3, activeLeads: 2, stalledLeads: 1, convertedThisMonth: 1, lostThisMonth: 1, conversionRate: 33, avgDaysToConvert: 38, pipelineValue: 9800 },
+];
+
+// ─── Phase 5: Advanced CRM Operations Mock Data ────────────────────────────
+
+export const NOTIFICATIONS: CRMNotification[] = [
+  { id: 'N001', type: 'follow-up-reminder',  priority: 'Warning',  title: 'Follow-up due — Cyberdyne Retail',      body: 'Scheduled follow-up for payment collection is due today.',          read: false, dismissed: false, createdAt: '2026-05-08T08:00:00Z', linkedEntityType: 'customer',   linkedEntityId: 'C002', linkedEntityName: 'Cyberdyne Retail',     visibleToRoles: ['Sales Rep'], repId: 'U004' },
+  { id: 'N002', type: 'overdue-payment',     priority: 'Critical', title: 'Overdue payment — X-Files Archive',      body: '£60 overdue. Dispute unresolved for 5 days.',                       read: false, dismissed: false, createdAt: '2026-05-08T07:30:00Z', linkedEntityType: 'customer',   linkedEntityId: 'C005', linkedEntityName: 'X-Files Archive',      visibleToRoles: ['Sales Rep', 'Sales Manager'], repId: 'U004' },
+  { id: 'N003', type: 'missed-visit',        priority: 'Warning',  title: 'Missed visit — Nostromo Supplies',       body: 'No visit recorded for 45 days. Account at risk.',                   read: false, dismissed: false, createdAt: '2026-05-08T07:00:00Z', linkedEntityType: 'customer',   linkedEntityId: 'C003', linkedEntityName: 'Nostromo Supplies',    visibleToRoles: ['Sales Rep', 'Sales Manager'], repId: 'U010' },
+  { id: 'N004', type: 'inactive-customer',   priority: 'Critical', title: 'Critical — Rick Deckard Imports',        body: 'No visit or order in 60 days. £260 overdue. Churn risk.',           read: false, dismissed: false, createdAt: '2026-05-08T07:00:00Z', linkedEntityType: 'customer',   linkedEntityId: 'C004', linkedEntityName: 'Rick Deckard Imports', visibleToRoles: ['Sales Rep', 'Sales Manager'], repId: 'U010' },
+  { id: 'N005', type: 'task-overdue',        priority: 'Warning',  title: 'Task overdue — Demo preparation',        body: 'Task "Prepare product demo for Smoke Signal Co" is 1 day overdue.', read: true,  dismissed: false, createdAt: '2026-05-07T09:00:00Z', linkedEntityType: 'task',       linkedEntityId: 'T003', linkedEntityName: 'Prepare product demo', visibleToRoles: ['Sales Rep'], repId: 'U004' },
+  { id: 'N006', type: 'collection-due',      priority: 'Warning',  title: 'Collection due — Cyberdyne Retail',      body: '£45.50 collection due today. 2 previous attempts failed.',           read: false, dismissed: false, createdAt: '2026-05-08T08:00:00Z', linkedEntityType: 'collection', linkedEntityId: 'COL001', linkedEntityName: 'Cyberdyne Retail £45.50', visibleToRoles: ['Sales Rep'], repId: 'U004' },
+  { id: 'N007', type: 'lead-stale',          priority: 'Info',     title: 'Stale lead — Smoke Signal Co',           body: 'No activity on this lead for 14 days. Demo stage stalled.',         read: true,  dismissed: false, createdAt: '2026-05-07T10:00:00Z', linkedEntityType: 'lead',       linkedEntityId: 'L001', linkedEntityName: 'Smoke Signal Co',     visibleToRoles: ['Sales Rep'], repId: 'U004' },
+  { id: 'N008', type: 'approval-required',   priority: 'Critical', title: 'Approval needed — 15% discount request', body: 'John Smith requests 15% discount for Cyberdyne Retail order.',      read: false, dismissed: false, createdAt: '2026-05-08T09:00:00Z', linkedEntityType: 'approval',   linkedEntityId: 'AP001', linkedEntityName: 'Discount — Cyberdyne Retail', visibleToRoles: ['Sales Manager'] },
+  { id: 'N009', type: 'overdue-payment',     priority: 'Critical', title: 'Approval needed — payment write-off',    body: 'Write-off request for £45.50 — Cyberdyne Retail requires review.',  read: false, dismissed: false, createdAt: '2026-05-08T08:30:00Z', linkedEntityType: 'approval',   linkedEntityId: 'AP004', linkedEntityName: 'Write-off — Cyberdyne Retail', visibleToRoles: ['Sales Manager'] },
+  { id: 'N010', type: 'missed-visit',        priority: 'Info',     title: 'Team alert — 2 reps have overdue visits', body: 'Emma Clarke has 2 customers with no visit in 30+ days.',           read: false, dismissed: false, createdAt: '2026-05-08T07:00:00Z', linkedEntityType: 'customer',   linkedEntityId: 'C004', linkedEntityName: 'Rick Deckard Imports', visibleToRoles: ['Sales Manager'] },
+];
+
+export const AUTOMATION_RULES: AutomationRule[] = [
+  { id: 'AR001', name: 'No Visit 30 Days → Follow-Up',     description: 'When a customer has no visit for 30+ days, auto-create a revisit follow-up for the assigned rep.', trigger: 'no-visit-30d',         triggerCondition: { daysThreshold: 30 }, actions: ['create-follow-up', 'create-notification'], actionConfig: { followUpPriority: 'High', followUpTitle: 'Revisit overdue customer', notifPriority: 'Warning' }, status: 'Active',  appliesTo: ['Sales Rep'], lastRunAt: '2026-05-08T06:00:00Z', totalFired: 3,  createdAt: '2026-01-15T00:00:00Z' },
+  { id: 'AR002', name: 'Overdue Payment → Alert Manager',  description: 'When a payment is overdue 7+ days, notify sales manager and create collection task.',               trigger: 'overdue-payment',       triggerCondition: { daysThreshold: 7  }, actions: ['create-notification', 'alert-manager'],    actionConfig: { notifPriority: 'Critical', alertTitle: 'Overdue payment requires attention' },                          status: 'Active',  appliesTo: ['Sales Manager'], lastRunAt: '2026-05-08T06:00:00Z', totalFired: 5,  createdAt: '2026-01-15T00:00:00Z' },
+  { id: 'AR003', name: 'Inactive Lead 21 Days → Stale',   description: 'When a lead has no activity for 21+ days, mark it as stale and notify the rep.',                    trigger: 'inactive-lead-21d',     triggerCondition: { daysThreshold: 21 }, actions: ['mark-lead-stale', 'create-notification'],  actionConfig: { notifPriority: 'Info', notifTitle: 'Lead marked stale — no activity 21d' },                             status: 'Active',  appliesTo: ['Sales Rep'], lastRunAt: '2026-05-07T06:00:00Z', totalFired: 2,  createdAt: '2026-02-01T00:00:00Z' },
+  { id: 'AR004', name: 'Missed Follow-Up → Alert Manager',description: 'When a follow-up is missed by 2+ days, alert the sales manager.',                                    trigger: 'missed-follow-up',      triggerCondition: { daysThreshold: 2  }, actions: ['alert-manager', 'create-notification'],    actionConfig: { alertTitle: 'Rep missed a follow-up', notifPriority: 'Warning' },                                         status: 'Active',  appliesTo: ['Sales Manager'], lastRunAt: '2026-05-08T06:00:00Z', totalFired: 4,  createdAt: '2026-02-01T00:00:00Z' },
+  { id: 'AR005', name: 'Customer Inactive 45 Days → Task',description: 'When a customer has no order or visit for 45+ days, create a revisit task for the rep.',             trigger: 'customer-inactive-45d', triggerCondition: { daysThreshold: 45 }, actions: ['create-task', 'create-notification'],      actionConfig: { taskTitle: 'Reactivate inactive customer', taskPriority: 'High', notifPriority: 'Warning' },              status: 'Active',  appliesTo: ['Sales Rep'], lastRunAt: '2026-05-07T06:00:00Z', totalFired: 2,  createdAt: '2026-02-15T00:00:00Z' },
+  { id: 'AR006', name: 'Collection Overdue → Task',        description: 'When a collection is overdue 3+ days, auto-create a priority collection task for the rep.',         trigger: 'collection-overdue',    triggerCondition: { daysThreshold: 3  }, actions: ['create-task', 'create-notification'],      actionConfig: { taskTitle: 'Priority collection required', taskPriority: 'High', notifPriority: 'Warning' },              status: 'Active',  appliesTo: ['Sales Rep'], lastRunAt: '2026-05-08T06:00:00Z', totalFired: 7,  createdAt: '2026-03-01T00:00:00Z' },
+  { id: 'AR007', name: 'Stale Lead 14 Days → Notify',     description: 'When a lead has been stale for 14 days with no rep action, send an escalation notification.',       trigger: 'lead-stale-14d',        triggerCondition: { daysThreshold: 14 }, actions: ['create-notification'],                     actionConfig: { notifPriority: 'Info', notifTitle: 'Stale lead needs rep action' },                                      status: 'Paused', appliesTo: ['Sales Rep'], lastRunAt: '2026-05-01T06:00:00Z', totalFired: 1,  createdAt: '2026-03-15T00:00:00Z' },
+];
+
+export const ESCALATIONS: Escalation[] = [
+  {
+    id: 'ESC001', type: 'payment-dispute', status: 'Reviewed', priority: 'High',
+    title: 'Payment Dispute — Cyberdyne Retail £45.50',
+    description: 'Customer disputes the £45.50 charge. Claims delivery was incomplete. Rep has attempted 2 collections.',
+    createdBy: 'U004', createdByName: 'John Smith', assignedTo: 'U011', assignedToName: 'David Patel',
+    customerId: 'C002', customerName: 'Cyberdyne Retail', repId: 'U004', repName: 'John Smith',
+    slaDeadline: '2026-05-10T17:00:00Z',
+    timeline: [
+      { status: 'Created',  note: 'Dispute raised by customer during visit. Rep escalated for manager review.', by: 'John Smith',   at: '2026-05-05T14:00:00Z' },
+      { status: 'Assigned', note: 'Assigned to Sales Manager for review.',                                      by: 'David Patel',  at: '2026-05-05T16:00:00Z' },
+      { status: 'Reviewed', note: 'Manager reviewed. Awaiting credit note from finance before resolving.',      by: 'David Patel',  at: '2026-05-07T10:00:00Z' },
+    ],
+    createdAt: '2026-05-05T14:00:00Z', updatedAt: '2026-05-07T10:00:00Z',
+  },
+  {
+    id: 'ESC002', type: 'churn-risk', status: 'Assigned', priority: 'Critical',
+    title: 'Churn Risk — Rick Deckard Imports',
+    description: 'Customer has not placed an order or received a visit in 60 days. £260 balance overdue. High churn probability.',
+    createdBy: 'U010', createdByName: 'Emma Clarke', assignedTo: 'U011', assignedToName: 'David Patel',
+    customerId: 'C004', customerName: 'Rick Deckard Imports', repId: 'U010', repName: 'Emma Clarke',
+    slaDeadline: '2026-05-09T17:00:00Z',
+    timeline: [
+      { status: 'Created',  note: 'Automated churn risk detected. Rep flagged for manager escalation.', by: 'Emma Clarke',  at: '2026-05-07T07:00:00Z' },
+      { status: 'Assigned', note: 'Assigned to David Patel. Immediate outreach required.',              by: 'David Patel',  at: '2026-05-07T09:00:00Z' },
+    ],
+    createdAt: '2026-05-07T07:00:00Z', updatedAt: '2026-05-07T09:00:00Z',
+  },
+  {
+    id: 'ESC003', type: 'overdue-collection', status: 'Created', priority: 'High',
+    title: 'Overdue Collection — X-Files Archive £60',
+    description: 'Customer disputes partial payment. £60 overdue for 5 days. Rep requests manager support.',
+    createdBy: 'U004', createdByName: 'John Smith',
+    customerId: 'C005', customerName: 'X-Files Archive', repId: 'U004', repName: 'John Smith',
+    slaDeadline: '2026-05-11T17:00:00Z',
+    timeline: [
+      { status: 'Created', note: 'Rep unable to resolve dispute. Escalating to manager.', by: 'John Smith', at: '2026-05-08T08:00:00Z' },
+    ],
+    createdAt: '2026-05-08T08:00:00Z', updatedAt: '2026-05-08T08:00:00Z',
+  },
+  {
+    id: 'ESC004', type: 'customer-complaint', status: 'Resolved', priority: 'Medium',
+    title: 'Product Quality Complaint — TechHub London',
+    description: 'Customer reported 3 damaged units in last delivery. Replacement requested.',
+    createdBy: 'U004', createdByName: 'John Smith', assignedTo: 'U011', assignedToName: 'David Patel',
+    customerId: 'C001', customerName: 'TechHub London', repId: 'U004', repName: 'John Smith',
+    timeline: [
+      { status: 'Created',  note: '3 damaged units reported. Rep escalated for replacement approval.',       by: 'John Smith',  at: '2026-04-28T11:00:00Z' },
+      { status: 'Assigned', note: 'Assigned to David Patel.',                                                by: 'David Patel', at: '2026-04-28T13:00:00Z' },
+      { status: 'Reviewed', note: 'Replacement approved. Warehouse notified.',                               by: 'David Patel', at: '2026-04-29T09:00:00Z' },
+      { status: 'Resolved', note: 'Replacement delivered. Customer satisfied. Case resolved.',               by: 'John Smith',  at: '2026-05-02T14:00:00Z' },
+    ],
+    createdAt: '2026-04-28T11:00:00Z', updatedAt: '2026-05-02T14:00:00Z', resolvedAt: '2026-05-02T14:00:00Z',
+  },
+  {
+    id: 'ESC005', type: 'pricing-request', status: 'Closed', priority: 'Low',
+    title: 'Pricing Review Request — Cyberdyne Retail',
+    description: 'Customer requested a volume discount review for next quarter ordering.',
+    createdBy: 'U004', createdByName: 'John Smith', assignedTo: 'U011', assignedToName: 'David Patel',
+    customerId: 'C002', customerName: 'Cyberdyne Retail', repId: 'U004', repName: 'John Smith',
+    timeline: [
+      { status: 'Created',  note: 'Customer requested volume pricing. Rep escalated for approval.',  by: 'John Smith',  at: '2026-04-20T10:00:00Z' },
+      { status: 'Assigned', note: 'Assigned to David Patel for pricing review.',                     by: 'David Patel', at: '2026-04-20T14:00:00Z' },
+      { status: 'Reviewed', note: 'Pricing tier reviewed. 5% volume discount approved.',             by: 'David Patel', at: '2026-04-22T09:00:00Z' },
+      { status: 'Resolved', note: 'New pricing communicated to customer.',                           by: 'John Smith',  at: '2026-04-23T11:00:00Z' },
+      { status: 'Closed',   note: 'Case closed. Customer confirmed new terms.',                      by: 'David Patel', at: '2026-04-24T10:00:00Z' },
+    ],
+    createdAt: '2026-04-20T10:00:00Z', updatedAt: '2026-04-24T10:00:00Z', resolvedAt: '2026-04-23T11:00:00Z',
+  },
+];
+
+export const APPROVAL_REQUESTS: ApprovalRequest[] = [
+  { id: 'AP001', type: 'discount',            status: 'Pending',  title: '15% Discount — Cyberdyne Retail',        description: 'Customer requesting 15% one-time discount to resolve payment dispute and retain account.', requestedBy: 'U004', requestedByName: 'John Smith',  requestedAt: '2026-05-08T09:00:00Z', customerId: 'C002', customerName: 'Cyberdyne Retail',     amount: 15, currentValue: 0, requestedValue: 15 },
+  { id: 'AP002', type: 'credit-increase',     status: 'Approved', title: 'Credit Limit +£500 — TechHub London',    description: 'Customer requests credit increase to support larger seasonal orders.',                     requestedBy: 'U004', requestedByName: 'John Smith',  requestedAt: '2026-04-25T10:00:00Z', reviewedBy: 'U011', reviewedByName: 'David Patel', reviewedAt: '2026-04-26T09:00:00Z', reviewNote: 'Approved. Strong payment history.', customerId: 'C001', customerName: 'TechHub London', currentValue: 1000, requestedValue: 1500 },
+  { id: 'AP003', type: 'payment-adjustment',  status: 'Pending',  title: 'Payment Plan — X-Files Archive',         description: 'Customer requests split payment over 3 months for £120.50 outstanding balance.',             requestedBy: 'U004', requestedByName: 'John Smith',  requestedAt: '2026-05-07T14:00:00Z', customerId: 'C005', customerName: 'X-Files Archive',      amount: 120.5 },
+  { id: 'AP004', type: 'write-off',           status: 'Rejected', title: 'Write-off £45.50 — Cyberdyne Retail',    description: 'Rep requests write-off of disputed £45.50. Customer refuses to pay.',                       requestedBy: 'U004', requestedByName: 'John Smith',  requestedAt: '2026-05-06T11:00:00Z', reviewedBy: 'U011', reviewedByName: 'David Patel', reviewedAt: '2026-05-07T08:00:00Z', reviewNote: 'Rejected. Escalation path must be followed first.', customerId: 'C002', customerName: 'Cyberdyne Retail', amount: 45.5 },
+  { id: 'AP005', type: 'order-override',      status: 'Pending',  title: 'Order Override — Nostromo Supplies',     description: 'Customer requests order despite account being flagged as inactive/high-risk.',               requestedBy: 'U010', requestedByName: 'Emma Clarke', requestedAt: '2026-05-08T10:00:00Z', customerId: 'C003', customerName: 'Nostromo Supplies' },
+  { id: 'AP006', type: 'discount',            status: 'Approved', title: '10% Retention Discount — Rick Deckard',  description: '10% discount approved as part of churn-prevention strategy.',                             requestedBy: 'U010', requestedByName: 'Emma Clarke', requestedAt: '2026-05-03T09:00:00Z', reviewedBy: 'U011', reviewedByName: 'David Patel', reviewedAt: '2026-05-04T10:00:00Z', reviewNote: 'Approved. Churn-risk customer — retention discount justified.', customerId: 'C004', customerName: 'Rick Deckard Imports', amount: 10, currentValue: 0, requestedValue: 10 },
+];
+
+export const AUDIT_LOGS: AuditLog[] = [
+  { id: 'AUD001', action: 'approval.create',          performedBy: 'U004', performedByName: 'John Smith',  entityType: 'approval',  entityId: 'AP001', entityName: 'Discount — Cyberdyne Retail',    newValue: { type: 'discount', status: 'Pending', amount: 15 },                                                             timestamp: '2026-05-08T09:00:00Z' },
+  { id: 'AUD002', action: 'escalation.create',        performedBy: 'U004', performedByName: 'John Smith',  entityType: 'escalation', entityId: 'ESC003', entityName: 'X-Files Archive Collection',    newValue: { type: 'overdue-collection', priority: 'High' },                                                                timestamp: '2026-05-08T08:00:00Z' },
+  { id: 'AUD003', action: 'collection.update',        performedBy: 'U004', performedByName: 'John Smith',  entityType: 'collection', entityId: 'COL001', entityName: 'Cyberdyne Retail £45.50',       oldValue: { status: 'Pending' }, newValue: { status: 'Disputed', note: 'Customer disputes charge' },                    timestamp: '2026-05-07T15:30:00Z' },
+  { id: 'AUD004', action: 'lead.stage-change',        performedBy: 'U004', performedByName: 'John Smith',  entityType: 'lead',       entityId: 'L001',   entityName: 'Smoke Signal Co',               oldValue: { stage: 'Qualified' }, newValue: { stage: 'Demo' },                                                           timestamp: '2026-05-07T11:00:00Z', note: 'Moved to Demo stage after discovery call' },
+  { id: 'AUD005', action: 'approval.review',          performedBy: 'U011', performedByName: 'David Patel', entityType: 'approval',   entityId: 'AP004', entityName: 'Write-off — Cyberdyne Retail',   oldValue: { status: 'Pending' }, newValue: { status: 'Rejected', note: 'Escalation path must be followed first.' },   timestamp: '2026-05-07T08:00:00Z' },
+  { id: 'AUD006', action: 'escalation.update',        performedBy: 'U011', performedByName: 'David Patel', entityType: 'escalation', entityId: 'ESC001', entityName: 'Cyberdyne Retail Payment Dispute', oldValue: { status: 'Assigned' }, newValue: { status: 'Reviewed', note: 'Awaiting credit note from finance' },       timestamp: '2026-05-07T10:00:00Z' },
+  { id: 'AUD007', action: 'customer.lifecycle-change',performedBy: 'U010', performedByName: 'Emma Clarke', entityType: 'customer',   entityId: 'C004', entityName: 'Rick Deckard Imports',             oldValue: { lifecycleStage: 'Active' }, newValue: { lifecycleStage: 'At Risk' },                                         timestamp: '2026-05-07T07:00:00Z', lat: 51.5194, lng: -0.0795 },
+  { id: 'AUD008', action: 'payment.record',           performedBy: 'U010', performedByName: 'Emma Clarke', entityType: 'collection', entityId: 'COL004', entityName: 'Nostromo Supplies £540',         oldValue: { amountCollected: 0 }, newValue: { amountCollected: 540, status: 'Paid' },                                   timestamp: '2026-05-07T10:30:00Z', lat: 51.5194, lng: -0.0795 },
+  { id: 'AUD009', action: 'approval.review',          performedBy: 'U011', performedByName: 'David Patel', entityType: 'approval',   entityId: 'AP002', entityName: 'Credit Increase — TechHub London', oldValue: { status: 'Pending' }, newValue: { status: 'Approved', note: 'Strong payment history.' },                  timestamp: '2026-04-26T09:00:00Z' },
+  { id: 'AUD010', action: 'lead.assign',              performedBy: 'U011', performedByName: 'David Patel', entityType: 'lead',       entityId: 'L002',   entityName: 'Skynet Systems',                 oldValue: { repId: null }, newValue: { repId: 'U004', repName: 'John Smith' },                                         timestamp: '2026-04-24T14:00:00Z', note: 'Assigned to John Smith — territory match' },
+  { id: 'AUD011', action: 'document.upload',          performedBy: 'U004', performedByName: 'John Smith',  entityType: 'customer',   entityId: 'C001', entityName: 'TechHub London',                   newValue: { documentId: 'DOC001', type: 'agreement', name: 'Trade Agreement 2026' },                                        timestamp: '2026-04-15T11:00:00Z' },
+  { id: 'AUD012', action: 'customer.update',          performedBy: 'U004', performedByName: 'John Smith',  entityType: 'customer',   entityId: 'C002', entityName: 'Cyberdyne Retail',                 oldValue: { phone: '07700 900 111' }, newValue: { phone: '07700 900 222' },                                               timestamp: '2026-05-05T14:30:00Z', note: 'Updated contact number during visit' },
+];
+
+export const CUSTOMER_DOCUMENTS: CustomerDocument[] = [
+  { id: 'DOC001', type: 'agreement',       name: 'Trade Agreement 2026',           description: 'Annual trade agreement and credit terms.',             fileUrl: 'https://example.com/docs/trade-agreement-2026.pdf',    fileSize: '420 KB', mimeType: 'application/pdf', uploadedBy: 'U004', uploadedByName: 'John Smith',  uploadedAt: '2026-04-15T11:00:00Z', linkedEntityType: 'customer', linkedEntityId: 'C001', linkedEntityName: 'TechHub London',       tags: ['agreement', '2026', 'credit'] },
+  { id: 'DOC002', type: 'invoice',         name: 'Invoice INV-2026-0451',          description: 'March 2026 monthly invoice.',                          fileUrl: 'https://example.com/docs/inv-0451.pdf',                fileSize: '85 KB',  mimeType: 'application/pdf', uploadedBy: 'U004', uploadedByName: 'John Smith',  uploadedAt: '2026-04-01T09:00:00Z', linkedEntityType: 'customer', linkedEntityId: 'C001', linkedEntityName: 'TechHub London',       tags: ['invoice', 'march-2026'] },
+  { id: 'DOC003', type: 'payment-proof',   name: 'Payment Receipt — April £1,186', description: 'Bank transfer confirmation for April order.',          fileUrl: 'https://example.com/docs/receipt-apr-c001.jpg',        fileSize: '1.2 MB', mimeType: 'image/jpeg',      uploadedBy: 'U004', uploadedByName: 'John Smith',  uploadedAt: '2026-05-07T10:00:00Z', linkedEntityType: 'customer', linkedEntityId: 'C001', linkedEntityName: 'TechHub London',       tags: ['receipt', 'payment', 'april'] },
+  { id: 'DOC004', type: 'customer-document', name: 'Business Licence — Cyberdyne', description: 'Customer business registration document.',              fileUrl: 'https://example.com/docs/cyberdyne-licence.pdf',       fileSize: '320 KB', mimeType: 'application/pdf', uploadedBy: 'U004', uploadedByName: 'John Smith',  uploadedAt: '2026-02-10T14:00:00Z', linkedEntityType: 'customer', linkedEntityId: 'C002', linkedEntityName: 'Cyberdyne Retail',     tags: ['licence', 'kyc'] },
+  { id: 'DOC005', type: 'visit-photo',     name: 'Visit Photo — Cyberdyne Retail', description: 'Shelf display photo taken during May 7 visit.',         fileUrl: 'https://picsum.photos/400/300?random=500',             fileSize: '2.1 MB', mimeType: 'image/jpeg',      uploadedBy: 'U004', uploadedByName: 'John Smith',  uploadedAt: '2026-05-07T11:30:00Z', linkedEntityType: 'customer', linkedEntityId: 'C002', linkedEntityName: 'Cyberdyne Retail',     tags: ['visit-photo', 'display'] },
+  { id: 'DOC006', type: 'receipt',         name: 'Collection Receipt — £120 partial', description: 'Partial payment collected from X-Files Archive.',    fileUrl: 'https://example.com/docs/receipt-xfiles-partial.pdf',  fileSize: '55 KB',  mimeType: 'application/pdf', uploadedBy: 'U004', uploadedByName: 'John Smith',  uploadedAt: '2026-05-03T15:00:00Z', linkedEntityType: 'customer', linkedEntityId: 'C005', linkedEntityName: 'X-Files Archive',      tags: ['receipt', 'partial-payment'] },
+  { id: 'DOC007', type: 'agreement',       name: 'Credit Terms — Rick Deckard',    description: 'Revised credit terms post-account review.',             fileUrl: 'https://example.com/docs/credit-terms-c004.pdf',       fileSize: '210 KB', mimeType: 'application/pdf', uploadedBy: 'U011', uploadedByName: 'David Patel', uploadedAt: '2026-03-15T10:00:00Z', linkedEntityType: 'customer', linkedEntityId: 'C004', linkedEntityName: 'Rick Deckard Imports', tags: ['agreement', 'credit-terms'] },
+  { id: 'DOC008', type: 'invoice',         name: 'Invoice INV-2026-0388 — Nostromo', description: 'Last invoice before account went inactive.',          fileUrl: 'https://example.com/docs/inv-0388.pdf',                fileSize: '78 KB',  mimeType: 'application/pdf', uploadedBy: 'U010', uploadedByName: 'Emma Clarke', uploadedAt: '2026-03-20T09:00:00Z', linkedEntityType: 'customer', linkedEntityId: 'C003', linkedEntityName: 'Nostromo Supplies',    tags: ['invoice', 'march-2026'] },
+];
+
+export const CRM_RECOMMENDATIONS: CRMRecommendation[] = [
+  { id: 'REC001', type: 'overdue-visit',       severity: 'Action Required', title: 'Rick Deckard Imports — 60 days no visit',    description: 'No visit or order for 60 days. Account critical. Immediate rep visit required.',          actionLabel: 'View Customer',  actionHref: '#/customers/C004/360', entityType: 'customer', entityId: 'C004', entityName: 'Rick Deckard Imports', repId: 'U010', generatedAt: '2026-05-08T06:00:00Z', dismissed: false },
+  { id: 'REC002', type: 'high-risk-account',   severity: 'Action Required', title: 'Nostromo Supplies — inactive 45 days',       description: 'Account has no engagement for 45 days. Risk of permanent churn if not contacted.',         actionLabel: 'View Customer',  actionHref: '#/customers/C003/360', entityType: 'customer', entityId: 'C003', entityName: 'Nostromo Supplies',    repId: 'U010', generatedAt: '2026-05-08T06:00:00Z', dismissed: false },
+  { id: 'REC003', type: 'collection-priority', severity: 'Action Required', title: 'Priority collections — 3 overdue accounts', description: '£365.50 total overdue across Cyberdyne, X-Files, Rick Deckard. Prioritise this week.',    actionLabel: 'View Collections', actionHref: '#/sales/collections', entityType: 'collection', generatedAt: '2026-05-08T06:00:00Z', dismissed: false },
+  { id: 'REC004', type: 'inactive-lead',       severity: 'Warning',         title: 'Smoke Signal Co lead stalled — 14 days',     description: 'Lead has been in Demo stage for 14 days without activity. Rep action required.',           actionLabel: 'View Lead',      actionHref: '#/sales/leads', entityType: 'lead', entityId: 'L001', entityName: 'Smoke Signal Co',    repId: 'U004', generatedAt: '2026-05-08T06:00:00Z', dismissed: false },
+  { id: 'REC005', type: 'high-performing-rep', severity: 'Info',            title: 'John Smith — top performer this week',       description: 'John Smith completed 8 visits and £4,820 revenue this week, 60% of monthly target.',       actionLabel: 'View Analytics', actionHref: '#/sales-manager/analytics', entityType: 'rep', entityId: 'U004', entityName: 'John Smith', generatedAt: '2026-05-08T06:00:00Z', dismissed: false },
+  { id: 'REC006', type: 'low-engagement',      severity: 'Warning',         title: 'Emma Clarke — below visit target',           description: 'Emma has completed 6/20 visits this week (30%). Coaching or route review recommended.', actionLabel: 'View Team',      actionHref: '#/sales-manager/team', entityType: 'rep', entityId: 'U010', entityName: 'Emma Clarke', generatedAt: '2026-05-08T06:00:00Z', dismissed: false },
 ];

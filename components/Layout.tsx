@@ -116,6 +116,11 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     { name: 'Analytics', href: '/sales-manager/analytics', icon: BarChart3, group: 'analytics' },
     { name: 'Customer Health', href: '/sales-manager/customer-health', icon: AlertTriangle, group: 'analytics' },
     { name: 'Alerts', href: '/sales-manager/alerts', icon: Bell, group: 'analytics' },
+    { name: 'Notifications', href: '/notifications', icon: Bell, group: 'ops' },
+    { name: 'Escalations', href: '/escalations', icon: AlertTriangle, group: 'ops' },
+    { name: 'Approvals', href: '/approvals', icon: ClipboardList, group: 'ops' },
+    { name: 'Documents', href: '/documents', icon: FileText, group: 'ops' },
+    { name: 'Automation', href: '/automation', icon: Activity, group: 'ops' },
   ];
 
   const salesRepNavigation = [
@@ -130,6 +135,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     { name: 'My Orders', href: '/sales/orders', icon: ShoppingCart, group: 'crm' },
     { name: 'My Reports', href: '/sales/reporting', icon: TrendingUp, group: 'analytics' },
     { name: 'My Profile', href: '/sales/profile', icon: UserCircle, group: 'analytics' },
+    { name: 'Notifications', href: '/notifications', icon: Bell, group: 'ops' },
+    { name: 'Documents', href: '/documents', icon: FileText, group: 'ops' },
   ];
 
   let navigation: typeof allNavigation;

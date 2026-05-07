@@ -1,4 +1,5 @@
 import React from 'react';
+// phase5-cache-bust
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import Dashboard from './pages/Dashboard';
@@ -78,9 +79,20 @@ import { WorkSessionProvider } from './context/WorkSessionContext';
 import { SalesCRMProvider } from './context/SalesCRMContext';
 import { SalesExecutionProvider } from './context/SalesExecutionContext';
 import { SalesManagerProvider } from './context/SalesManagerContext';
+import { NotificationProvider } from './context/NotificationContext';
+import { CRMOpsProvider } from './context/CRMOpsContext';
+import { AutomationProvider } from './context/AutomationContext';
 // Phase 4 new pages
 import SMCustomerHealth from './pages/sales-manager/SMCustomerHealth';
 import SMAlerts from './pages/sales-manager/SMAlerts';
+// Phase 5 new pages
+import NotificationsCenter from './pages/NotificationsCenter';
+import EscalationsDashboard from './pages/EscalationsDashboard';
+import ApprovalQueue from './pages/ApprovalQueue';
+import AuditLogs from './pages/AuditLogs';
+import DocumentsManager from './pages/DocumentsManager';
+import AutomationRules from './pages/AutomationRules';
+import Customer360 from './pages/Customer360';
 
 const App: React.FC = () => {
   return (
@@ -92,6 +104,9 @@ const App: React.FC = () => {
             <SalesCRMProvider>
             <SalesExecutionProvider>
             <SalesManagerProvider>
+            <NotificationProvider>
+            <CRMOpsProvider>
+            <AutomationProvider>
             <CheckInProvider>
             <HashRouter>
             <Routes>
@@ -174,6 +189,16 @@ const App: React.FC = () => {
 
                     {/* Placeholders for other routes to ensure navigation works visually */}
                     <Route path="/loyalty" element={<GenericPage title="Loyalty Program" description="Points and rewards configuration." data={[]} columns={[]} actionLabel="Configure" />} />
+                    {/* Phase 5 CRM Operations */}
+                    <Route path="/notifications" element={<NotificationsCenter />} />
+                    <Route path="/escalations" element={<EscalationsDashboard />} />
+                    <Route path="/approvals" element={<ApprovalQueue />} />
+                    <Route path="/audit" element={<AuditLogs />} />
+                    <Route path="/documents" element={<DocumentsManager />} />
+                    <Route path="/automation" element={<AutomationRules />} />
+                    <Route path="/customers/:id/360" element={<Customer360 />} />
+                    <Route path="/sales-manager/escalations" element={<EscalationsDashboard />} />
+                    <Route path="/sales-manager/approvals" element={<ApprovalQueue />} />
 
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
@@ -182,6 +207,9 @@ const App: React.FC = () => {
             </Routes>
           </HashRouter>
         </CheckInProvider>
+            </AutomationProvider>
+            </CRMOpsProvider>
+            </NotificationProvider>
             </SalesManagerProvider>
             </SalesExecutionProvider>
             </SalesCRMProvider>

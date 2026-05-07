@@ -884,3 +884,196 @@ export interface LeadAnalytics {
   avgDaysToConvert: number;
   pipelineValue: number;
 }
+
+// ─── Phase 5: Advanced CRM Operations ──────────────────────────────────────
+
+export type NotificationPriority = 'Info' | 'Warning' | 'Critical';
+export type NotificationType =
+  | 'follow-up-reminder' | 'overdue-payment' | 'missed-visit'
+  | 'inactive-customer' | 'task-overdue' | 'collection-due'
+  | 'lead-stale' | 'approval-required';
+export type NotificationRole = 'Sales Rep' | 'Sales Manager' | 'Admin' | 'any';
+
+export interface CRMNotification {
+  id: string;
+  type: NotificationType;
+  priority: NotificationPriority;
+  title: string;
+  body: string;
+  read: boolean;
+  dismissed: boolean;
+  createdAt: string;
+  linkedEntityType?: 'customer' | 'lead' | 'order' | 'collection' | 'follow-up' | 'task' | 'approval' | 'escalation';
+  linkedEntityId?: string;
+  linkedEntityName?: string;
+  visibleToRoles: NotificationRole[];
+  repId?: string;
+}
+
+export type AutomationTrigger =
+  | 'no-visit-30d' | 'overdue-payment' | 'inactive-lead-21d'
+  | 'missed-follow-up' | 'customer-inactive-45d' | 'collection-overdue'
+  | 'lead-stale-14d';
+export type AutomationActionType =
+  | 'create-follow-up' | 'create-task' | 'create-notification'
+  | 'mark-lead-stale' | 'create-escalation' | 'alert-manager';
+export type AutomationStatus = 'Active' | 'Paused' | 'Disabled';
+
+export interface AutomationRule {
+  id: string;
+  name: string;
+  description: string;
+  trigger: AutomationTrigger;
+  triggerCondition: Record<string, unknown>;
+  actions: AutomationActionType[];
+  actionConfig: Record<string, unknown>;
+  status: AutomationStatus;
+  appliesTo: NotificationRole[];
+  lastRunAt?: string;
+  totalFired: number;
+  createdAt: string;
+}
+
+export type EscalationType =
+  | 'payment-dispute' | 'customer-complaint' | 'pricing-request'
+  | 'urgent-stock' | 'overdue-collection' | 'churn-risk' | 'missed-sla';
+export type EscalationStatus = 'Created' | 'Assigned' | 'Reviewed' | 'Resolved' | 'Closed';
+export type EscalationPriority = 'Low' | 'Medium' | 'High' | 'Critical';
+
+export interface EscalationEvent {
+  status: EscalationStatus;
+  note: string;
+  by: string;
+  at: string;
+}
+
+export interface Escalation {
+  id: string;
+  type: EscalationType;
+  status: EscalationStatus;
+  priority: EscalationPriority;
+  title: string;
+  description: string;
+  createdBy: string;
+  createdByName: string;
+  assignedTo?: string;
+  assignedToName?: string;
+  customerId?: string;
+  customerName?: string;
+  repId?: string;
+  repName?: string;
+  timeline: EscalationEvent[];
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt?: string;
+  slaDeadline?: string;
+}
+
+export type ApprovalType =
+  | 'discount' | 'credit-increase' | 'order-override'
+  | 'customer-activation' | 'payment-adjustment' | 'write-off';
+export type ApprovalStatus = 'Pending' | 'Approved' | 'Rejected' | 'Escalated';
+
+export interface ApprovalRequest {
+  id: string;
+  type: ApprovalType;
+  status: ApprovalStatus;
+  title: string;
+  description: string;
+  requestedBy: string;
+  requestedByName: string;
+  requestedAt: string;
+  reviewedBy?: string;
+  reviewedByName?: string;
+  reviewedAt?: string;
+  reviewNote?: string;
+  customerId?: string;
+  customerName?: string;
+  orderId?: string;
+  amount?: number;
+  currentValue?: number;
+  requestedValue?: number;
+}
+
+export type AuditAction =
+  | 'customer.update' | 'lead.stage-change' | 'lead.assign'
+  | 'payment.record' | 'approval.create' | 'approval.review'
+  | 'collection.update' | 'escalation.create' | 'escalation.update'
+  | 'customer.lifecycle-change' | 'document.upload';
+
+export interface AuditLog {
+  id: string;
+  action: AuditAction;
+  performedBy: string;
+  performedByName: string;
+  entityType: string;
+  entityId: string;
+  entityName: string;
+  oldValue?: Record<string, unknown>;
+  newValue?: Record<string, unknown>;
+  note?: string;
+  lat?: number;
+  lng?: number;
+  timestamp: string;
+}
+
+export type DocumentType =
+  | 'invoice' | 'receipt' | 'agreement' | 'license'
+  | 'payment-proof' | 'visit-photo' | 'customer-document' | 'other';
+
+export interface CustomerDocument {
+  id: string;
+  type: DocumentType;
+  name: string;
+  description?: string;
+  fileUrl: string;
+  fileSize: string;
+  mimeType: string;
+  uploadedBy: string;
+  uploadedByName: string;
+  uploadedAt: string;
+  linkedEntityType: 'customer' | 'lead' | 'order' | 'escalation' | 'approval';
+  linkedEntityId: string;
+  linkedEntityName: string;
+  tags: string[];
+}
+
+export type RecommendationType =
+  | 'overdue-visit' | 'high-risk-account' | 'inactive-lead'
+  | 'collection-priority' | 'high-performing-rep' | 'low-engagement';
+export type RecommendationSeverity = 'Info' | 'Warning' | 'Action Required';
+
+export interface CRMRecommendation {
+  id: string;
+  type: RecommendationType;
+  severity: RecommendationSeverity;
+  title: string;
+  description: string;
+  actionLabel: string;
+  actionHref?: string;
+  entityType?: string;
+  entityId?: string;
+  entityName?: string;
+  repId?: string;
+  generatedAt: string;
+  dismissed: boolean;
+}
+
+export interface Customer360Timeline {
+  id: string;
+  type: 'visit' | 'order' | 'payment' | 'follow-up' | 'note' | 'escalation' | 'approval' | 'document';
+  title: string;
+  description: string;
+  by: string;
+  at: string;
+  linkedId?: string;
+}
+
+export interface Customer360 {
+  customerId: string;
+  timeline: Customer360Timeline[];
+  openEscalations: number;
+  pendingApprovals: number;
+  documentCount: number;
+  lastAuditAt?: string;
+}
