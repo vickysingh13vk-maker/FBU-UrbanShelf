@@ -45,11 +45,14 @@ export interface Product {
 export interface Order {
   id: string;
   customer: string;
+  customerId?: string;
   date: string;
   total: number;
   items: number;
   status: 'Pending' | 'Approved' | 'Picking' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled';
   paymentStatus: 'Paid' | 'Unpaid' | 'Pending' | 'Refunded';
+  repId?: string;
+  collectionAmount?: number;
 }
 
 export interface StockReversal {
@@ -86,6 +89,14 @@ export interface Customer {
   supplier?: string;
   lat?: number;
   lng?: number;
+  // CRM ownership
+  assignedRepId?: string;
+  assignedRepName?: string;
+  createdByRepId?: string;
+  ownershipStatus?: CustomerOwnershipStatus;
+  lifecycleStage?: CustomerLifecycleStage;
+  lastContactDate?: string;
+  nextFollowUp?: string;
 }
 
 export interface Cart {
@@ -494,4 +505,618 @@ export interface LedgerEntry {
   supplierName: string;
   customerId?: string;
   customerName?: string;
+// ─── PHASE 2: SALES REP CRM ──────────────────────────────────────────────────
+
+export type WorkSessionStatus = 'active' | 'ended';
+
+export interface SessionSummary {
+  duration: number;
+  visits: number;
+  orders: number;
+  collections: number;
+  revenue: number;
+  leadsAdded: number;
+  followUpsCompleted: number;
+}
+
+export interface WorkSession {
+  id: string;
+  repId: string;
+  repName: string;
+  date: string;
+  startTime: string;
+  endTime?: string;
+  status: WorkSessionStatus;
+  totalVisits: number;
+  totalOrders: number;
+  totalCollections: number;
+  totalRevenue: number;
+  summary?: SessionSummary;
+}
+
+export type LeadStage =
+  | 'New Lead'
+  | 'Contacted'
+  | 'Interested'
+  | 'Meeting Scheduled'
+  | 'Trial Order'
+  | 'Converted'
+  | 'Lost';
+
+export type LeadPriority = 'High' | 'Medium' | 'Low';
+
+export type LeadActivityType =
+  | 'Call'
+  | 'Visit'
+  | 'Follow-Up'
+  | 'WhatsApp'
+  | 'Note'
+  | 'Stage Change';
+
+export interface LeadActivity {
+  id: string;
+  leadId: string;
+  type: LeadActivityType;
+  repId: string;
+  repName: string;
+  timestamp: string;
+  notes: string;
+  outcome?: string;
+  nextAction?: string;
+  stageFrom?: LeadStage;
+  stageTo?: LeadStage;
+}
+
+export interface Lead {
+  id: string;
+  repId: string;
+  repName: string;
+  businessName: string;
+  contactName: string;
+  phone: string;
+  email?: string;
+  address?: string;
+  category?: string;
+  stage: LeadStage;
+  priority: LeadPriority;
+  createdDate: string;
+  lastContactDate?: string;
+  nextFollowUp?: string;
+  notes: string;
+  activities: LeadActivity[];
+  convertedCustomerId?: string;
+  lostReason?: string;
+}
+
+export type TimelineEventType =
+  | 'Call'
+  | 'Visit'
+  | 'Follow-Up'
+  | 'Order'
+  | 'Payment'
+  | 'WhatsApp'
+  | 'Note';
+
+export interface CustomerTimeline {
+  id: string;
+  customerId: string;
+  type: TimelineEventType;
+  repId: string;
+  repName: string;
+  timestamp: string;
+  notes: string;
+  outcome?: string;
+  nextAction?: string;
+  orderId?: string;
+  amount?: number;
+}
+
+export type CustomerLifecycleStage =
+  | 'Lead'
+  | 'Prospect'
+  | 'Qualified'
+  | 'Active'
+  | 'At Risk'
+  | 'Inactive'
+  | 'Lost'
+  | 'Archived';
+
+export type CustomerOwnershipStatus = 'assigned' | 'self-created' | 'converted';
+
+// ─── Phase 3: Sales Execution Engine ────────────────────────────────────────
+
+// Visit
+export type VisitStatus = 'planned' | 'active' | 'completed' | 'cancelled';
+export type VisitObjectiveType = 'Order' | 'Collection' | 'Product Demo' | 'Relationship' | 'Sampling' | 'Merchandising';
+
+export interface VisitObjective {
+  id: string;
+  type: VisitObjectiveType;
+  description: string;
+  completed: boolean;
+}
+
+export interface VisitOutcome {
+  orderId?: string;
+  orderAmount?: number;
+  collectionAmount?: number;
+  productsDiscussed: string[];
+  notes: string;
+  customerSatisfaction?: 1 | 2 | 3 | 4 | 5;
+}
+
+export interface Visit {
+  id: string;
+  customerId: string;
+  customerName: string;
+  repId: string;
+  repName: string;
+  status: VisitStatus;
+  date: string;
+  startTime: string;
+  endTime?: string;
+  durationMinutes?: number;
+  gpsLat?: number;
+  gpsLng?: number;
+  objectives: VisitObjective[];
+  outcome?: VisitOutcome;
+  notes: string;
+  followUpId?: string;
+  sessionId?: string;
+}
+
+// Follow-Up
+export type FollowUpType =
+  | 'Callback'
+  | 'Payment Reminder'
+  | 'Revisit'
+  | 'Product Demo'
+  | 'Negotiation'
+  | 'Trial Follow-Up'
+  | 'Collection Follow-Up';
+
+export type FollowUpStatus = 'Pending' | 'Completed' | 'Overdue' | 'Cancelled';
+export type FollowUpPriority = 'High' | 'Medium' | 'Low';
+
+export interface FollowUp {
+  id: string;
+  type: FollowUpType;
+  repId: string;
+  customerId?: string;
+  customerName?: string;
+  leadId?: string;
+  leadName?: string;
+  dueDate: string;
+  status: FollowUpStatus;
+  priority: FollowUpPriority;
+  notes: string;
+  outcome?: string;
+  linkedVisitId?: string;
+  recurring?: boolean;
+  recurringIntervalDays?: number;
+  completedAt?: string;
+}
+
+// Task
+export type TaskType =
+  | 'Visit'
+  | 'Collection'
+  | 'Lead Follow-Up'
+  | 'Product Push'
+  | 'Merchandising'
+  | 'Admin';
+
+export type TaskStatus = 'Pending' | 'In Progress' | 'Completed' | 'Overdue';
+export type TaskPriority = 'High' | 'Medium' | 'Low';
+
+export interface Task {
+  id: string;
+  type: TaskType;
+  title: string;
+  description?: string;
+  customerId?: string;
+  customerName?: string;
+  repId: string;
+  priority: TaskPriority;
+  dueDate: string;
+  status: TaskStatus;
+  completedAt?: string;
+  linkedFollowUpId?: string;
+  linkedVisitId?: string;
+}
+
+// Collection
+export type CollectionStatus = 'Pending' | 'Partially Paid' | 'Paid' | 'Disputed' | 'Overdue';
+
+export interface CollectionAttempt {
+  id: string;
+  customerId: string;
+  customerName: string;
+  repId: string;
+  attemptDate: string;
+  amountRequested: number;
+  amountCollected: number;
+  status: CollectionStatus;
+  notes: string;
+  promisedDate?: string;
+  visitId?: string;
+}
+
+// Route Planning
+export interface RoutePlanStop {
+  customerId: string;
+  customerName: string;
+  address: string;
+  priority: 'High' | 'Medium' | 'Low';
+  estimatedVisitMinutes: number;
+  suggestedOrder: number;
+  hasOverdueCollection: boolean;
+  hasOverdueFollowUp: boolean;
+  lastVisitDaysAgo?: number;
+  status: 'Pending' | 'Visited' | 'Skipped';
+}
+
+export interface RoutePlan {
+  id: string;
+  repId: string;
+  date: string;
+  stops: RoutePlanStop[];
+  estimatedTotalMinutes?: number;
+}
+
+// Productivity
+export interface ProductivityMetrics {
+  repId: string;
+  date: string;
+  visitsCompleted: number;
+  visitsPlanned: number;
+  avgVisitDurationMinutes: number;
+  ordersPerVisit: number;
+  collectionsRecovered: number;
+  followUpCompletionRate: number;
+  leadConversionRate: number;
+  productiveHours: number;
+}
+
+// ─── Phase 4: Sales Manager Intelligence ───────────────────────────────────
+
+export type TerritoryLevel = 'Region' | 'Zone' | 'Area';
+
+export interface Territory {
+  id: string;
+  name: string;
+  level: TerritoryLevel;
+  parentId?: string;
+  assignedRepId?: string;
+  assignedRepName?: string;
+  customerCount: number;
+  activeCustomers: number;
+  monthlyRevenue: number;
+}
+
+export interface TerritoryPerformance {
+  territoryId: string;
+  territoryName: string;
+  repId: string;
+  repName: string;
+  visitsThisMonth: number;
+  ordersThisMonth: number;
+  revenueThisMonth: number;
+  collectionsThisMonth: number;
+  activeLeads: number;
+  overdueCollections: number;
+}
+
+export type RepActivityStatus =
+  | 'Online – In Visit'
+  | 'Online – Travelling'
+  | 'Online – Idle'
+  | 'Offline';
+
+export interface RepStatus {
+  repId: string;
+  repName: string;
+  repImage?: string;
+  status: RepActivityStatus;
+  sessionStart?: string;
+  activeVisitCustomer?: string;
+  activeVisitStart?: string;
+  currentLat?: number;
+  currentLng?: number;
+  todayVisits: number;
+  todayOrders: number;
+  todayRevenue: number;
+  todayCollections: number;
+  routeProgress: { visited: number; total: number };
+  lastActivityAt?: string;
+}
+
+export type PeriodType = 'daily' | 'weekly' | 'monthly';
+
+export interface RepPerformanceMetrics {
+  repId: string;
+  repName: string;
+  period: PeriodType;
+  periodLabel: string;
+  visitsCompleted: number;
+  visitsTarget: number;
+  ordersCreated: number;
+  revenueGenerated: number;
+  revenueTarget: number;
+  collectionsRecovered: number;
+  followUpCompletionRate: number;
+  leadConversionRate: number;
+  productiveHours: number;
+  idleHours: number;
+  avgVisitDuration: number;
+  customersCovered: number;
+}
+
+export type CustomerHealthState = 'Healthy' | 'Warning' | 'High Risk' | 'Critical';
+
+export interface CustomerHealth {
+  customerId: string;
+  customerName: string;
+  assignedRepId: string;
+  assignedRepName: string;
+  healthState: CustomerHealthState;
+  healthScore: number;
+  lastVisitDaysAgo?: number;
+  daysSinceLastOrder?: number;
+  outstandingBalance: number;
+  overdueAmount: number;
+  openFollowUps: number;
+  missedVisits: number;
+  flags: string[];
+}
+
+export type AlertType =
+  | 'rep-idle'
+  | 'overdue-collection'
+  | 'inactive-customer'
+  | 'missed-visit'
+  | 'overdue-follow-up'
+  | 'low-productivity'
+  | 'churn-risk'
+  | 'unassigned-lead'
+  | 'stalled-lead';
+
+export type AlertSeverity = 'Info' | 'Warning' | 'Critical';
+
+export interface OperationalAlert {
+  id: string;
+  type: AlertType;
+  severity: AlertSeverity;
+  title: string;
+  description: string;
+  repId?: string;
+  repName?: string;
+  customerId?: string;
+  customerName?: string;
+  leadId?: string;
+  createdAt: string;
+  read: boolean;
+  dismissed: boolean;
+  actionUrl?: string;
+}
+
+export interface TeamAnalytics {
+  date: string;
+  totalReps: number;
+  onlineReps: number;
+  activeVisits: number;
+  todayVisits: number;
+  todayOrders: number;
+  todayRevenue: number;
+  todayCollections: number;
+  pendingFollowUps: number;
+  overdueTasks: number;
+  idleReps: number;
+  highRiskCustomers: number;
+}
+
+export interface LeadAnalytics {
+  repId: string;
+  repName: string;
+  totalLeads: number;
+  activeLeads: number;
+  stalledLeads: number;
+  convertedThisMonth: number;
+  lostThisMonth: number;
+  conversionRate: number;
+  avgDaysToConvert: number;
+  pipelineValue: number;
+}
+
+// ─── Phase 5: Advanced CRM Operations ──────────────────────────────────────
+
+export type NotificationPriority = 'Info' | 'Warning' | 'Critical';
+export type NotificationType =
+  | 'follow-up-reminder' | 'overdue-payment' | 'missed-visit'
+  | 'inactive-customer' | 'task-overdue' | 'collection-due'
+  | 'lead-stale' | 'approval-required';
+export type NotificationRole = 'Sales Rep' | 'Sales Manager' | 'Admin' | 'any';
+
+export interface CRMNotification {
+  id: string;
+  type: NotificationType;
+  priority: NotificationPriority;
+  title: string;
+  body: string;
+  read: boolean;
+  dismissed: boolean;
+  createdAt: string;
+  linkedEntityType?: 'customer' | 'lead' | 'order' | 'collection' | 'follow-up' | 'task' | 'approval' | 'escalation';
+  linkedEntityId?: string;
+  linkedEntityName?: string;
+  visibleToRoles: NotificationRole[];
+  repId?: string;
+}
+
+export type AutomationTrigger =
+  | 'no-visit-30d' | 'overdue-payment' | 'inactive-lead-21d'
+  | 'missed-follow-up' | 'customer-inactive-45d' | 'collection-overdue'
+  | 'lead-stale-14d';
+export type AutomationActionType =
+  | 'create-follow-up' | 'create-task' | 'create-notification'
+  | 'mark-lead-stale' | 'create-escalation' | 'alert-manager';
+export type AutomationStatus = 'Active' | 'Paused' | 'Disabled';
+
+export interface AutomationRule {
+  id: string;
+  name: string;
+  description: string;
+  trigger: AutomationTrigger;
+  triggerCondition: Record<string, unknown>;
+  actions: AutomationActionType[];
+  actionConfig: Record<string, unknown>;
+  status: AutomationStatus;
+  appliesTo: NotificationRole[];
+  lastRunAt?: string;
+  totalFired: number;
+  createdAt: string;
+}
+
+export type EscalationType =
+  | 'payment-dispute' | 'customer-complaint' | 'pricing-request'
+  | 'urgent-stock' | 'overdue-collection' | 'churn-risk' | 'missed-sla';
+export type EscalationStatus = 'Created' | 'Assigned' | 'Reviewed' | 'Resolved' | 'Closed';
+export type EscalationPriority = 'Low' | 'Medium' | 'High' | 'Critical';
+
+export interface EscalationEvent {
+  status: EscalationStatus;
+  note: string;
+  by: string;
+  at: string;
+}
+
+export interface Escalation {
+  id: string;
+  type: EscalationType;
+  status: EscalationStatus;
+  priority: EscalationPriority;
+  title: string;
+  description: string;
+  createdBy: string;
+  createdByName: string;
+  assignedTo?: string;
+  assignedToName?: string;
+  customerId?: string;
+  customerName?: string;
+  repId?: string;
+  repName?: string;
+  timeline: EscalationEvent[];
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt?: string;
+  slaDeadline?: string;
+}
+
+export type ApprovalType =
+  | 'discount' | 'credit-increase' | 'order-override'
+  | 'customer-activation' | 'payment-adjustment' | 'write-off';
+export type ApprovalStatus = 'Pending' | 'Approved' | 'Rejected' | 'Escalated';
+
+export interface ApprovalRequest {
+  id: string;
+  type: ApprovalType;
+  status: ApprovalStatus;
+  title: string;
+  description: string;
+  requestedBy: string;
+  requestedByName: string;
+  requestedAt: string;
+  reviewedBy?: string;
+  reviewedByName?: string;
+  reviewedAt?: string;
+  reviewNote?: string;
+  customerId?: string;
+  customerName?: string;
+  orderId?: string;
+  amount?: number;
+  currentValue?: number;
+  requestedValue?: number;
+}
+
+export type AuditAction =
+  | 'customer.update' | 'lead.stage-change' | 'lead.assign'
+  | 'payment.record' | 'approval.create' | 'approval.review'
+  | 'collection.update' | 'escalation.create' | 'escalation.update'
+  | 'customer.lifecycle-change' | 'document.upload';
+
+export interface AuditLog {
+  id: string;
+  action: AuditAction;
+  performedBy: string;
+  performedByName: string;
+  entityType: string;
+  entityId: string;
+  entityName: string;
+  oldValue?: Record<string, unknown>;
+  newValue?: Record<string, unknown>;
+  note?: string;
+  lat?: number;
+  lng?: number;
+  timestamp: string;
+}
+
+export type DocumentType =
+  | 'invoice' | 'receipt' | 'agreement' | 'license'
+  | 'payment-proof' | 'visit-photo' | 'customer-document' | 'other';
+
+export interface CustomerDocument {
+  id: string;
+  type: DocumentType;
+  name: string;
+  description?: string;
+  fileUrl: string;
+  fileSize: string;
+  mimeType: string;
+  uploadedBy: string;
+  uploadedByName: string;
+  uploadedAt: string;
+  linkedEntityType: 'customer' | 'lead' | 'order' | 'escalation' | 'approval';
+  linkedEntityId: string;
+  linkedEntityName: string;
+  tags: string[];
+}
+
+export type RecommendationType =
+  | 'overdue-visit' | 'high-risk-account' | 'inactive-lead'
+  | 'collection-priority' | 'high-performing-rep' | 'low-engagement';
+export type RecommendationSeverity = 'Info' | 'Warning' | 'Action Required';
+
+export interface CRMRecommendation {
+  id: string;
+  type: RecommendationType;
+  severity: RecommendationSeverity;
+  title: string;
+  description: string;
+  actionLabel: string;
+  actionHref?: string;
+  entityType?: string;
+  entityId?: string;
+  entityName?: string;
+  repId?: string;
+  generatedAt: string;
+  dismissed: boolean;
+}
+
+export interface Customer360Timeline {
+  id: string;
+  type: 'visit' | 'order' | 'payment' | 'follow-up' | 'note' | 'escalation' | 'approval' | 'document';
+  title: string;
+  description: string;
+  by: string;
+  at: string;
+  linkedId?: string;
+}
+
+export interface Customer360 {
+  customerId: string;
+  timeline: Customer360Timeline[];
+  openEscalations: number;
+  pendingApprovals: number;
+  documentCount: number;
+  lastAuditAt?: string;
 }

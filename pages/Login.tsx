@@ -31,6 +31,10 @@ const LoginPage: React.FC = () => {
           } else {
             navigate('/supplier/onboarding');
           }
+        } else if (parsedUser?.roleName === 'Sales Rep') {
+          navigate('/sales/dashboard');
+        } else if (parsedUser?.roleName === 'Sales Manager') {
+          navigate('/sales-manager/dashboard');
         } else {
           navigate('/');
         }
