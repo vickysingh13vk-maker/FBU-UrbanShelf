@@ -14,3 +14,5 @@ export * from './Sidebar';
 export * from './Navbar';
 export * from './Drawer';
 export * from './ViewModeToggle';
+export { default as SearchableSelect } from './SearchableSelect';
+export type { SelectOption } from './SearchableSelect';

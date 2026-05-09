@@ -2,6 +2,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { ShipmentItem } from '../../types';
 import { PRODUCTS } from '../../data';
+import SearchableSelect from '../ui/SearchableSelect';
 
 interface Props {
   item: ShipmentItem;
@@ -12,16 +13,35 @@ interface Props {
 }
 
 const LineItemRow: React.FC<Props> = ({ item, index, onChange, onRemove, canRemove }) => {
-  const products = PRODUCTS;
-  const selectedProduct = products.find(p => p.id === item.productId);
-  const flavours = products.filter(p => item.productId && p.name === selectedProduct?.name && p.flavour).map(p => p.flavour!);
+  // Unique product names (deduplicated — each name shown once)
+  const uniqueNames = Array.from(new Set(PRODUCTS.map(p => p.name)));
+  const productOptions = uniqueNames.map(name => ({ value: name, label: name }));
 
-  const handleProductChange = (productId: string) => {
-    const p = products.find(pr => pr.id === productId);
-    onChange(item.id, 'productId', productId);
-    onChange(item.id, 'productName', p?.name ?? '');
-    onChange(item.id, 'flavour', p?.flavour ?? '');
-    if (p) onChange(item.id, 'unitPrice', p.price);
+  // Flavours for selected product name
+  const flavourOptions = PRODUCTS
+    .filter(p => p.name === item.productName && p.flavour)
+    .map(p => ({ value: p.flavour!, label: p.flavour! }));
+
+  // When product name changes: reset flavour, set price from first matching product
+  const handleProductChange = (productName: string) => {
+    const first = PRODUCTS.find(p => p.name === productName);
+    onChange(item.id, 'productName', productName);
+    onChange(item.id, 'productId', first?.id ?? '');
+    onChange(item.id, 'flavour', '');
+    const price = first?.price ?? 0;
+    onChange(item.id, 'unitPrice', price);
+    onChange(item.id, 'totalPrice', item.quantity * price);
+  };
+
+  // When flavour changes: find matching variant → update productId + price
+  const handleFlavourChange = (flavour: string) => {
+    onChange(item.id, 'flavour', flavour);
+    const match = PRODUCTS.find(p => p.name === item.productName && p.flavour === flavour);
+    if (match) {
+      onChange(item.id, 'productId', match.id);
+      onChange(item.id, 'unitPrice', match.price);
+      onChange(item.id, 'totalPrice', item.quantity * match.price);
+    }
   };
 
   const handleQty = (v: string) => {
@@ -38,44 +58,53 @@ const LineItemRow: React.FC<Props> = ({ item, index, onChange, onRemove, canRemo
 
   return (
     <tr className="border-b border-slate-100 hover:bg-slate-50/50">
-      <td className="py-2 px-3 text-xs text-slate-400">{index + 1}</td>
+      <td className="py-2 px-3 text-xs text-slate-400 w-8">{index + 1}</td>
+
+      {/* Product — searchable, unique names */}
       <td className="py-2 px-2">
-        <select
-          value={item.productId}
-          onChange={e => handleProductChange(e.target.value)}
-          className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-        >
-          <option value="">Select product...</option>
-          {Array.from(new Map(products.map(p => [p.id, p])).values()).map(p => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
+        <SearchableSelect
+          options={productOptions}
+          value={item.productName}
+          onChange={handleProductChange}
+          placeholder="Search product..."
+          className="min-w-[160px]"
+          emptyLabel="No products"
+        />
       </td>
+
+      {/* Flavour — searchable, filtered by product */}
       <td className="py-2 px-2">
-        <select
+        <SearchableSelect
+          options={flavourOptions}
           value={item.flavour ?? ''}
-          onChange={e => onChange(item.id, 'flavour', e.target.value)}
-          disabled={!item.productId}
-          className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white disabled:opacity-40"
-        >
-          <option value="">Any / All</option>
-          {flavours.map(f => <option key={f} value={f}>{f}</option>)}
-        </select>
+          onChange={handleFlavourChange}
+          placeholder="Any / All"
+          disabled={!item.productName}
+          className="min-w-[140px]"
+          emptyLabel="No flavours"
+        />
       </td>
+
+      {/* Qty */}
       <td className="py-2 px-2">
         <input
-          type="number" min="1"
+          type="number"
+          min="1"
           value={item.quantity || ''}
           onChange={e => handleQty(e.target.value)}
           placeholder="0"
           className="w-20 text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-right"
         />
       </td>
+
+      {/* Unit Price */}
       <td className="py-2 px-2">
         <div className="relative">
           <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">£</span>
           <input
-            type="number" min="0" step="0.01"
+            type="number"
+            min="0"
+            step="0.01"
             value={item.unitPrice || ''}
             onChange={e => handlePrice(e.target.value)}
             placeholder="0.00"
@@ -83,9 +112,13 @@ const LineItemRow: React.FC<Props> = ({ item, index, onChange, onRemove, canRemo
           />
         </div>
       </td>
+
+      {/* Total */}
       <td className="py-2 px-3 text-xs font-semibold text-slate-700 text-right">
         £{item.totalPrice.toFixed(2)}
       </td>
+
+      {/* Remove */}
       <td className="py-2 px-2">
         {canRemove && (
           <button
