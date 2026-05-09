@@ -1,5 +1,4 @@
-import { Product, Order, Supplier, Category, User, Customer, Cart, Coupon, PricingStrategy, Campaign, Role, Warehouse, InboundShipment, LedgerEntry } from './types';
-import { Product, Order, Supplier, Category, User, Customer, Cart, Coupon, PricingStrategy, Campaign, Role, Warehouse, Lead, CustomerTimeline, WorkSession, Visit, FollowUp, Task, CollectionAttempt, RoutePlan, Territory, TerritoryPerformance, RepStatus, RepPerformanceMetrics, CustomerHealth, OperationalAlert, TeamAnalytics, LeadAnalytics, CRMNotification, AutomationRule, Escalation, ApprovalRequest, AuditLog, CustomerDocument, CRMRecommendation } from './types';
+import { Product, Order, Supplier, Category, User, Customer, Cart, Coupon, PricingStrategy, Campaign, Role, Warehouse, InboundShipment, LedgerEntry, Lead, CustomerTimeline, WorkSession, Visit, FollowUp, Task, CollectionAttempt, RoutePlan, Territory, TerritoryPerformance, RepStatus, RepPerformanceMetrics, CustomerHealth, OperationalAlert, TeamAnalytics, LeadAnalytics, CRMNotification, AutomationRule, Escalation, ApprovalRequest, AuditLog, CustomerDocument, CRMRecommendation } from './types';
 
 export const PRODUCTS: Product[] = [
   { id: 'P101', name: 'LOST MARY BM6000 KIT', sku: '69af31c9f23b451a66fe8d05', barcode: '506090000101', category: 'Pre-filled Vape Kits + Pods', supplier: 'Lost Mary', flavour: 'Strawberry Lime', price: 3.85, mrp: 5.99, stock: 1200, reservedStock: 150, damagedStock: 5, status: 'Active', image: 'https://picsum.photos/40/40?random=101', unitsPerCarton: 200, weight: '150g', warehouseLocation: 'Rack A-01', batchNumber: 'B-2024-001', expiryDate: '2025-12-31' },
@@ -500,6 +499,10 @@ export const INBOUND_SHIPMENTS: InboundShipment[] = [
     createdAt: '2026-04-20T16:00:00Z', createdBy: 'Admin',
     items: [
       { id: 'SI-012', productId: 'P001', productName: 'ELF BAR 600', flavour: 'Strawberry Kiwi', quantity: 400, unitPrice: 8, totalPrice: 3200 },
+    ],
+  },
+];
+
 // ─── PHASE 2: SALES REP CRM MOCK DATA ────────────────────────────────────────
 
 export const LEADS: Lead[] = [
@@ -782,6 +785,8 @@ export const LEDGER_ENTRIES: LedgerEntry[] = [
   { id: 'LED-005', shipmentId: 'SHIP-003', date: '2026-05-01', type: 'DEBIT',  amount: 24000, description: 'Payment made to Lost Mary',    supplierId: 'SUP-001', supplierName: 'Lost Mary', customerId: 'C001', customerName: 'James Cameron' },
   // SHIP-004: Credit → CREDIT only
   { id: 'LED-006', shipmentId: 'SHIP-004', date: '2026-04-28', type: 'CREDIT', amount: 6000,  description: 'Stock received from Velo',      supplierId: 'SUP-003', supplierName: 'Velo' },
+];
+
 // ─── Phase 4: Sales Manager Intelligence Mock Data ─────────────────────────
 
 export const TERRITORIES: Territory[] = [
