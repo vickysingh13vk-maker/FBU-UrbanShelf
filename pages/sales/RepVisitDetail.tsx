@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, MapPin, CheckSquare, Square, Star, Package, Banknote, FileText, Calendar } from 'lucide-react';
+import { ArrowLeft, Clock, CheckSquare, Square, Star, Package, Banknote, FileText, Calendar, StopCircle } from 'lucide-react';
 import { Card } from '../../components/ui';
 import { useSalesExecution } from '../../context/SalesExecutionContext';
 
@@ -14,7 +14,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
 const RepVisitDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getVisitById } = useSalesExecution();
+  const { getVisitById, updateVisitObjective, endVisit } = useSalesExecution();
 
   const visit = getVisitById(id ?? '');
 
@@ -102,19 +102,23 @@ const RepVisitDetail: React.FC = () => {
           </div>
           <div className="space-y-2">
             {visit.objectives.map(obj => (
-              <div key={obj.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border ${
-                obj.completed ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'
-              }`}>
+              <button
+                key={obj.id}
+                onClick={() => visit.status === 'active' && updateVisitObjective(visit.id, obj.id, !obj.completed)}
+                disabled={visit.status !== 'active'}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-all ${
+                  obj.completed ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'
+                } ${visit.status === 'active' ? 'cursor-pointer hover:border-indigo-200 hover:bg-indigo-50' : 'cursor-default'}`}>
                 {obj.completed
                   ? <CheckSquare className="h-4 w-4 text-emerald-500 flex-shrink-0" />
                   : <Square className="h-4 w-4 text-slate-300 flex-shrink-0" />}
-                <span className={`text-sm font-semibold ${obj.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+                <span className={`text-sm font-semibold flex-1 ${obj.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}>
                   {obj.type}
                 </span>
                 {obj.description && (
-                  <span className="text-xs text-slate-400 ml-auto truncate">{obj.description}</span>
+                  <span className="text-xs text-slate-400 truncate">{obj.description}</span>
                 )}
-              </div>
+              </button>
             ))}
           </div>
         </Card>
@@ -192,10 +196,11 @@ const RepVisitDetail: React.FC = () => {
           {visit.followUpId && (
             <div className="flex items-center justify-between text-sm">
               <span className="text-slate-500 text-xs">Follow-Up Created</span>
-              <div className="flex items-center gap-1 text-indigo-600 text-xs font-semibold">
+              <button onClick={() => navigate('/sales/follow-ups')}
+                className="flex items-center gap-1 text-indigo-600 text-xs font-semibold hover:text-indigo-800">
                 <Calendar className="h-3.5 w-3.5" />
-                {visit.followUpId}
-              </div>
+                View Follow-Ups →
+              </button>
             </div>
           )}
         </div>
@@ -209,10 +214,19 @@ const RepVisitDetail: React.FC = () => {
         </Card>
       )}
 
-      <button onClick={() => navigate(`/sales/customers/${visit.customerId}`)}
-        className="w-full py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
-        View Customer →
-      </button>
+      <div className="flex gap-3">
+        {visit.status === 'active' && (
+          <button
+            onClick={() => { endVisit(visit.id, { productsDiscussed: [], notes: 'Ended from visit detail.' }); navigate('/sales/visits'); }}
+            className="flex items-center gap-2 px-5 py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-sm font-bold transition-colors">
+            <StopCircle className="h-4 w-4" /> End Visit
+          </button>
+        )}
+        <button onClick={() => navigate(`/sales/customers/${visit.customerId}`)}
+          className="flex-1 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+          View Customer →
+        </button>
+      </div>
     </div>
   );
 };

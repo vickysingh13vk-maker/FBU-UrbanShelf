@@ -772,6 +772,14 @@ export const ROUTE_PLANS: RoutePlan[] = [
       { customerId: 'C005', customerName: 'X-Files Archive', address: '22 Basement Row, London SW1A 0AA', priority: 'High', estimatedVisitMinutes: 40, suggestedOrder: 3, hasOverdueCollection: true, hasOverdueFollowUp: true, lastVisitDaysAgo: 3, status: 'Pending' },
     ],
   },
+  {
+    id: 'RP003', repId: 'U004', date: '2026-05-10', estimatedTotalMinutes: 105,
+    stops: [
+      { customerId: 'C002', customerName: 'Cyberdyne Retail', address: '89 Market Lane, London W1B 3HH', priority: 'High', estimatedVisitMinutes: 30, suggestedOrder: 1, hasOverdueCollection: true, hasOverdueFollowUp: true, lastVisitDaysAgo: 3, status: 'Pending' },
+      { customerId: 'C003', customerName: 'Nostromo Supplies', address: '44 Warehouse Road, London E14 5AB', priority: 'High', estimatedVisitMinutes: 35, suggestedOrder: 2, hasOverdueCollection: false, hasOverdueFollowUp: true, lastVisitDaysAgo: 45, status: 'Pending' },
+      { customerId: 'C004', customerName: 'Rick Deckard Imports', address: '7 Blade Runner Lane, London N1 9GU', priority: 'High', estimatedVisitMinutes: 40, suggestedOrder: 3, hasOverdueCollection: true, hasOverdueFollowUp: false, lastVisitDaysAgo: 60, status: 'Pending' },
+    ],
+  },
 ];
 
 export const LEDGER_ENTRIES: LedgerEntry[] = [

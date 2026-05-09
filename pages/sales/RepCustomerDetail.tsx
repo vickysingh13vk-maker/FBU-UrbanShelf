@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Phone, Mail, ShoppingCart, Wallet, Plus } from 'lucide-react';
+import { ArrowLeft, MapPin, Phone, Mail, ShoppingCart, Wallet, Plus, Calendar, CheckCircle, Clock } from 'lucide-react';
 import { Card } from '../../components/ui';
 import LifecycleBadge from '../../components/sales/LifecycleBadge';
 import CustomerTimelineItem from '../../components/sales/CustomerTimelineItem';
 import TimelineLogForm from '../../components/sales/TimelineLogForm';
 import { useSalesCRM } from '../../context/SalesCRMContext';
+import { useSalesExecution } from '../../context/SalesExecutionContext';
 import { useAuth } from '../../context/AuthContext';
 import { useCheckIn } from '../../context/CheckInContext';
 import { ORDERS } from '../../data';
@@ -16,6 +17,7 @@ const RepCustomerDetail: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { customers, getCustomerTimeline, addTimelineEntry } = useSalesCRM();
+  const { getRepFollowUps, completeFollowUp, addFollowUp } = useSalesExecution();
   const { checkIn, checkOut, checkedInCustomer } = useCheckIn();
   const [showLogForm, setShowLogForm] = useState(false);
   const [checkingIn, setCheckingIn] = useState(false);
@@ -24,6 +26,8 @@ const RepCustomerDetail: React.FC = () => {
   const timeline = id ? getCustomerTimeline(id) : [];
   const customerOrders = ORDERS.filter(o => o.customerId === id).slice(0, 5);
   const isCheckedIn = checkedInCustomer?.id === id;
+  const repId = user?.id ?? '';
+  const customerFollowUps = getRepFollowUps(repId).filter(f => f.customerId === id && f.status !== 'Cancelled');
 
   if (!customer) {
     return (
@@ -107,11 +111,11 @@ const RepCustomerDetail: React.FC = () => {
             <MapPin className="h-4 w-4" />
             {checkingIn ? 'Locating...' : isCheckedIn ? 'Check Out' : 'Check In'}
           </button>
-          <button onClick={() => navigate('/sales/orders')}
+          <button onClick={() => navigate('/sales/orders', { state: { customerId: customer.id, customerName: customer.storeName } })}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
-            <ShoppingCart className="h-4 w-4" /> Create Order
+            <ShoppingCart className="h-4 w-4" /> View Orders
           </button>
-          <button onClick={() => navigate('/sales/payments')}
+          <button onClick={() => navigate('/sales/payments', { state: { customerId: customer.id } })}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
             <Wallet className="h-4 w-4" /> Log Payment
           </button>
@@ -163,8 +167,54 @@ const RepCustomerDetail: React.FC = () => {
           </Card>
         </div>
 
-        {/* Orders */}
-        <div>
+        {/* Right Column */}
+        <div className="space-y-4">
+          {/* Follow-Ups */}
+          <Card padding="md">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-slate-700">Follow-Ups</h3>
+              <button
+                onClick={() => addFollowUp({
+                  repId, repName: user?.name ?? '', customerId: customer.id, customerName: customer.storeName,
+                  type: 'Call', priority: 'Medium',
+                  scheduledDate: new Date(Date.now() + 86400000).toISOString(),
+                  notes: '', status: 'Pending',
+                })}
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-semibold hover:bg-indigo-100 transition-colors">
+                <Plus className="h-3 w-3" /> Add
+              </button>
+            </div>
+            {customerFollowUps.length === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-4">No follow-ups scheduled</p>
+            ) : (
+              <div className="space-y-2">
+                {customerFollowUps.slice(0, 4).map(fu => (
+                  <div key={fu.id} className={`flex items-start gap-2.5 p-2.5 rounded-xl border ${
+                    fu.status === 'Completed' ? 'bg-emerald-50 border-emerald-100' :
+                    new Date(fu.scheduledDate) < new Date() ? 'bg-rose-50 border-rose-100' : 'bg-slate-50 border-slate-100'
+                  }`}>
+                    {fu.status === 'Completed'
+                      ? <CheckCircle className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                      : <Clock className={`h-3.5 w-3.5 flex-shrink-0 mt-0.5 ${new Date(fu.scheduledDate) < new Date() ? 'text-rose-500' : 'text-amber-500'}`} />
+                    }
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-slate-700">{fu.type}</p>
+                      <p className="text-xs text-slate-400">{new Date(fu.scheduledDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
+                      {fu.notes && <p className="text-xs text-slate-400 mt-0.5 truncate">{fu.notes}</p>}
+                    </div>
+                    {fu.status === 'Pending' && (
+                      <button onClick={() => completeFollowUp(fu.id, 'Completed from customer detail')}
+                        className="text-xs text-emerald-600 font-semibold hover:text-emerald-800 flex-shrink-0">
+                        Done
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {/* Orders */}
           <Card padding="md">
             <h3 className="text-sm font-bold text-slate-700 mb-4">Recent Orders</h3>
             {customerOrders.length === 0 ? (
@@ -189,7 +239,7 @@ const RepCustomerDetail: React.FC = () => {
               </div>
             )}
           </Card>
-        </div>
+        </div> {/* end right column */}
       </div>
 
       {showLogForm && (

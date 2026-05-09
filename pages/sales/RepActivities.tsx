@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { Plus, Phone, MapPin, RefreshCw, ShoppingCart, Wallet, MessageCircle, FileText, Clock } from 'lucide-react';
+import { Plus, Phone, MapPin, RefreshCw, ShoppingCart, Wallet, MessageCircle, FileText, Clock, ChevronDown } from 'lucide-react';
 import { Card } from '../../components/ui';
 import TimelineLogForm from '../../components/sales/TimelineLogForm';
 import { useSalesCRM } from '../../context/SalesCRMContext';
-import { useWorkSession } from '../../context/WorkSessionContext';
 import { useAuth } from '../../context/AuthContext';
 import { TimelineEventType, CustomerTimeline } from '../../types';
 
@@ -22,10 +21,10 @@ const FILTER_TYPES: (TimelineEventType | 'All')[] = ['All', 'Visit', 'Call', 'Or
 const RepActivities: React.FC = () => {
   const { user } = useAuth();
   const { getRepCustomers, getCustomerTimeline, addTimelineEntry } = useSalesCRM();
-  const { todayStats } = useWorkSession();
   const [typeFilter, setTypeFilter] = useState<TimelineEventType | 'All'>('All');
   const [showLogForm, setShowLogForm] = useState(false);
   const [logForCustomerId, setLogForCustomerId] = useState<string | null>(null);
+  const [showCustomerSelect, setShowCustomerSelect] = useState(false);
 
   const repId = user?.id ?? '';
   const myCustomers = getRepCustomers(repId);
@@ -72,10 +71,25 @@ const RepActivities: React.FC = () => {
           <h1 className="text-2xl font-black text-slate-800">Activities</h1>
           <p className="text-sm text-slate-500 mt-1">Today's field activity log</p>
         </div>
-        <button onClick={() => setShowLogForm(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors">
-          <Plus className="h-4 w-4" /> Log Activity
-        </button>
+        <div className="relative">
+          <button onClick={() => setShowCustomerSelect(!showCustomerSelect)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors">
+            <Plus className="h-4 w-4" /> Log Activity
+            <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+          </button>
+          {showCustomerSelect && (
+            <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-slate-200 rounded-xl shadow-xl z-20 overflow-hidden">
+              <p className="px-3 py-2 text-xs font-bold text-slate-400 border-b border-slate-100">Log for customer:</p>
+              {myCustomers.map(c => (
+                <button key={c.id}
+                  onClick={() => { setLogForCustomerId(c.id); setShowCustomerSelect(false); setShowLogForm(true); }}
+                  className="w-full px-3 py-2.5 text-left text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors">
+                  {c.storeName}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Summary Strip */}
@@ -155,6 +169,7 @@ const RepActivities: React.FC = () => {
         <TimelineLogForm
           onSave={handleLog}
           onClose={() => { setShowLogForm(false); setLogForCustomerId(null); }}
+          customerName={myCustomers.find(c => c.id === (logForCustomerId ?? myCustomers[0]?.id))?.storeName}
         />
       )}
     </div>

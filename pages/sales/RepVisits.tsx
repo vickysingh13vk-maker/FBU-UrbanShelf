@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Clock, CheckCircle, XCircle, Calendar, Plus } from 'lucide-react';
+import { MapPin, Clock, CheckCircle, XCircle, Calendar, Plus, Search, X } from 'lucide-react';
 import { Card } from '../../components/ui';
 import VisitWorkflowModal from '../../components/sales/VisitWorkflowModal';
 import ActiveVisitPanel from '../../components/sales/ActiveVisitPanel';
@@ -25,6 +25,8 @@ const RepVisits: React.FC = () => {
   const [tab, setTab] = useState<'today' | 'history'>('today');
   const [visitModal, setVisitModal] = useState<{ customerId: string; customerName: string } | null>(null);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
+  const [showCustomerPicker, setShowCustomerPicker] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState('');
 
   const repId = user?.id ?? '';
   const allVisits = getRepVisits(repId);
@@ -56,7 +58,7 @@ const RepVisits: React.FC = () => {
           <p className="text-sm text-slate-500 mt-1">{todayVisits.length} today · {allVisits.filter(v => v.status === 'completed').length} total</p>
         </div>
         {!activeVisit && (
-          <button onClick={() => setVisitModal({ customerId: myCustomers[0]?.id ?? '', customerName: myCustomers[0]?.storeName ?? '' })}
+          <button onClick={() => setShowCustomerPicker(true)}
             className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors">
             <Plus className="h-4 w-4" /> Start Visit
           </button>
@@ -94,7 +96,7 @@ const RepVisits: React.FC = () => {
           <MapPin className="h-10 w-10 text-slate-200 mx-auto mb-3" />
           <p className="text-sm text-slate-400">{tab === 'today' ? 'No visits logged today' : 'No visit history'}</p>
           {tab === 'today' && !activeVisit && (
-            <button onClick={() => setVisitModal({ customerId: myCustomers[0]?.id ?? '', customerName: myCustomers[0]?.storeName ?? '' })}
+            <button onClick={() => setShowCustomerPicker(true)}
               className="mt-3 text-indigo-500 text-sm font-semibold">Start your first visit →</button>
           )}
         </Card>
@@ -134,6 +136,50 @@ const RepVisits: React.FC = () => {
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {/* Customer Picker Modal */}
+      {showCustomerPicker && !activeVisit && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100">
+              <h3 className="text-sm font-bold text-slate-800">Select Customer to Visit</h3>
+              <button onClick={() => { setShowCustomerPicker(false); setPickerSearch(''); }}
+                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="p-3 border-b border-slate-100">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                <input
+                  value={pickerSearch}
+                  onChange={e => setPickerSearch(e.target.value)}
+                  placeholder="Search customers..."
+                  autoFocus
+                  className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                />
+              </div>
+            </div>
+            <div className="overflow-y-auto max-h-72 p-2">
+              {myCustomers
+                .filter(c => !pickerSearch || c.storeName.toLowerCase().includes(pickerSearch.toLowerCase()))
+                .map(c => (
+                  <button key={c.id}
+                    onClick={() => { setShowCustomerPicker(false); setPickerSearch(''); setVisitModal({ customerId: c.id, customerName: c.storeName }); }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-indigo-50 transition-colors text-left">
+                    <div className="h-9 w-9 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <span className="text-sm font-bold text-indigo-600">{c.storeName.charAt(0)}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-800 truncate">{c.storeName}</p>
+                      <p className="text-xs text-slate-400">{c.name}</p>
+                    </div>
+                  </button>
+                ))}
+            </div>
+          </div>
         </div>
       )}
 

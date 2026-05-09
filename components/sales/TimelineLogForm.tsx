@@ -8,9 +8,10 @@ interface Props {
   onSave: (type: TimelineEventType, notes: string, outcome: string, nextAction: string, amount?: number) => void;
   onClose: () => void;
   defaultType?: TimelineEventType;
+  customerName?: string;
 }
 
-const TimelineLogForm: React.FC<Props> = ({ onSave, onClose, defaultType = 'Note' }) => {
+const TimelineLogForm: React.FC<Props> = ({ onSave, onClose, defaultType = 'Note', customerName }) => {
   const [type, setType] = useState<TimelineEventType>(defaultType);
   const [notes, setNotes] = useState('');
   const [outcome, setOutcome] = useState('');
@@ -27,7 +28,10 @@ const TimelineLogForm: React.FC<Props> = ({ onSave, onClose, defaultType = 'Note
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
         <div className="flex items-center justify-between p-5 border-b border-slate-100">
-          <h3 className="text-base font-bold text-slate-800">Log Activity</h3>
+          <div>
+            <h3 className="text-base font-bold text-slate-800">Log Activity</h3>
+            {customerName && <p className="text-xs text-indigo-500 font-semibold mt-0.5">@ {customerName}</p>}
+          </div>
           <button onClick={onClose} className="h-7 w-7 rounded-lg hover:bg-slate-100 flex items-center justify-center">
             <X className="h-4 w-4 text-slate-500" />
           </button>

@@ -35,7 +35,7 @@ const RepLeadDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { leads, updateLead, moveLeadStage, addLeadActivity, convertLead } = useSalesCRM();
+  const { leads, updateLead, moveLeadStage, addLeadActivity, convertLead, addCustomer } = useSalesCRM();
 
   const [showEditForm, setShowEditForm] = useState(false);
   const [showStagePicker, setShowStagePicker] = useState(false);
@@ -85,8 +85,28 @@ const RepLeadDetail: React.FC = () => {
   };
 
   const handleConvert = () => {
-    const newCustomerId = 'C' + Date.now().toString().slice(-4);
-    convertLead(lead.id, newCustomerId);
+    const newCustomer = addCustomer({
+      name: lead.contactName,
+      email: lead.email ?? '',
+      phone: lead.phone ?? '',
+      companyName: lead.businessName,
+      storeName: lead.businessName,
+      regNo: '',
+      address: lead.address ?? '',
+      status: 'Approved',
+      walletBalance: 0,
+      creditLimit: 1000,
+      joinedDate: new Date().toISOString().split('T')[0],
+      category: lead.category,
+      assignedRepId: lead.repId,
+      assignedRepName: lead.repName,
+      createdByRepId: lead.repId,
+      ownershipStatus: 'Assigned',
+      lifecycleStage: 'New',
+      lastContactDate: new Date().toISOString(),
+    });
+    convertLead(lead.id, newCustomer.id);
+    navigate(`/sales/customers/${newCustomer.id}`);
   };
 
   const sortedActivities = [...lead.activities].sort(

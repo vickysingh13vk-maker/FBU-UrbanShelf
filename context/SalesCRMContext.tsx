@@ -15,6 +15,9 @@ interface SalesCRMContextType {
   convertLead: (leadId: string, customerId: string) => void;
   addLeadActivity: (leadId: string, activity: Omit<LeadActivity, 'id' | 'leadId'>) => void;
 
+  // Customer Management
+  addCustomer: (customer: Omit<Customer, 'id'>) => Customer;
+
   // Customer Timeline
   timelines: CustomerTimeline[];
   getCustomerTimeline: (customerId: string) => CustomerTimeline[];
@@ -133,6 +136,12 @@ export const SalesCRMProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     ));
   }, []);
 
+  const addCustomer = useCallback((customer: Omit<Customer, 'id'>): Customer => {
+    const newCustomer: Customer = { ...customer, id: generateId('C') };
+    setCustomers(prev => [newCustomer, ...prev]);
+    return newCustomer;
+  }, []);
+
   const getRepCustomers = useCallback((repId: string): Customer[] =>
     customers.filter(c => c.assignedRepId === repId), [customers]);
 
@@ -162,7 +171,7 @@ export const SalesCRMProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     <SalesCRMContext.Provider value={{
       leads, getRepLeads, addLead, updateLead, moveLeadStage, convertLead, addLeadActivity,
       timelines, getCustomerTimeline, addTimelineEntry,
-      customers, getRepCustomers, updateCustomerLifecycle,
+      customers, getRepCustomers, addCustomer, updateCustomerLifecycle,
       getTodayLeadCount, getPendingFollowUps,
     }}>
       {children}

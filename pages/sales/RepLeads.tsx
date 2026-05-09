@@ -54,7 +54,7 @@ const LeadCard: React.FC<{ lead: Lead; onClick: () => void }> = ({ lead, onClick
 const RepLeads: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { getRepLeads, addLead, moveLeadStage } = useSalesCRM();
+  const { getRepLeads, addLead } = useSalesCRM();
 
   const [view, setView] = useState<'list' | 'pipeline'>('list');
   const [search, setSearch] = useState('');
@@ -181,7 +181,7 @@ const RepLeads: React.FC = () => {
         <div className="overflow-x-auto">
           <div className="flex gap-4 min-w-max pb-4">
             {STAGES.map(stage => {
-              const stageLeads = leads.filter(l => l.stage === stage);
+              const stageLeads = filtered.filter(l => l.stage === stage);
               return (
                 <div key={stage} className={`w-64 rounded-2xl border-2 ${STAGE_COLORS[stage]} p-3`}>
                   <div className="flex items-center justify-between mb-3">
