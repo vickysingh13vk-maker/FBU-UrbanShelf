@@ -447,12 +447,25 @@ const ShipmentsPage: React.FC = () => {
               </button>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full table-fixed">
+                <colgroup>
+                  <col style={{ width: '36px' }} />
+                  <col style={{ width: '220px' }} />
+                  <col style={{ width: '180px' }} />
+                  <col style={{ width: '88px' }} />
+                  <col style={{ width: '110px' }} />
+                  <col style={{ width: '96px' }} />
+                  <col style={{ width: '36px' }} />
+                </colgroup>
                 <thead className="bg-slate-50 border-b border-slate-100">
                   <tr>
-                    {['#', 'Product', 'Flavour', 'Qty', 'Unit Price', 'Total', ''].map(h => (
-                      <th key={h} className="text-left px-3 py-2.5 text-xs font-semibold text-slate-500">{h}</th>
-                    ))}
+                    <th className="text-left   px-3 py-2.5 text-xs font-semibold text-slate-500">#</th>
+                    <th className="text-left   px-3 py-2.5 text-xs font-semibold text-slate-500">Product</th>
+                    <th className="text-left   px-3 py-2.5 text-xs font-semibold text-slate-500">Flavour</th>
+                    <th className="text-right  px-3 py-2.5 text-xs font-semibold text-slate-500">Qty</th>
+                    <th className="text-right  px-3 py-2.5 text-xs font-semibold text-slate-500">Unit Price</th>
+                    <th className="text-right  px-3 py-2.5 text-xs font-semibold text-slate-500">Total</th>
+                    <th />
                   </tr>
                 </thead>
                 <tbody>

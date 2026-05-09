@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronDown, X, Search } from 'lucide-react';
+import { ChevronDown, X } from 'lucide-react';
 
 export interface SelectOption {
   value: string;
   label: string;
-  sub?: string; // optional subtitle / description
+  sub?: string;
 }
 
 interface Props {
@@ -14,7 +14,7 @@ interface Props {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
-  emptyLabel?: string; // shown when no options match query
+  emptyLabel?: string;
 }
 
 const SearchableSelect: React.FC<Props> = ({
@@ -33,12 +33,10 @@ const SearchableSelect: React.FC<Props> = ({
 
   const selectedLabel = options.find(o => o.value === value)?.label ?? '';
 
-  // Filtered list
   const filtered = query.trim()
-    ? options.filter(
-        o =>
-          o.label.toLowerCase().includes(query.toLowerCase()) ||
-          (o.sub ?? '').toLowerCase().includes(query.toLowerCase())
+    ? options.filter(o =>
+        o.label.toLowerCase().includes(query.toLowerCase()) ||
+        (o.sub ?? '').toLowerCase().includes(query.toLowerCase())
       )
     : options;
 
@@ -54,12 +52,13 @@ const SearchableSelect: React.FC<Props> = ({
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Keyboard: Escape to close
+  // Escape to close
   useEffect(() => {
+    if (!open) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { setOpen(false); setQuery(''); }
     };
-    if (open) document.addEventListener('keydown', handler);
+    document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [open]);
 
@@ -83,41 +82,53 @@ const SearchableSelect: React.FC<Props> = ({
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
-      {/* Trigger button */}
+      {/*
+        Trigger — FIXED height via py-1.5 + text-xs on all content.
+        The input and label span are always both rendered; we toggle
+        visibility so the DOM height never changes on open/close.
+      */}
       <div
         role="combobox"
         aria-expanded={open}
         tabIndex={disabled ? -1 : 0}
-        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDropdown(); } }}
         onClick={openDropdown}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDropdown(); }
+        }}
         className={[
-          'flex items-center gap-1 w-full text-xs border rounded-lg px-2 py-1.5 cursor-pointer select-none transition-all',
+          'flex items-center w-full text-xs border rounded-lg px-2 py-1.5 cursor-pointer transition-all overflow-hidden',
           disabled
             ? 'opacity-40 cursor-not-allowed bg-slate-50 border-slate-200'
             : open
               ? 'border-indigo-500 ring-2 ring-indigo-500/20 bg-white'
-              : 'border-slate-200 bg-white hover:border-slate-300',
+              : 'border-slate-200 bg-white hover:border-indigo-300',
         ].join(' ')}
       >
-        {open ? (
-          /* Search input inside trigger */
-          <div className="flex items-center gap-1.5 flex-1 min-w-0">
-            <Search className="h-3 w-3 text-slate-400 flex-shrink-0" />
-            <input
-              ref={inputRef}
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              onClick={e => e.stopPropagation()}
-              placeholder={selectedLabel || placeholder}
-              className="flex-1 min-w-0 outline-none bg-transparent text-slate-700 placeholder-slate-400 text-xs"
-            />
-          </div>
-        ) : (
-          <span className={`flex-1 truncate ${value ? 'text-slate-700 font-medium' : 'text-slate-400'}`}>
-            {selectedLabel || placeholder}
-          </span>
-        )}
+        {/* Label — visible when closed */}
+        <span
+          className={[
+            'flex-1 truncate text-xs leading-none',
+            open ? 'hidden' : 'block',
+            value ? 'text-slate-700 font-medium' : 'text-slate-400',
+          ].join(' ')}
+        >
+          {selectedLabel || placeholder}
+        </span>
 
+        {/* Search input — visible when open, same line-height as label */}
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onClick={e => e.stopPropagation()}
+          placeholder={selectedLabel || placeholder}
+          className={[
+            'flex-1 min-w-0 outline-none bg-transparent text-slate-700 text-xs leading-none placeholder-slate-400',
+            open ? 'block' : 'hidden',
+          ].join(' ')}
+        />
+
+        {/* Right icons — fixed width so trigger width is stable */}
         <div className="flex items-center gap-0.5 flex-shrink-0 ml-1">
           {value && !disabled && !open && (
             <button
@@ -129,17 +140,19 @@ const SearchableSelect: React.FC<Props> = ({
             </button>
           )}
           <ChevronDown
-            className={`h-3 w-3 text-slate-400 transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
+            className={`h-3 w-3 text-slate-400 transition-transform duration-150 flex-shrink-0 ${open ? 'rotate-180' : ''}`}
           />
         </div>
       </div>
 
-      {/* Dropdown list */}
+      {/* Dropdown — absolutely positioned, never affects layout */}
       {open && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-[200] overflow-hidden">
-          <div className="overflow-y-auto max-h-52">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-[300] overflow-hidden min-w-[160px]">
+          <div className="overflow-y-auto max-h-48">
             {filtered.length === 0 ? (
-              <div className="px-3 py-3 text-xs text-slate-400 italic text-center">{emptyLabel}{query ? ` for "${query}"` : ''}</div>
+              <div className="px-3 py-3 text-xs text-slate-400 italic text-center">
+                {emptyLabel}{query ? ` for "${query}"` : ''}
+              </div>
             ) : (
               filtered.map(opt => (
                 <div
@@ -152,13 +165,15 @@ const SearchableSelect: React.FC<Props> = ({
                       : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900',
                   ].join(' ')}
                 >
-                  <span className="truncate">{opt.label}</span>
-                  {opt.sub && (
-                    <span className="ml-2 text-[10px] text-slate-400 flex-shrink-0">{opt.sub}</span>
-                  )}
-                  {opt.value === value && (
-                    <span className="ml-2 text-indigo-400 flex-shrink-0">✓</span>
-                  )}
+                  <span className="truncate flex-1">{opt.label}</span>
+                  <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                    {opt.sub && (
+                      <span className="text-[10px] text-slate-400">{opt.sub}</span>
+                    )}
+                    {opt.value === value && (
+                      <span className="text-indigo-400 text-[10px]">✓</span>
+                    )}
+                  </div>
                 </div>
               ))
             )}

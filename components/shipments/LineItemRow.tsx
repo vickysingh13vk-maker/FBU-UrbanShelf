@@ -60,45 +60,45 @@ const LineItemRow: React.FC<Props> = ({ item, index, onChange, onRemove, canRemo
     <tr className="border-b border-slate-100 hover:bg-slate-50/50">
       <td className="py-2 px-3 text-xs text-slate-400 w-8">{index + 1}</td>
 
-      {/* Product — searchable, unique names */}
-      <td className="py-2 px-2">
+      {/* Product — searchable, unique names, fills fixed column width */}
+      <td className="py-1.5 px-2">
         <SearchableSelect
           options={productOptions}
           value={item.productName}
           onChange={handleProductChange}
           placeholder="Search product..."
-          className="min-w-[160px]"
+          className="w-full"
           emptyLabel="No products"
         />
       </td>
 
       {/* Flavour — searchable, filtered by product */}
-      <td className="py-2 px-2">
+      <td className="py-1.5 px-2">
         <SearchableSelect
           options={flavourOptions}
           value={item.flavour ?? ''}
           onChange={handleFlavourChange}
           placeholder="Any / All"
           disabled={!item.productName}
-          className="min-w-[140px]"
+          className="w-full"
           emptyLabel="No flavours"
         />
       </td>
 
       {/* Qty */}
-      <td className="py-2 px-2">
+      <td className="py-1.5 px-2">
         <input
           type="number"
           min="1"
           value={item.quantity || ''}
           onChange={e => handleQty(e.target.value)}
           placeholder="0"
-          className="w-20 text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-right"
+          className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-right"
         />
       </td>
 
       {/* Unit Price */}
-      <td className="py-2 px-2">
+      <td className="py-1.5 px-2">
         <div className="relative">
           <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">£</span>
           <input
@@ -108,13 +108,13 @@ const LineItemRow: React.FC<Props> = ({ item, index, onChange, onRemove, canRemo
             value={item.unitPrice || ''}
             onChange={e => handlePrice(e.target.value)}
             placeholder="0.00"
-            className="w-24 text-xs border border-slate-200 rounded-lg pl-5 pr-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-right"
+            className="w-full text-xs border border-slate-200 rounded-lg pl-5 pr-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-right"
           />
         </div>
       </td>
 
       {/* Total */}
-      <td className="py-2 px-3 text-xs font-semibold text-slate-700 text-right">
+      <td className="py-1.5 px-3 text-xs font-semibold text-slate-700 text-right">
         £{item.totalPrice.toFixed(2)}
       </td>
 
