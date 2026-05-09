@@ -41,11 +41,13 @@ import RolesPermissionsPage from './pages/RolesPermissions';
 import CheckInPage from './pages/CheckIn';
 import CommissionDashboardPage from './pages/CommissionDashboard';
 import StockReversalLedgerPage from './pages/StockReversalLedger';
+import ShipmentsPage from './pages/Shipments';
 import { AuthProvider } from './context/AuthContext';
 import { DashboardProvider } from './context/DashboardContext';
 import { CheckInProvider } from './context/CheckInContext';
 import { ProductProvider } from './context/ProductContext';
 import { SupplierProvider } from './context/SupplierContext';
+import { ShipmentProvider } from './context/ShipmentContext';
 
 const App: React.FC = () => {
   return (
@@ -53,6 +55,7 @@ const App: React.FC = () => {
       <DashboardProvider>
         <ProductProvider>
           <SupplierProvider>
+            <ShipmentProvider>
             <CheckInProvider>
             <HashRouter>
             <Routes>
@@ -103,6 +106,7 @@ const App: React.FC = () => {
 
                     <Route path="/users" element={<UsersPage />} />
                     <Route path="/roles" element={<RolesPermissionsPage />} />
+                    <Route path="/admin/shipments" element={<ShipmentsPage />} />
 
                     {/* Placeholders for other routes to ensure navigation works visually */}
                     <Route path="/loyalty" element={<GenericPage title="Loyalty Program" description="Points and rewards configuration." data={[]} columns={[]} actionLabel="Configure" />} />
@@ -114,6 +118,7 @@ const App: React.FC = () => {
             </Routes>
           </HashRouter>
         </CheckInProvider>
+        </ShipmentProvider>
       </SupplierProvider>
     </ProductProvider>
   </DashboardProvider>

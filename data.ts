@@ -1,4 +1,4 @@
-import { Product, Order, Supplier, Category, User, Customer, Cart, Coupon, PricingStrategy, Campaign, Role, Warehouse } from './types';
+import { Product, Order, Supplier, Category, User, Customer, Cart, Coupon, PricingStrategy, Campaign, Role, Warehouse, InboundShipment, LedgerEntry } from './types';
 
 export const PRODUCTS: Product[] = [
   { id: 'P101', name: 'LOST MARY BM6000 KIT', sku: '69af31c9f23b451a66fe8d05', barcode: '506090000101', category: 'Pre-filled Vape Kits + Pods', supplier: 'Lost Mary', flavour: 'Strawberry Lime', price: 3.85, mrp: 5.99, stock: 1200, reservedStock: 150, damagedStock: 5, status: 'Active', image: 'https://picsum.photos/40/40?random=101', unitsPerCarton: 200, weight: '150g', warehouseLocation: 'Rack A-01', batchNumber: 'B-2024-001', expiryDate: '2025-12-31' },
@@ -387,16 +387,87 @@ export const CAMPAIGNS: Campaign[] = [
     date: 'Oct 10, 2023', 
     sentAt: 'Oct 10, 2023 02:00 PM' 
   },
-  { 
-    id: 'CAM-005', 
-    title: 'Q4 Wholesale Pricing Update', 
-    subject: 'Important update regarding your account', 
-    status: 'SENDING', 
-    audience: 'Approved Users', 
-    recipients: 300, 
-    delivered: 150, 
-    failed: 0, 
-    date: 'Oct 27, 2023', 
-    sentAt: 'Sending now...' 
+  {
+    id: 'CAM-005',
+    title: 'Q4 Wholesale Pricing Update',
+    subject: 'Important update regarding your account',
+    status: 'SENDING',
+    audience: 'Approved Users',
+    recipients: 300,
+    delivered: 150,
+    failed: 0,
+    date: 'Oct 27, 2023',
+    sentAt: 'Sending now...'
   },
+];
+
+export const INBOUND_SHIPMENTS: InboundShipment[] = [
+  {
+    id: 'SHIP-001', supplierId: 'SUP-001', supplierName: 'Lost Mary',
+    date: '2026-05-05', paymentType: 'Paid', status: 'Confirmed',
+    hasLinkedCustomer: false, totalAmount: 18000,
+    createdAt: '2026-05-05T10:00:00Z', createdBy: 'Admin',
+    notes: 'Regular monthly stock replenishment',
+    items: [
+      { id: 'SI-001', productId: 'P101', productName: 'LOST MARY BM6000 KIT', flavour: 'Strawberry Lime', quantity: 500, unitPrice: 12, totalPrice: 6000 },
+      { id: 'SI-002', productId: 'P102', productName: 'LOST MARY BM6000 KIT', flavour: 'Pineapple Passion Fruit', quantity: 500, unitPrice: 12, totalPrice: 6000 },
+      { id: 'SI-003', productId: 'P103', productName: 'LOST MARY BM6000 KIT', flavour: 'Watermelon Kiwi', quantity: 500, unitPrice: 12, totalPrice: 6000 },
+    ],
+  },
+  {
+    id: 'SHIP-002', supplierId: 'SUP-002', supplierName: 'Elf Bar',
+    date: '2026-05-04', paymentType: 'Credit', status: 'Confirmed',
+    hasLinkedCustomer: false, totalAmount: 9500,
+    createdAt: '2026-05-04T14:30:00Z', createdBy: 'Admin',
+    items: [
+      { id: 'SI-004', productId: 'P001', productName: 'ELF BAR 600', flavour: 'Blueberry', quantity: 1000, unitPrice: 5.5, totalPrice: 5500 },
+      { id: 'SI-005', productId: 'P001', productName: 'ELF BAR 600', flavour: 'Mango', quantity: 600, unitPrice: 5.5, totalPrice: 3300 },
+      { id: 'SI-006', productId: 'P001', productName: 'ELF BAR 600', flavour: 'Watermelon', quantity: 127, unitPrice: 5.5, totalPrice: 700 },
+    ],
+  },
+  {
+    id: 'SHIP-003', supplierId: 'SUP-001', supplierName: 'Lost Mary',
+    date: '2026-05-01', paymentType: 'Paid', status: 'Confirmed',
+    hasLinkedCustomer: true, customerId: 'C001', customerName: 'James Cameron',
+    totalAmount: 24000,
+    createdAt: '2026-05-01T09:00:00Z', createdBy: 'Admin',
+    notes: 'Customer pre-order fulfilled',
+    items: [
+      { id: 'SI-007', productId: 'P104', productName: 'LOST MARY BM6000 KIT', flavour: 'Red Apple Ice', quantity: 1000, unitPrice: 12, totalPrice: 12000 },
+      { id: 'SI-008', productId: 'P105', productName: 'LOST MARY BM6000 KIT', flavour: 'Blue Razz Cherry', quantity: 800, unitPrice: 12, totalPrice: 9600 },
+      { id: 'SI-009', productId: 'P106', productName: 'LOST MARY BM6000 KIT', flavour: 'Orange Bruu', quantity: 200, unitPrice: 12, totalPrice: 2400 },
+    ],
+  },
+  {
+    id: 'SHIP-004', supplierId: 'SUP-003', supplierName: 'Velo',
+    date: '2026-04-28', paymentType: 'Credit', status: 'Confirmed',
+    hasLinkedCustomer: false, totalAmount: 6000,
+    createdAt: '2026-04-28T11:00:00Z', createdBy: 'Admin',
+    items: [
+      { id: 'SI-010', productId: 'P201', productName: 'VELO Ice Cool', flavour: 'Mint', quantity: 400, unitPrice: 8, totalPrice: 3200 },
+      { id: 'SI-011', productId: 'P202', productName: 'VELO Freeze', flavour: 'Arctic Mint', quantity: 350, unitPrice: 8, totalPrice: 2800 },
+    ],
+  },
+  {
+    id: 'SHIP-005', supplierId: 'SUP-002', supplierName: 'Elf Bar',
+    date: '2026-04-20', paymentType: 'Paid', status: 'Draft',
+    hasLinkedCustomer: false, totalAmount: 3200,
+    createdAt: '2026-04-20T16:00:00Z', createdBy: 'Admin',
+    items: [
+      { id: 'SI-012', productId: 'P001', productName: 'ELF BAR 600', flavour: 'Strawberry Kiwi', quantity: 400, unitPrice: 8, totalPrice: 3200 },
+    ],
+  },
+];
+
+export const LEDGER_ENTRIES: LedgerEntry[] = [
+  // SHIP-001: Paid → CREDIT + DEBIT
+  { id: 'LED-001', shipmentId: 'SHIP-001', date: '2026-05-05', type: 'CREDIT', amount: 18000, description: 'Stock received from Lost Mary', supplierId: 'SUP-001', supplierName: 'Lost Mary' },
+  { id: 'LED-002', shipmentId: 'SHIP-001', date: '2026-05-05', type: 'DEBIT',  amount: 18000, description: 'Payment made to Lost Mary',    supplierId: 'SUP-001', supplierName: 'Lost Mary' },
+  // SHIP-002: Credit → CREDIT only
+  { id: 'LED-003', shipmentId: 'SHIP-002', date: '2026-05-04', type: 'CREDIT', amount: 9500,  description: 'Stock received from Elf Bar',   supplierId: 'SUP-002', supplierName: 'Elf Bar' },
+  // SHIP-003: Paid + linked customer → CREDIT + DEBIT
+  { id: 'LED-004', shipmentId: 'SHIP-003', date: '2026-05-01', type: 'CREDIT', amount: 24000, description: 'Stock received from Lost Mary', supplierId: 'SUP-001', supplierName: 'Lost Mary', customerId: 'C001', customerName: 'James Cameron' },
+  { id: 'LED-005', shipmentId: 'SHIP-003', date: '2026-05-01', type: 'DEBIT',  amount: 24000, description: 'Payment made to Lost Mary',    supplierId: 'SUP-001', supplierName: 'Lost Mary', customerId: 'C001', customerName: 'James Cameron' },
+  // SHIP-004: Credit → CREDIT only
+  { id: 'LED-006', shipmentId: 'SHIP-004', date: '2026-04-28', type: 'CREDIT', amount: 6000,  description: 'Stock received from Velo',      supplierId: 'SUP-003', supplierName: 'Velo' },
 ];

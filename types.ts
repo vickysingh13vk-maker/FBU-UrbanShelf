@@ -450,3 +450,48 @@ export interface SupplierReportsData {
   templates: ReportTemplate[];
   history: ReportHistoryItem[];
 }
+
+// ── Shipment Recording ────────────────────────────────────────────────────────
+export type PaymentType = 'Paid' | 'Credit';
+export type ShipmentStatus = 'Draft' | 'Confirmed' | 'Cancelled';
+export type LedgerEntryType = 'CREDIT' | 'DEBIT';
+
+export interface ShipmentItem {
+  id: string;
+  productId: string;
+  productName: string;
+  flavour?: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+export interface InboundShipment {
+  id: string;
+  supplierId: string;
+  supplierName: string;
+  date: string;
+  paymentType: PaymentType;
+  status: ShipmentStatus;
+  hasLinkedCustomer: boolean;
+  customerId?: string;
+  customerName?: string;
+  items: ShipmentItem[];
+  totalAmount: number;
+  notes?: string;
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface LedgerEntry {
+  id: string;
+  shipmentId: string;
+  date: string;
+  type: LedgerEntryType;
+  amount: number;
+  description: string;
+  supplierId: string;
+  supplierName: string;
+  customerId?: string;
+  customerName?: string;
+}

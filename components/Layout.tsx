@@ -77,6 +77,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     { name: 'Loyalty Program', href: '/loyalty', icon: Heart, group: 'customers', module: 'Loyalty Program' },
     { name: 'Pricing Tiers', href: '/pricing', icon: Tag, group: 'customers', module: 'Pricing Tiers' },
     
+    { name: 'Shipments', href: '/admin/shipments', icon: Truck, group: 'admin', module: 'Administration' },
     { name: 'Finance', href: '/finance', icon: Wallet, group: 'admin', module: 'Administration' },
     { name: 'Inventory', href: '/inventory', icon: Warehouse, group: 'admin', module: 'Products' },
     { name: 'Stock Reversals', href: '/stock-reversal-ledger', icon: RotateCcw, group: 'admin', module: 'Products' },
