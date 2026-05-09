@@ -46,9 +46,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, isCollapsed, onClose, 
 
   const groups = [
     { id: 'main', items: navigation.filter(item => !item.group || item.group === 'main') },
+    { id: 'execution', label: 'Daily Execution', items: navigation.filter(item => item.group === 'execution') },
+    { id: 'crm', label: 'CRM', items: navigation.filter(item => item.group === 'crm') },
     { id: 'analytics', label: 'Analytics & Catalog', items: navigation.filter(item => item.group === 'analytics') },
     { id: 'customers', label: 'Customers & Marketing', items: navigation.filter(item => item.group === 'customers') },
     { id: 'admin', label: 'Administration', items: navigation.filter(item => item.group === 'admin') },
+    { id: 'ops', label: 'Operations', items: navigation.filter(item => item.group === 'ops') },
   ];
 
   return (

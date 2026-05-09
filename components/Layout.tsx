@@ -134,6 +134,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     { name: 'My Customers', href: '/sales/customers', icon: UsersRound, group: 'crm' },
     { name: 'Leads', href: '/sales/leads', icon: Target, group: 'crm' },
     { name: 'My Orders', href: '/sales/orders', icon: ShoppingCart, group: 'crm' },
+    { name: 'My Payments', href: '/sales/payments', icon: Wallet, group: 'crm' },
+    { name: 'Activities', href: '/sales/activities', icon: Activity, group: 'crm' },
     { name: 'My Reports', href: '/sales/reporting', icon: TrendingUp, group: 'analytics' },
     { name: 'My Profile', href: '/sales/profile', icon: UserCircle, group: 'analytics' },
     { name: 'Notifications', href: '/notifications', icon: Bell, group: 'ops' },
