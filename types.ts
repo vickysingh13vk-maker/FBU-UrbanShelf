@@ -594,10 +594,12 @@ export type TimelineEventType =
   | 'Call'
   | 'Visit'
   | 'Follow-Up'
+  | 'Meeting'
   | 'Order'
   | 'Payment'
   | 'WhatsApp'
-  | 'Note';
+  | 'Note'
+  | 'Admin';
 
 export interface CustomerTimeline {
   id: string;

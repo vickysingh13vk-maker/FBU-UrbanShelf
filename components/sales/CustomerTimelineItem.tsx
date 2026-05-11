@@ -1,15 +1,17 @@
 import React from 'react';
-import { Phone, MapPin, RefreshCw, ShoppingCart, Wallet, MessageCircle, FileText } from 'lucide-react';
+import { Phone, MapPin, RefreshCw, ShoppingCart, Wallet, MessageCircle, FileText, Video, Briefcase } from 'lucide-react';
 import { CustomerTimeline, TimelineEventType } from '../../types';
 
 const TYPE_CONFIG: Record<TimelineEventType, { icon: React.ReactNode; color: string; label: string }> = {
   Call:       { icon: <Phone className="h-3.5 w-3.5" />,        color: 'bg-blue-500',    label: 'Call' },
   Visit:      { icon: <MapPin className="h-3.5 w-3.5" />,       color: 'bg-indigo-500',  label: 'Visit' },
   'Follow-Up':{ icon: <RefreshCw className="h-3.5 w-3.5" />,    color: 'bg-amber-500',   label: 'Follow-Up' },
+  Meeting:    { icon: <Video className="h-3.5 w-3.5" />,        color: 'bg-violet-500',  label: 'Meeting' },
   Order:      { icon: <ShoppingCart className="h-3.5 w-3.5" />, color: 'bg-emerald-500', label: 'Order' },
   Payment:    { icon: <Wallet className="h-3.5 w-3.5" />,       color: 'bg-green-600',   label: 'Payment' },
   WhatsApp:   { icon: <MessageCircle className="h-3.5 w-3.5" />,color: 'bg-teal-500',    label: 'WhatsApp' },
   Note:       { icon: <FileText className="h-3.5 w-3.5" />,     color: 'bg-slate-400',   label: 'Note' },
+  Admin:      { icon: <Briefcase className="h-3.5 w-3.5" />,    color: 'bg-rose-500',    label: 'Admin' },
 };
 
 function formatRelative(iso: string): string {

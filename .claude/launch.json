@@ -2,17 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-<<<<<<< Updated upstream
-      "name": "dev",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["vite", "--port", "5005"],
-      "port": 5005
-=======
       "name": "Dev Server",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000
->>>>>>> Stashed changes
     },
     {
       "name": "Preview Server",

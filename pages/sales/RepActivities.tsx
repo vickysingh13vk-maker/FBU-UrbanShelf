@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Phone, MapPin, RefreshCw, ShoppingCart, Wallet, MessageCircle, FileText, Clock, ChevronDown } from 'lucide-react';
+import { Plus, Phone, MapPin, RefreshCw, ShoppingCart, Wallet, MessageCircle, FileText, Clock, ChevronDown, Video, Briefcase } from 'lucide-react';
 import { Card } from '../../components/ui';
 import TimelineLogForm from '../../components/sales/TimelineLogForm';
 import { useSalesCRM } from '../../context/SalesCRMContext';
@@ -10,13 +10,15 @@ const TYPE_CONFIG: Record<TimelineEventType, { icon: React.ReactNode; color: str
   Call:        { icon: <Phone className="h-4 w-4" />,        color: 'text-blue-500',    bg: 'bg-blue-50',    label: 'Call' },
   Visit:       { icon: <MapPin className="h-4 w-4" />,       color: 'text-indigo-500',  bg: 'bg-indigo-50',  label: 'Visit' },
   'Follow-Up': { icon: <RefreshCw className="h-4 w-4" />,    color: 'text-amber-500',   bg: 'bg-amber-50',   label: 'Follow-Up' },
-  Order:       { icon: <ShoppingCart className="h-4 w-4" />, color: 'text-blue-500',    bg: 'bg-blue-50',    label: 'Order' },
-  Payment:     { icon: <Wallet className="h-4 w-4" />,       color: 'text-emerald-500', bg: 'bg-emerald-50', label: 'Payment' },
+  Meeting:     { icon: <Video className="h-4 w-4" />,        color: 'text-violet-500',  bg: 'bg-violet-50',  label: 'Meeting' },
+  Order:       { icon: <ShoppingCart className="h-4 w-4" />, color: 'text-emerald-500', bg: 'bg-emerald-50', label: 'Order' },
+  Payment:     { icon: <Wallet className="h-4 w-4" />,       color: 'text-green-600',   bg: 'bg-green-50',   label: 'Payment' },
   WhatsApp:    { icon: <MessageCircle className="h-4 w-4" />,color: 'text-teal-500',    bg: 'bg-teal-50',    label: 'WhatsApp' },
   Note:        { icon: <FileText className="h-4 w-4" />,     color: 'text-slate-500',   bg: 'bg-slate-100',  label: 'Note' },
+  Admin:       { icon: <Briefcase className="h-4 w-4" />,    color: 'text-rose-500',    bg: 'bg-rose-50',    label: 'Admin' },
 };
 
-const FILTER_TYPES: (TimelineEventType | 'All')[] = ['All', 'Visit', 'Call', 'Order', 'Payment', 'Follow-Up', 'WhatsApp', 'Note'];
+const FILTER_TYPES: (TimelineEventType | 'All')[] = ['All', 'Visit', 'Call', 'Meeting', 'Order', 'Payment', 'Follow-Up', 'WhatsApp', 'Note', 'Admin'];
 
 const RepActivities: React.FC = () => {
   const { user } = useAuth();
@@ -93,14 +95,16 @@ const RepActivities: React.FC = () => {
       </div>
 
       {/* Summary Strip */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+      <div className="grid grid-cols-3 sm:grid-cols-8 gap-2">
         {[
-          { label: 'Visits',   value: counts['Visit'] ?? 0,     color: 'text-indigo-600', bg: 'bg-indigo-50' },
-          { label: 'Calls',    value: counts['Call'] ?? 0,      color: 'text-blue-600',   bg: 'bg-blue-50' },
-          { label: 'Orders',   value: counts['Order'] ?? 0,     color: 'text-blue-600',   bg: 'bg-blue-50' },
-          { label: 'Payments', value: counts['Payment'] ?? 0,   color: 'text-emerald-600',bg: 'bg-emerald-50' },
-          { label: 'F-Ups',    value: counts['Follow-Up'] ?? 0, color: 'text-amber-600',  bg: 'bg-amber-50' },
-          { label: 'Notes',    value: counts['Note'] ?? 0,      color: 'text-slate-600',  bg: 'bg-slate-50' },
+          { label: 'Visits',    value: counts['Visit'] ?? 0,     color: 'text-indigo-600', bg: 'bg-indigo-50' },
+          { label: 'Calls',     value: counts['Call'] ?? 0,      color: 'text-blue-600',   bg: 'bg-blue-50' },
+          { label: 'Meetings',  value: counts['Meeting'] ?? 0,   color: 'text-violet-600', bg: 'bg-violet-50' },
+          { label: 'Orders',    value: counts['Order'] ?? 0,     color: 'text-emerald-600',bg: 'bg-emerald-50' },
+          { label: 'Payments',  value: counts['Payment'] ?? 0,   color: 'text-green-600',  bg: 'bg-green-50' },
+          { label: 'F-Ups',     value: counts['Follow-Up'] ?? 0, color: 'text-amber-600',  bg: 'bg-amber-50' },
+          { label: 'Notes',     value: counts['Note'] ?? 0,      color: 'text-slate-600',  bg: 'bg-slate-50' },
+          { label: 'Admin',     value: counts['Admin'] ?? 0,     color: 'text-rose-600',   bg: 'bg-rose-50' },
         ].map(s => (
           <div key={s.label} className={`${s.bg} border border-slate-100 rounded-xl px-3 py-2.5 text-center`}>
             <p className={`text-xl font-black ${s.color}`}>{s.value}</p>

@@ -5,7 +5,7 @@ import {
   ChevronRight, CheckCircle2, TrendingUp, Route,
   CheckSquare, Banknote, Calendar,
 } from 'lucide-react';
-import { Card } from '../../components/ui';
+import { Card, ViewModeToggle } from '../../components/ui';
 import WorkSessionBanner from '../../components/sales/WorkSessionBanner';
 import SessionSummaryModal from '../../components/sales/SessionSummaryModal';
 import ActiveVisitPanel from '../../components/sales/ActiveVisitPanel';
@@ -24,6 +24,48 @@ function formatTime(seconds: number): string {
   const s = seconds % 60;
   return [h, m, s].map(n => String(n).padStart(2, '0')).join(':');
 }
+
+const KPI_COLOR_MAP: Record<string, string> = {
+  indigo: 'text-indigo-600 bg-indigo-50/50',
+  violet: 'text-violet-600 bg-violet-50/50',
+  blue:   'text-blue-600 bg-blue-50/50',
+  emerald:'text-emerald-600 bg-emerald-50/50',
+  amber:  'text-amber-600 bg-amber-50/50',
+};
+
+interface KpiItem { label: string; value: string | number; trend: string; trendColor: string; }
+interface RepKpiCardProps {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  items: KpiItem[];
+  onClick?: () => void;
+}
+
+const RepGroupedKpiCard: React.FC<RepKpiCardProps> = ({ title, icon: Icon, color, items, onClick }) => (
+  <Card padding="none" className={`overflow-hidden flex flex-col hover:shadow-lg transition-all border-slate-100 group ${onClick ? 'cursor-pointer' : ''}`} onClick={onClick}>
+    <div className="p-[12px_18px] border-b border-slate-50 flex items-center justify-between bg-white group-hover:bg-slate-50/30 transition-colors">
+      <div className="flex items-center gap-3">
+        <div className={`p-2 rounded-lg ${KPI_COLOR_MAP[color]} group-hover:scale-110 transition-transform`}>
+          <Icon className="h-4 w-4" />
+        </div>
+        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.1em]">{title}</h3>
+      </div>
+      <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-indigo-500 transition-colors" />
+    </div>
+    <div className="p-[14px_18px] gap-y-3 flex flex-col bg-white flex-1">
+      {items.map((item, idx) => (
+        <div key={idx} className="flex items-center justify-between border-b border-slate-50 last:border-0 pb-2 last:pb-0">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.label}</p>
+          <div className="flex items-center gap-2">
+            <span className={`text-[10px] font-bold ${item.trendColor}`}>{item.trend}</span>
+            <span className="text-sm font-bold text-slate-900 tabular-nums leading-tight">{item.value}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  </Card>
+);
 
 const RepDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -83,6 +125,9 @@ const RepDashboard: React.FC = () => {
         )}
       </div>
 
+      {/* Live / Historic toggle */}
+      <ViewModeToggle />
+
       {/* Work Session Banner */}
       <WorkSessionBanner onToggle={handleToggleSession} />
 
@@ -91,77 +136,56 @@ const RepDashboard: React.FC = () => {
         <ActiveVisitPanel visit={activeVisit} onEnd={() => navigate('/sales/visits')} />
       )}
 
-      {/* Today KPIs — horizontal compact cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          {
-            label: 'Visits Today',
-            value: metrics.visitsCompleted,
-            icon: <MapPin className="h-4 w-4 text-indigo-500" />,
-            bg: 'bg-indigo-50',
-            sub: routeStop.length > 0 ? `${routeVisited}/${routeStop.length} route` : 'No route',
-            onClick: () => navigate('/sales/visits'),
-          },
-          {
-            label: 'Orders Today',
-            value: todayStats.orders,
-            icon: <ShoppingCart className="h-4 w-4 text-blue-500" />,
-            bg: 'bg-blue-50',
-            sub: `£${todayStats.revenue.toLocaleString()} revenue`,
-            onClick: undefined,
-          },
-          {
-            label: 'Collections',
-            value: `£${todayStats.collections.toLocaleString()}`,
-            icon: <Wallet className="h-4 w-4 text-emerald-500" />,
-            bg: 'bg-emerald-50',
-            sub: 'Recovered today',
-            onClick: () => navigate('/sales/collections'),
-          },
-          {
-            label: 'Follow-Ups',
-            value: overdueFU.length + todayFU.length,
-            icon: <Phone className="h-4 w-4 text-amber-500" />,
-            bg: 'bg-amber-50',
-            sub: overdueFU.length > 0 ? `${overdueFU.length} overdue` : `${todayFU.length} due today`,
-            onClick: () => navigate('/sales/follow-ups'),
-          },
-        ].map(card => (
-          <Card key={card.label} padding="sm"
-            className={`${card.onClick ? 'cursor-pointer hover:shadow-md' : ''} transition-all`}
-            onClick={card.onClick}>
-            <div className="flex items-center gap-3">
-              <div className={`h-9 w-9 ${card.bg} rounded-xl flex items-center justify-center flex-shrink-0`}>
-                {card.icon}
-              </div>
-              <div className="min-w-0">
-                <p className="text-xl font-black text-slate-800 leading-tight">{card.value}</p>
-                <p className="text-xs font-semibold text-slate-600 truncate">{card.label}</p>
-                <p className="text-xs text-slate-400 truncate">{card.sub}</p>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {/* Week Context Strip */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-        {[
-          { label: 'Week Visits',      value: weekVisits,            color: 'text-indigo-600', icon: <MapPin className="h-3.5 w-3.5" /> },
-          { label: 'Week Orders',      value: weekOrders,            color: 'text-blue-600',   icon: <ShoppingCart className="h-3.5 w-3.5" /> },
-          { label: 'Collections',      value: `£${weekCollections}`, color: 'text-emerald-600',icon: <Wallet className="h-3.5 w-3.5" /> },
-          { label: 'Customers',        value: myCustomers.length,    color: 'text-slate-700',  icon: <Users className="h-3.5 w-3.5" /> },
-          { label: 'Active Leads',     value: activeLeads.length,    color: 'text-violet-600', icon: <TrendingUp className="h-3.5 w-3.5" /> },
-          { label: 'Open Tasks',       value: activeTasks.length,    color: 'text-amber-600',  icon: <CheckSquare className="h-3.5 w-3.5" /> },
-        ].map(s => (
-          <div key={s.label} className="bg-white border border-slate-100 rounded-xl px-3 py-2.5 flex items-center gap-2.5 shadow-sm">
-            <span className={`${s.color} flex-shrink-0`}>{s.icon}</span>
-            <div className="min-w-0">
-              <p className={`text-sm font-black ${s.color} leading-tight`}>{s.value}</p>
-              <p className="text-xs text-slate-400 truncate leading-tight">{s.label}</p>
-            </div>
-          </div>
-        ))}
+      {/* Grouped KPI Cards — admin-style */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <RepGroupedKpiCard
+          title="TODAY'S ACTIVITY"
+          icon={MapPin}
+          color="indigo"
+          onClick={() => navigate('/sales/visits')}
+          items={[
+            { label: 'VISITS', value: metrics.visitsCompleted, trend: routeStop.length > 0 ? `${routeVisited}/${routeStop.length} stops` : 'no route', trendColor: 'text-slate-400' },
+            { label: 'ORDERS', value: todayStats.orders, trend: `£${todayStats.revenue.toLocaleString()}`, trendColor: 'text-emerald-500' },
+            { label: 'COLLECTED', value: `£${todayStats.collections.toLocaleString()}`, trend: 'cash in', trendColor: 'text-slate-400' },
+            { label: 'FOLLOW-UPS', value: overdueFU.length + todayFU.length, trend: overdueFU.length > 0 ? `${overdueFU.length} overdue` : 'on track', trendColor: overdueFU.length > 0 ? 'text-rose-500' : 'text-emerald-500' },
+          ]}
+        />
+        <RepGroupedKpiCard
+          title="ROUTE STATUS"
+          icon={Route}
+          color="violet"
+          onClick={() => navigate('/sales/route')}
+          items={[
+            { label: 'TOTAL STOPS', value: routeStop.length || '—', trend: 'planned', trendColor: 'text-slate-400' },
+            { label: 'VISITED', value: routeVisited, trend: routeStop.length > 0 ? `${Math.round(routeVisited / routeStop.length * 100)}%` : '—', trendColor: 'text-emerald-500' },
+            { label: 'PENDING', value: routePending, trend: routePending > 0 ? 'remaining' : 'clear', trendColor: routePending > 0 ? 'text-amber-500' : 'text-emerald-500' },
+            { label: 'ALERTS', value: overdueFU.length, trend: overdueFU.length > 0 ? 'overdue FU' : 'none', trendColor: overdueFU.length > 0 ? 'text-rose-500' : 'text-emerald-500' },
+          ]}
+        />
+        <RepGroupedKpiCard
+          title="MY PIPELINE"
+          icon={Users}
+          color="blue"
+          onClick={() => navigate('/sales/customers')}
+          items={[
+            { label: 'CUSTOMERS', value: myCustomers.length, trend: 'assigned', trendColor: 'text-slate-400' },
+            { label: 'ACTIVE LEADS', value: activeLeads.length, trend: `${myLeads.length} total`, trendColor: 'text-slate-400' },
+            { label: 'OPEN TASKS', value: activeTasks.length, trend: activeTasks.length > 0 ? 'pending' : 'clear', trendColor: activeTasks.length > 0 ? 'text-amber-500' : 'text-emerald-500' },
+            { label: 'FU RATE', value: myCustomers.length > 0 ? `${Math.round((overdueFU.length + todayFU.length) / myCustomers.length * 100)}%` : '0%', trend: 'of portfolio', trendColor: 'text-slate-400' },
+          ]}
+        />
+        <RepGroupedKpiCard
+          title="THIS WEEK"
+          icon={TrendingUp}
+          color="emerald"
+          onClick={() => navigate('/sales/reporting')}
+          items={[
+            { label: 'VISITS', value: weekVisits, trend: `${mySessions.length + 1} sessions`, trendColor: 'text-slate-400' },
+            { label: 'ORDERS', value: weekOrders, trend: weekOrders > 0 ? 'booked' : 'none yet', trendColor: weekOrders > 0 ? 'text-emerald-500' : 'text-slate-400' },
+            { label: 'COLLECTED', value: `£${weekCollections.toLocaleString()}`, trend: 'cash in', trendColor: 'text-slate-400' },
+            { label: 'CUSTOMERS HIT', value: mySessions.length + 1, trend: 'days active', trendColor: 'text-slate-400' },
+          ]}
+        />
       </div>
 
       {/* Quick Actions — compact pill buttons */}
