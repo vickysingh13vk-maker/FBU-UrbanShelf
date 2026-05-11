@@ -37,29 +37,29 @@ const RepTasks: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-slate-800">Tasks</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            {overdue > 0 ? `${overdue} overdue · ` : ''}{inProgress > 0 ? `${inProgress} in progress · ` : ''}{active.length} total active
+          <h1 className="text-xl font-black text-slate-800">Tasks</h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {overdue > 0 ? `${overdue} overdue · ` : ''}{inProgress > 0 ? `${inProgress} in progress · ` : ''}{active.length} active · {completed.length} done
           </p>
         </div>
         <button onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors">
+          className="flex items-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors">
           <Plus className="h-4 w-4" /> Add Task
         </button>
       </div>
 
       {/* Summary strip */}
       {active.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="flex gap-3">
           {[
-            { label: 'Total Active', value: active.length, color: 'text-slate-800' },
-            { label: 'Overdue',      value: overdue,       color: overdue > 0 ? 'text-rose-600' : 'text-slate-400' },
-            { label: 'In Progress',  value: inProgress,    color: inProgress > 0 ? 'text-blue-600' : 'text-slate-400' },
+            { label: 'Active', value: active.length, color: 'text-slate-800', bg: 'bg-white' },
+            { label: 'Overdue', value: overdue, color: overdue > 0 ? 'text-rose-600' : 'text-slate-400', bg: overdue > 0 ? 'bg-rose-50' : 'bg-white' },
+            { label: 'In Progress', value: inProgress, color: inProgress > 0 ? 'text-blue-600' : 'text-slate-400', bg: inProgress > 0 ? 'bg-blue-50' : 'bg-white' },
           ].map(s => (
-            <Card key={s.label} padding="md">
-              <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
+            <div key={s.label} className={`flex-1 ${s.bg} border border-slate-200 rounded-xl px-4 py-3 shadow-sm`}>
+              <p className={`text-xl font-black ${s.color}`}>{s.value}</p>
               <p className="text-xs text-slate-400 mt-0.5">{s.label}</p>
-            </Card>
+            </div>
           ))}
         </div>
       )}
@@ -78,11 +78,11 @@ const RepTasks: React.FC = () => {
 
       {/* List */}
       {displayList.length === 0 ? (
-        <Card padding="lg" className="text-center py-16">
-          <CheckSquare className="h-10 w-10 text-slate-200 mx-auto mb-3" />
+        <Card padding="md" className="text-center py-10">
+          <CheckSquare className="h-8 w-8 text-slate-200 mx-auto mb-2" />
           <p className="text-sm text-slate-400">{tab === 'active' ? 'No active tasks' : 'No completed tasks yet'}</p>
           {tab === 'active' && (
-            <button onClick={() => setShowModal(true)} className="mt-3 text-indigo-500 text-sm font-semibold">
+            <button onClick={() => setShowModal(true)} className="mt-2 text-indigo-500 text-sm font-semibold">
               Add your first task →
             </button>
           )}

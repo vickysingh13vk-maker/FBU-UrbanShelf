@@ -89,11 +89,11 @@ const RepLeads: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-slate-800">My Leads</h1>
-          <p className="text-sm text-slate-500 mt-1">{leads.filter(l => l.stage !== 'Converted' && l.stage !== 'Lost').length} active leads</p>
+          <h1 className="text-xl font-black text-slate-800">My Leads</h1>
+          <p className="text-xs text-slate-500 mt-0.5">{leads.filter(l => l.stage !== 'Converted' && l.stage !== 'Lost').length} active · {leads.filter(l => l.stage === 'Converted').length} converted</p>
         </div>
         <button onClick={() => setShowAddForm(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm">
+          className="flex items-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm">
           <Plus className="h-4 w-4" /> Add Lead
         </button>
       </div>
@@ -131,9 +131,9 @@ const RepLeads: React.FC = () => {
           </div>
 
           {filtered.length === 0 ? (
-            <Card padding="lg" className="text-center py-16">
+            <Card padding="md" className="text-center py-10">
               <p className="text-sm text-slate-400">No leads found</p>
-              <button onClick={() => setShowAddForm(true)} className="mt-3 text-indigo-500 text-sm font-semibold">Add your first lead →</button>
+              <button onClick={() => setShowAddForm(true)} className="mt-2 text-indigo-500 text-sm font-semibold">Add your first lead →</button>
             </Card>
           ) : (
             <div className="space-y-3">

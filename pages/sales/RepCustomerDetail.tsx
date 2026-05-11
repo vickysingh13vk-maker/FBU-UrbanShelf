@@ -66,8 +66,8 @@ const RepCustomerDetail: React.FC = () => {
   return (
     <div className="space-y-5">
       {/* Back */}
-      <button onClick={() => navigate('/sales/customers')} className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">
-        <ArrowLeft className="h-4 w-4" /> My Customers
+      <button onClick={() => navigate('/sales/customers')} className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors">
+        <ArrowLeft className="h-3.5 w-3.5" /> My Customers
       </button>
 
       {/* Customer Header */}
@@ -81,8 +81,8 @@ const RepCustomerDetail: React.FC = () => {
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <h1 className="text-xl font-black text-slate-800">{customer.storeName}</h1>
-                <p className="text-sm text-slate-500">{customer.companyName} · {customer.name}</p>
+                <h1 className="text-lg font-black text-slate-800">{customer.storeName}</h1>
+                <p className="text-xs text-slate-500">{customer.companyName} · {customer.name}</p>
               </div>
               <LifecycleBadge stage={customer.lifecycleStage ?? 'Active'} size="md" />
             </div>
@@ -127,17 +127,17 @@ const RepCustomerDetail: React.FC = () => {
       </Card>
 
       {/* KPI Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {[
-          { label: 'Outstanding', value: customer.walletBalance < 0 ? `£${Math.abs(customer.walletBalance).toFixed(2)}` : '£0', color: customer.walletBalance < 0 ? 'text-rose-600' : 'text-emerald-600' },
+          { label: 'Outstanding', value: customer.walletBalance < 0 ? `£${Math.abs(customer.walletBalance).toFixed(0)}` : '£0', color: customer.walletBalance < 0 ? 'text-rose-600' : 'text-emerald-600' },
           { label: 'Total Orders', value: totalOrders, color: 'text-slate-800' },
           { label: 'Total Revenue', value: `£${totalRevenue.toLocaleString()}`, color: 'text-slate-800' },
           { label: 'Last Order', value: lastOrder ? lastOrder.date : '—', color: 'text-slate-800' },
         ].map(kpi => (
-          <Card key={kpi.label} padding="md">
+          <div key={kpi.label} className="bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm">
             <p className={`text-xl font-black ${kpi.color}`}>{kpi.value}</p>
             <p className="text-xs text-slate-400 mt-0.5">{kpi.label}</p>
-          </Card>
+          </div>
         ))}
       </div>
 

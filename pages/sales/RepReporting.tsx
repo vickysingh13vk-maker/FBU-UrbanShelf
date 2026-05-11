@@ -71,8 +71,8 @@ const RepReporting: React.FC = () => {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-slate-800">My Reporting</h1>
-          <p className="text-sm text-slate-500 mt-1">Personal performance metrics</p>
+          <h1 className="text-xl font-black text-slate-800">My Reporting</h1>
+          <p className="text-xs text-slate-500 mt-0.5">Personal performance metrics</p>
         </div>
         <div className="flex bg-slate-100 rounded-xl p-1 gap-1">
           {PERIOD_OPTIONS.map(p => (
@@ -85,20 +85,24 @@ const RepReporting: React.FC = () => {
       </div>
 
       {/* KPI summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: 'Total Visits', value: totalHistVisits, sub: `${todayStats.visits} today`, color: 'text-blue-600', bg: 'bg-blue-50', icon: <Calendar className="h-5 w-5 text-blue-500" /> },
-          { label: 'Total Orders', value: totalHistOrders, sub: `${todayStats.orders} today`, color: 'text-indigo-600', bg: 'bg-indigo-50', icon: <TrendingUp className="h-5 w-5 text-indigo-500" /> },
-          { label: 'Collections', value: `£${totalHistCollections.toLocaleString()}`, sub: `£${todayStats.collections} today`, color: 'text-emerald-600', bg: 'bg-emerald-50', icon: <Target className="h-5 w-5 text-emerald-500" /> },
-          { label: 'Commission', value: `£${earnedCommission.toFixed(2)}`, sub: `£${pendingCommission.toFixed(2)} pending`, color: 'text-amber-600', bg: 'bg-amber-50', icon: <Award className="h-5 w-5 text-amber-500" /> },
+          { label: 'Total Visits', value: totalHistVisits, sub: `${todayStats.visits} today`, color: 'text-blue-600', bg: 'bg-blue-50', icon: <Calendar className="h-4 w-4 text-blue-500" /> },
+          { label: 'Total Orders', value: totalHistOrders, sub: `${todayStats.orders} today`, color: 'text-indigo-600', bg: 'bg-indigo-50', icon: <TrendingUp className="h-4 w-4 text-indigo-500" /> },
+          { label: 'Collections', value: `£${totalHistCollections.toLocaleString()}`, sub: `£${todayStats.collections} today`, color: 'text-emerald-600', bg: 'bg-emerald-50', icon: <Target className="h-4 w-4 text-emerald-500" /> },
+          { label: 'Commission', value: `£${earnedCommission.toFixed(2)}`, sub: `£${pendingCommission.toFixed(2)} pending`, color: 'text-amber-600', bg: 'bg-amber-50', icon: <Award className="h-4 w-4 text-amber-500" /> },
         ].map(kpi => (
-          <Card key={kpi.label} padding="md">
-            <div className={`h-9 w-9 ${kpi.bg} rounded-xl flex items-center justify-center mb-2`}>
-              {kpi.icon}
+          <Card key={kpi.label} padding="sm">
+            <div className="flex items-center gap-3">
+              <div className={`h-8 w-8 ${kpi.bg} rounded-xl flex items-center justify-center flex-shrink-0`}>
+                {kpi.icon}
+              </div>
+              <div className="min-w-0">
+                <p className={`text-xl font-black ${kpi.color} leading-tight`}>{kpi.value}</p>
+                <p className="text-xs font-semibold text-slate-600 truncate">{kpi.label}</p>
+                <p className="text-xs text-slate-400 truncate">{kpi.sub}</p>
+              </div>
             </div>
-            <p className={`text-2xl font-black ${kpi.color}`}>{kpi.value}</p>
-            <p className="text-xs font-semibold text-slate-600 mt-0.5">{kpi.label}</p>
-            <p className="text-xs text-slate-400">{kpi.sub}</p>
           </Card>
         ))}
       </div>

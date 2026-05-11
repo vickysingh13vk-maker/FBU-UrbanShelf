@@ -68,8 +68,8 @@ const RepActivities: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-slate-800">Activities</h1>
-          <p className="text-sm text-slate-500 mt-1">Today's field activity log</p>
+          <h1 className="text-xl font-black text-slate-800">Activities</h1>
+          <p className="text-xs text-slate-500 mt-0.5">Today's field activity log</p>
         </div>
         <div className="relative">
           <button onClick={() => setShowCustomerSelect(!showCustomerSelect)}
@@ -93,19 +93,19 @@ const RepActivities: React.FC = () => {
       </div>
 
       {/* Summary Strip */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
         {[
-          { label: 'Visits',  value: counts['Visit'] ?? 0,      color: 'text-indigo-600', bg: 'bg-indigo-50' },
-          { label: 'Calls',   value: counts['Call'] ?? 0,       color: 'text-blue-600',   bg: 'bg-blue-50' },
-          { label: 'Orders',  value: counts['Order'] ?? 0,      color: 'text-blue-600',   bg: 'bg-blue-50' },
-          { label: 'Payments',value: counts['Payment'] ?? 0,    color: 'text-emerald-600',bg: 'bg-emerald-50' },
-          { label: 'F-Ups',   value: counts['Follow-Up'] ?? 0,  color: 'text-amber-600',  bg: 'bg-amber-50' },
-          { label: 'Notes',   value: counts['Note'] ?? 0,       color: 'text-slate-600',  bg: 'bg-slate-50' },
+          { label: 'Visits',   value: counts['Visit'] ?? 0,     color: 'text-indigo-600', bg: 'bg-indigo-50' },
+          { label: 'Calls',    value: counts['Call'] ?? 0,      color: 'text-blue-600',   bg: 'bg-blue-50' },
+          { label: 'Orders',   value: counts['Order'] ?? 0,     color: 'text-blue-600',   bg: 'bg-blue-50' },
+          { label: 'Payments', value: counts['Payment'] ?? 0,   color: 'text-emerald-600',bg: 'bg-emerald-50' },
+          { label: 'F-Ups',    value: counts['Follow-Up'] ?? 0, color: 'text-amber-600',  bg: 'bg-amber-50' },
+          { label: 'Notes',    value: counts['Note'] ?? 0,      color: 'text-slate-600',  bg: 'bg-slate-50' },
         ].map(s => (
-          <Card key={s.label} padding="md" className="text-center">
-            <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
-            <p className="text-xs text-slate-400 mt-0.5">{s.label}</p>
-          </Card>
+          <div key={s.label} className={`${s.bg} border border-slate-100 rounded-xl px-3 py-2.5 text-center`}>
+            <p className={`text-xl font-black ${s.color}`}>{s.value}</p>
+            <p className="text-xs text-slate-500 mt-0.5">{s.label}</p>
+          </div>
         ))}
       </div>
 

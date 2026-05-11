@@ -40,8 +40,8 @@ const RepRoute: React.FC = () => {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-slate-800">Today's Route</h1>
-          <p className="text-sm text-slate-500 mt-1">{today}</p>
+          <h1 className="text-xl font-black text-slate-800">Today's Route</h1>
+          <p className="text-xs text-slate-500 mt-0.5">{today}</p>
         </div>
         {activeVisit && (
           <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl">
@@ -52,18 +52,18 @@ const RepRoute: React.FC = () => {
       </div>
 
       {/* Summary strip */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-4 gap-2">
         {[
-          { label: 'Total Stops', value: stops.length, color: 'text-slate-800', icon: <MapPin className="h-4 w-4 text-slate-400" /> },
-          { label: 'Visited', value: visited, color: 'text-emerald-600', icon: <CheckCircle className="h-4 w-4 text-emerald-400" /> },
-          { label: 'Remaining', value: pending, color: 'text-indigo-600', icon: <Clock className="h-4 w-4 text-indigo-400" /> },
-          { label: 'Alerts', value: overdueStops, color: 'text-rose-600', icon: <AlertCircle className="h-4 w-4 text-rose-400" /> },
+          { label: 'Total', value: stops.length, color: 'text-slate-800', icon: <MapPin className="h-3.5 w-3.5 text-slate-400" /> },
+          { label: 'Visited', value: visited, color: 'text-emerald-600', icon: <CheckCircle className="h-3.5 w-3.5 text-emerald-400" /> },
+          { label: 'Remaining', value: pending, color: 'text-indigo-600', icon: <Clock className="h-3.5 w-3.5 text-indigo-400" /> },
+          { label: 'Alerts', value: overdueStops, color: 'text-rose-600', icon: <AlertCircle className="h-3.5 w-3.5 text-rose-400" /> },
         ].map(s => (
-          <Card key={s.label} padding="md">
-            <div className="flex items-center gap-1.5 mb-1">{s.icon}</div>
-            <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
+          <div key={s.label} className="bg-white border border-slate-200 rounded-xl px-3 py-2.5 shadow-sm">
+            <div className="flex items-center gap-1 mb-1">{s.icon}</div>
+            <p className={`text-xl font-black ${s.color}`}>{s.value}</p>
             <p className="text-xs text-slate-400">{s.label}</p>
-          </Card>
+          </div>
         ))}
       </div>
 
@@ -76,8 +76,8 @@ const RepRoute: React.FC = () => {
 
       {/* Stop list */}
       {stops.length === 0 ? (
-        <Card padding="lg" className="text-center py-16">
-          <MapPin className="h-10 w-10 text-slate-200 mx-auto mb-3" />
+        <Card padding="md" className="text-center py-10">
+          <MapPin className="h-8 w-8 text-slate-200 mx-auto mb-2" />
           <p className="text-sm text-slate-400">No route planned for today</p>
           <p className="text-xs text-slate-300 mt-1">Route plans are set by your manager</p>
         </Card>

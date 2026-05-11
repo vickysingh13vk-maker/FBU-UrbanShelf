@@ -53,33 +53,27 @@ const RepPayments: React.FC = () => {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-black text-slate-800">Payments</h1>
-        <p className="text-sm text-slate-500 mt-1">Collections due and your commission</p>
+        <h1 className="text-xl font-black text-slate-800">Payments</h1>
+        <p className="text-xs text-slate-500 mt-0.5">Collections due and your commission</p>
       </div>
 
       {/* Today Collection Summary */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card padding="md">
-          <div className="h-9 w-9 bg-emerald-50 rounded-xl flex items-center justify-center mb-2">
-            <Wallet className="h-5 w-5 text-emerald-500" />
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { label: 'Collected Today', value: `£${todayStats.collections.toLocaleString()}`, icon: <Wallet className="h-4 w-4 text-emerald-500" />, bg: 'bg-emerald-50', color: 'text-slate-800' },
+          { label: 'Due Collections', value: customersDue.length, icon: <Clock className="h-4 w-4 text-amber-500" />, bg: 'bg-amber-50', color: customersDue.length > 0 ? 'text-amber-700' : 'text-slate-800' },
+          { label: 'Commission Earned', value: `£${MOCK_COMMISSION.earned}`, icon: <TrendingUp className="h-4 w-4 text-blue-500" />, bg: 'bg-blue-50', color: 'text-slate-800' },
+        ].map(kpi => (
+          <div key={kpi.label} className="bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm flex items-center gap-3">
+            <div className={`h-8 w-8 ${kpi.bg} rounded-xl flex items-center justify-center flex-shrink-0`}>
+              {kpi.icon}
+            </div>
+            <div>
+              <p className={`text-lg font-black ${kpi.color}`}>{kpi.value}</p>
+              <p className="text-xs text-slate-400">{kpi.label}</p>
+            </div>
           </div>
-          <p className="text-2xl font-black text-slate-800">£{todayStats.collections.toLocaleString()}</p>
-          <p className="text-xs text-slate-400 mt-0.5">Collected Today</p>
-        </Card>
-        <Card padding="md">
-          <div className="h-9 w-9 bg-amber-50 rounded-xl flex items-center justify-center mb-2">
-            <Clock className="h-5 w-5 text-amber-500" />
-          </div>
-          <p className="text-2xl font-black text-slate-800">{customersDue.length}</p>
-          <p className="text-xs text-slate-400 mt-0.5">Due Collections</p>
-        </Card>
-        <Card padding="md">
-          <div className="h-9 w-9 bg-blue-50 rounded-xl flex items-center justify-center mb-2">
-            <TrendingUp className="h-5 w-5 text-blue-500" />
-          </div>
-          <p className="text-2xl font-black text-slate-800">£{MOCK_COMMISSION.earned}</p>
-          <p className="text-xs text-slate-400 mt-0.5">Commission Earned</p>
-        </Card>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

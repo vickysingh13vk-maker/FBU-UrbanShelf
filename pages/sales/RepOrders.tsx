@@ -56,40 +56,33 @@ const RepOrders: React.FC = () => {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-slate-800">My Orders</h1>
+          <h1 className="text-xl font-black text-slate-800">My Orders</h1>
           {preselectedCustomerId ? (
-            <p className="text-sm text-indigo-500 font-semibold mt-1">
+            <p className="text-xs text-indigo-500 font-semibold mt-0.5">
               Filtered: {preselectedCustomerName} ·{' '}
               <button onClick={() => navigate('/sales/orders')} className="underline hover:text-indigo-700">
                 Show all
               </button>
             </p>
           ) : (
-            <p className="text-sm text-slate-500 mt-1">{allRepOrders.length} total orders</p>
+            <p className="text-xs text-slate-500 mt-0.5">{allRepOrders.length} total orders</p>
           )}
         </div>
       </div>
 
       {/* KPI Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card padding="md">
-          <p className="text-xl font-black text-slate-800">{allRepOrders.length}</p>
-          <p className="text-xs text-slate-400 mt-0.5">Total Orders</p>
-        </Card>
-        <Card padding="md">
-          <p className="text-xl font-black text-emerald-600">£{totalRevenue.toLocaleString()}</p>
-          <p className="text-xs text-slate-400 mt-0.5">Revenue (Paid)</p>
-        </Card>
-        <Card padding="md">
-          <p className="text-xl font-black text-amber-600">£{pendingPay.toLocaleString()}</p>
-          <p className="text-xs text-slate-400 mt-0.5">Pending Payment</p>
-        </Card>
-        <Card padding="md">
-          <p className="text-xl font-black text-slate-800">
-            {allRepOrders.filter(o => o.status === 'Delivered').length}
-          </p>
-          <p className="text-xs text-slate-400 mt-0.5">Delivered</p>
-        </Card>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {[
+          { label: 'Total Orders', value: allRepOrders.length, color: 'text-slate-800' },
+          { label: 'Revenue (Paid)', value: `£${totalRevenue.toLocaleString()}`, color: 'text-emerald-600' },
+          { label: 'Pending Payment', value: `£${pendingPay.toLocaleString()}`, color: 'text-amber-600' },
+          { label: 'Delivered', value: allRepOrders.filter(o => o.status === 'Delivered').length, color: 'text-slate-800' },
+        ].map(kpi => (
+          <div key={kpi.label} className="bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm">
+            <p className={`text-xl font-black ${kpi.color}`}>{kpi.value}</p>
+            <p className="text-xs text-slate-400 mt-0.5">{kpi.label}</p>
+          </div>
+        ))}
       </div>
 
       {/* Filters */}
@@ -116,8 +109,8 @@ const RepOrders: React.FC = () => {
 
       {/* Order List */}
       {filtered.length === 0 ? (
-        <Card padding="lg" className="flex flex-col items-center justify-center py-16 text-center">
-          <ShoppingCart className="h-10 w-10 text-slate-200 mx-auto mb-3" />
+        <Card padding="md" className="flex flex-col items-center justify-center py-10 text-center">
+          <ShoppingCart className="h-8 w-8 text-slate-200 mx-auto mb-2" />
           <p className="text-sm text-slate-400">No orders found</p>
         </Card>
       ) : (

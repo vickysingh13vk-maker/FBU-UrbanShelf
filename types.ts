@@ -505,6 +505,8 @@ export interface LedgerEntry {
   supplierName: string;
   customerId?: string;
   customerName?: string;
+}
+
 // ─── PHASE 2: SALES REP CRM ──────────────────────────────────────────────────
 
 export type WorkSessionStatus = 'active' | 'ended';

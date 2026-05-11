@@ -54,8 +54,8 @@ const RepVisits: React.FC = () => {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-slate-800">Visits</h1>
-          <p className="text-sm text-slate-500 mt-1">{todayVisits.length} today · {allVisits.filter(v => v.status === 'completed').length} total</p>
+          <h1 className="text-xl font-black text-slate-800">Visits</h1>
+          <p className="text-xs text-slate-500 mt-0.5">{todayVisits.length} today · {allVisits.filter(v => v.status === 'completed').length} total completed</p>
         </div>
         {!activeVisit && (
           <button onClick={() => setShowCustomerPicker(true)}
@@ -92,12 +92,12 @@ const RepVisits: React.FC = () => {
 
       {/* Visit list */}
       {displayVisits.length === 0 ? (
-        <Card padding="lg" className="text-center py-16">
-          <MapPin className="h-10 w-10 text-slate-200 mx-auto mb-3" />
+        <Card padding="md" className="text-center py-10">
+          <MapPin className="h-8 w-8 text-slate-200 mx-auto mb-2" />
           <p className="text-sm text-slate-400">{tab === 'today' ? 'No visits logged today' : 'No visit history'}</p>
           {tab === 'today' && !activeVisit && (
             <button onClick={() => setShowCustomerPicker(true)}
-              className="mt-3 text-indigo-500 text-sm font-semibold">Start your first visit →</button>
+              className="mt-2 text-indigo-500 text-sm font-semibold">Start your first visit →</button>
           )}
         </Card>
       ) : (

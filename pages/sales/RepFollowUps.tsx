@@ -58,13 +58,13 @@ const RepFollowUps: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-slate-800">Follow-Ups</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            {overdue.length > 0 ? `${overdue.length} overdue · ` : ''}{todayList.length} today
+          <h1 className="text-xl font-black text-slate-800">Follow-Ups</h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {overdue.length > 0 ? `${overdue.length} overdue · ` : ''}{todayList.length} today · {upcoming.length} upcoming
           </p>
         </div>
         <button onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors">
+          className="flex items-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors">
           <Plus className="h-4 w-4" /> Add
         </button>
       </div>
@@ -100,8 +100,8 @@ const RepFollowUps: React.FC = () => {
 
       {/* List */}
       {displayList.length === 0 ? (
-        <Card padding="lg" className="text-center py-16">
-          <Phone className="h-10 w-10 text-slate-200 mx-auto mb-3" />
+        <Card padding="md" className="text-center py-10">
+          <Phone className="h-8 w-8 text-slate-200 mx-auto mb-2" />
           <p className="text-sm text-slate-400">
             {tab === 'overdue' ? 'No overdue follow-ups' :
              tab === 'today' ? 'Nothing due today' :
