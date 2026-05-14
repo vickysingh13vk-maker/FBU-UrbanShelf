@@ -111,14 +111,12 @@ const RepDashboard: React.FC = () => {
     else startSession(repId, repName);
   };
 
-  // Field action grid
-  const fieldActions = [
-    { label: 'Start Visit',  icon: MapPin,       color: 'bg-indigo-600 hover:bg-indigo-700',   action: () => navigate('/sales/visits') },
-    { label: 'My Route',     icon: Route,        color: 'bg-violet-600 hover:bg-violet-700',   action: () => navigate('/sales/route') },
-    { label: 'Follow-Ups',   icon: Phone,        color: 'bg-amber-500 hover:bg-amber-600',     action: () => navigate('/sales/follow-ups') },
-    { label: 'Collections',  icon: Banknote,     color: 'bg-emerald-600 hover:bg-emerald-700', action: () => navigate('/sales/collections') },
-    { label: 'Tasks',        icon: CheckSquare,  color: 'bg-blue-600 hover:bg-blue-700',       action: () => navigate('/sales/tasks') },
-    { label: 'My Customers', icon: Users,        color: 'bg-slate-700 hover:bg-slate-800',     action: () => navigate('/sales/customers') },
+  // Field action grid — secondary actions (icon + label)
+  const fieldSecondaryActions = [
+    { label: 'My Route',    icon: Route,       iconColor: 'text-violet-600', iconBg: 'bg-violet-50',  path: '/sales/route',       badge: routePending },
+    { label: 'Follow-Ups',  icon: Phone,       iconColor: 'text-amber-600',  iconBg: 'bg-amber-50',   path: '/sales/follow-ups',  badge: overdueFU.length },
+    { label: 'Collections', icon: Banknote,    iconColor: 'text-emerald-600',iconBg: 'bg-emerald-50', path: '/sales/collections', badge: 0 },
+    { label: 'Tasks',       icon: CheckSquare, iconColor: 'text-blue-600',   iconBg: 'bg-blue-50',    path: '/sales/tasks',       badge: activeTasks.length },
   ];
 
   return (
@@ -413,17 +411,50 @@ const RepDashboard: React.FC = () => {
             <ActiveVisitPanel visit={activeVisit} onEnd={() => navigate('/sales/visits')} />
           )}
 
-          {/* Field Action Grid — 2×3 large tap targets */}
-          <div className="grid grid-cols-2 gap-3">
-            {fieldActions.map(action => (
-              <button
-                key={action.label}
-                onClick={action.action}
-                className={`flex flex-col items-center justify-center gap-2.5 p-5 ${action.color} text-white rounded-2xl font-bold text-sm transition-colors min-h-[84px] shadow-sm`}>
-                <action.icon className="h-6 w-6" />
-                {action.label}
-              </button>
-            ))}
+          {/* Field Action Grid — hierarchy: hero CTA + secondary cards */}
+          <div className="space-y-2.5">
+            {/* Primary: Start Visit — full-width hero */}
+            <button
+              onClick={() => navigate('/sales/visits')}
+              className="w-full flex items-center gap-4 px-5 py-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-2xl font-bold text-base transition-all shadow-md hover:shadow-lg">
+              <div className="p-2 bg-white/20 rounded-xl flex-shrink-0">
+                <MapPin className="h-5 w-5" />
+              </div>
+              <span className="flex-1 text-left">Start Visit</span>
+              <ChevronRight className="h-4 w-4 opacity-60 flex-shrink-0" />
+            </button>
+
+            {/* Secondary: 2-col icon cards with badges */}
+            <div className="grid grid-cols-2 gap-2.5">
+              {fieldSecondaryActions.map(action => (
+                <button
+                  key={action.label}
+                  onClick={() => navigate(action.path)}
+                  className="relative flex flex-col items-center justify-center gap-2 p-4 bg-white border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/40 rounded-2xl font-semibold text-xs text-slate-700 transition-all shadow-sm hover:shadow-md min-h-[80px]">
+                  <div className={`p-2.5 ${action.iconBg} rounded-xl`}>
+                    <action.icon className={`h-5 w-5 ${action.iconColor}`} />
+                  </div>
+                  {action.label}
+                  {action.badge > 0 && (
+                    <span className="absolute top-2 right-2 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+                      {action.badge}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Tertiary: My Customers — horizontal nav link style */}
+            <button
+              onClick={() => navigate('/sales/customers')}
+              className="w-full flex items-center gap-3 px-4 py-3.5 bg-white border border-slate-100 hover:border-slate-200 hover:bg-slate-50 rounded-2xl font-semibold text-sm text-slate-700 transition-all shadow-sm">
+              <div className="p-2 bg-slate-100 rounded-xl flex-shrink-0">
+                <Users className="h-4 w-4 text-slate-600" />
+              </div>
+              <span className="flex-1 text-left">My Customers</span>
+              <span className="text-xs text-slate-400 font-normal">{myCustomers.length} assigned</span>
+              <ChevronRight className="h-4 w-4 text-slate-300 flex-shrink-0" />
+            </button>
           </div>
 
           {/* Today's Route — full list with Visit buttons */}
