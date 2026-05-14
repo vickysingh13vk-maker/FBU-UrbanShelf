@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Menu, Search, Maximize, Minimize, Bell, ShoppingCart, Box, Users, ChevronDown, User as UserIcon, CheckCircle2, Calendar, LogOut, Settings, Shield, PlusCircle, Briefcase, Wallet, Warehouse, ShoppingBag } from 'lucide-react';
+import { Menu, Search, Maximize, Minimize, Bell, ShoppingCart, Box, Users, ChevronDown, User as UserIcon, CheckCircle2, Calendar, LogOut, Settings, Shield, PlusCircle, Briefcase, Wallet, Warehouse, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { Input } from './Input';
 import { useAuth } from '../../context/AuthContext';
 import { useDashboard, DashboardRole } from '../../context/DashboardContext';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import NotificationBell from '../notifications/NotificationBell';
 
 interface NavbarProps {
@@ -26,6 +26,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const { user, logout } = useAuth();
   const { activeRole, setActiveRole } = useDashboard();
   const location = useLocation();
+  const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -59,7 +60,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-30 h-14 flex items-center">
       <div className="flex items-center justify-between w-full px-6">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-1">
+          <button
+            className="p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-lg transition-colors"
+            onClick={() => navigate(-1)}
+            title="Go back"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
           <button
             className="lg:hidden p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors"
             onClick={onMenuClick}
