@@ -49,6 +49,10 @@ interface SalesExecutionContextValue {
   getTodayRoute: (repId: string) => RoutePlan | undefined;
   markStopVisited: (repId: string, customerId: string) => void;
   markStopSkipped: (repId: string, customerId: string) => void;
+  createOrUpdateRoute: (repId: string, stops: Array<{ customerId: string; customerName: string; address: string; priority: RoutePlanStop['priority']; estimatedVisitMinutes: number }>) => void;
+  addStopToRoute: (repId: string, customerId: string, customerName: string, address: string) => void;
+  removeStopFromRoute: (repId: string, customerId: string) => void;
+  reorderRouteStops: (repId: string, newCustomerIdOrder: string[]) => void;
 
   // Productivity
   getProductivityMetrics: (repId: string) => ProductivityMetrics;
@@ -250,6 +254,90 @@ export const SalesExecutionProvider: React.FC<{ children: React.ReactNode }> = (
   const markStopSkipped = useCallback((repId: string, customerId: string) =>
     updateStopStatus(repId, customerId, 'Skipped'), []);
 
+  const createOrUpdateRoute = useCallback((
+    repId: string,
+    stops: Array<{ customerId: string; customerName: string; address: string; priority: RoutePlanStop['priority']; estimatedVisitMinutes: number }>,
+  ) => {
+    const todayStr = today();
+    const newStops: RoutePlanStop[] = stops.map((s, i) => ({
+      ...s,
+      suggestedOrder: i + 1,
+      status: 'Pending',
+      hasOverdueCollection: false,
+      hasOverdueFollowUp: false,
+    }));
+    setRoutePlans(prev => {
+      const exists = prev.find(r => r.repId === repId && r.date === todayStr);
+      if (exists) {
+        return prev.map(r => r.repId === repId && r.date === todayStr
+          ? { ...r, stops: newStops, estimatedTotalMinutes: newStops.reduce((a, s) => a + s.estimatedVisitMinutes, 0) }
+          : r
+        );
+      }
+      return [...prev, {
+        id: genId('RP'),
+        repId,
+        date: todayStr,
+        stops: newStops,
+        estimatedTotalMinutes: newStops.reduce((a, s) => a + s.estimatedVisitMinutes, 0),
+      }];
+    });
+  }, []);
+
+  const addStopToRoute = useCallback((repId: string, customerId: string, customerName: string, address: string) => {
+    const todayStr = today();
+    setRoutePlans(prev => {
+      const existing = prev.find(r => r.repId === repId && r.date === todayStr);
+      const alreadyOn = existing?.stops.some(s => s.customerId === customerId);
+      if (alreadyOn) return prev;
+      const newStop: RoutePlanStop = {
+        customerId, customerName, address,
+        priority: 'Medium',
+        estimatedVisitMinutes: 30,
+        suggestedOrder: (existing?.stops.length ?? 0) + 1,
+        status: 'Pending',
+        hasOverdueCollection: false,
+        hasOverdueFollowUp: false,
+      };
+      if (existing) {
+        return prev.map(r => r.repId === repId && r.date === todayStr
+          ? { ...r, stops: [...r.stops, newStop], estimatedTotalMinutes: (r.estimatedTotalMinutes ?? 0) + 30 }
+          : r
+        );
+      }
+      return [...prev, { id: genId('RP'), repId, date: todayStr, stops: [newStop], estimatedTotalMinutes: 30 }];
+    });
+  }, []);
+
+  const removeStopFromRoute = useCallback((repId: string, customerId: string) => {
+    const todayStr = today();
+    setRoutePlans(prev => prev.map(r => {
+      if (r.repId !== repId || r.date !== todayStr) return r;
+      const filtered = r.stops.filter(s => !(s.customerId === customerId && s.status === 'Pending'));
+      return {
+        ...r,
+        stops: filtered.map((s, i) => ({ ...s, suggestedOrder: i + 1 })),
+        estimatedTotalMinutes: filtered.reduce((a, s) => a + s.estimatedVisitMinutes, 0),
+      };
+    }));
+  }, []);
+
+  const reorderRouteStops = useCallback((repId: string, newCustomerIdOrder: string[]) => {
+    const todayStr = today();
+    setRoutePlans(prev => prev.map(r => {
+      if (r.repId !== repId || r.date !== todayStr) return r;
+      const reordered = newCustomerIdOrder
+        .map((cid, i) => {
+          const stop = r.stops.find(s => s.customerId === cid);
+          return stop ? { ...stop, suggestedOrder: i + 1 } : null;
+        })
+        .filter(Boolean) as RoutePlanStop[];
+      // keep any stops not in newOrder at the end (shouldn't happen but safe)
+      const rest = r.stops.filter(s => !newCustomerIdOrder.includes(s.customerId));
+      return { ...r, stops: [...reordered, ...rest] };
+    }));
+  }, []);
+
   // ── Productivity ───────────────────────────────────────────────────────────
 
   const getProductivityMetrics = useCallback((repId: string): ProductivityMetrics => {
@@ -292,6 +380,7 @@ export const SalesExecutionProvider: React.FC<{ children: React.ReactNode }> = (
     collectionAttempts, logCollectionAttempt, updateCollectionStatus,
     getRepCollections, getCustomerCollections,
     routePlans, getTodayRoute, markStopVisited, markStopSkipped,
+    createOrUpdateRoute, addStopToRoute, removeStopFromRoute, reorderRouteStops,
     getProductivityMetrics,
   };
 
