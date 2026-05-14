@@ -115,8 +115,13 @@ const RepLeadDetail: React.FC = () => {
 
   return (
     <div className="space-y-5">
-      <button onClick={() => navigate('/sales/leads')} className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700">
-        <ArrowLeft className="h-4 w-4" /> My Leads
+      <button
+        onClick={() => navigate(-1)}
+        className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors group w-fit">
+        <div className="p-1.5 bg-slate-100 group-hover:bg-slate-200 rounded-lg transition-colors">
+          <ArrowLeft className="h-4 w-4" />
+        </div>
+        Back
       </button>
 
       {/* Lead Header */}

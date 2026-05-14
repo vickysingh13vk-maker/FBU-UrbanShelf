@@ -21,8 +21,13 @@ const RepVisitDetail: React.FC = () => {
   if (!visit) {
     return (
       <div className="space-y-5">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 font-semibold">
-          <ArrowLeft className="h-4 w-4" /> Back
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors group w-fit">
+          <div className="p-1.5 bg-slate-100 group-hover:bg-slate-200 rounded-lg transition-colors">
+            <ArrowLeft className="h-4 w-4" />
+          </div>
+          Back
         </button>
         <Card padding="lg" className="text-center py-16">
           <p className="text-sm text-slate-400">Visit not found</p>
