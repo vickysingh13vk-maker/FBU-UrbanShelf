@@ -492,18 +492,18 @@ const RepDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* ══ BOTTOM SHEET ══ */}
+      {/* ══ BOTTOM SHEET (mobile) / MODAL (tablet+) ══ */}
       {activeSheet && (
         <div
-          className="fixed inset-0 bg-black/50 z-50 flex flex-col justify-end"
+          className="fixed inset-0 bg-black/50 z-50 flex flex-col justify-end sm:items-center sm:justify-center sm:p-6"
           onClick={closeSheet}>
           <div
-            className="bg-white rounded-t-3xl shadow-2xl flex flex-col"
+            className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col w-full sm:max-w-lg sm:w-full"
             style={{ maxHeight: '82vh' }}
             onClick={e => e.stopPropagation()}>
 
-            {/* Drag handle */}
-            <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+            {/* Drag handle — mobile only */}
+            <div className="flex justify-center pt-3 pb-1 flex-shrink-0 sm:hidden">
               <div className="h-1 w-10 bg-slate-200 rounded-full" />
             </div>
 
