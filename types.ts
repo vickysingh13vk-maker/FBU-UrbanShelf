@@ -53,6 +53,7 @@ export interface Order {
   paymentStatus: 'Paid' | 'Unpaid' | 'Pending' | 'Refunded';
   repId?: string;
   collectionAmount?: number;
+  visitId?: string;
 }
 
 export interface StockReversal {

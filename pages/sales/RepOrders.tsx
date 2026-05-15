@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Search, ChevronRight, Package, Clock, CheckCircle, XCircle, TruckIcon } from 'lucide-react';
+import { ShoppingCart, Search, ChevronRight, Package, Clock, CheckCircle, XCircle, TruckIcon, Plus } from 'lucide-react';
 import { Card } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
-import { ORDERS } from '../../data';
+import { useSalesExecution } from '../../context/SalesExecutionContext';
 
 const STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; bg: string }> = {
   Pending:   { icon: <Clock className="h-3.5 w-3.5" />,       color: 'text-amber-600',   bg: 'bg-amber-50' },
@@ -29,12 +29,13 @@ const RepOrders: React.FC = () => {
   const preselectedCustomerId = (location.state as any)?.customerId;
   const preselectedCustomerName = (location.state as any)?.customerName;
 
+  const { getRepOrders } = useSalesExecution();
   const repId = user?.id ?? '';
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [payFilter, setPayFilter] = useState<string>('All');
 
-  const allRepOrders = ORDERS.filter(o => o.repId === repId);
+  const allRepOrders = getRepOrders(repId);
   const customerOrders = preselectedCustomerId
     ? allRepOrders.filter(o => o.customerId === preselectedCustomerId)
     : allRepOrders;
@@ -68,6 +69,11 @@ const RepOrders: React.FC = () => {
             <p className="text-xs text-slate-500 mt-0.5">{allRepOrders.length} total orders</p>
           )}
         </div>
+        <button
+          onClick={() => navigate('/sales/orders/new', { state: { repId } })}
+          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors">
+          <Plus className="h-4 w-4" /> New Order
+        </button>
       </div>
 
       {/* KPI Row */}

@@ -74,6 +74,7 @@ import RepFollowUps from './pages/sales/RepFollowUps';
 import RepTasks from './pages/sales/RepTasks';
 import RepCollections from './pages/sales/RepCollections';
 import RepRoute from './pages/sales/RepRoute';
+import RepOrderCreate from './pages/sales/RepOrderCreate';
 
 // Phase 5 CRM Ops
 import NotificationsCenter from './pages/NotificationsCenter';
@@ -190,6 +191,7 @@ const App: React.FC = () => {
                     <Route path="/sales/leads" element={<RepLeads />} />
                     <Route path="/sales/activities" element={<RepActivities />} />
                     <Route path="/sales/orders" element={<RepOrders />} />
+                    <Route path="/sales/orders/new" element={<RepOrderCreate />} />
                     <Route path="/sales/payments" element={<RepPayments />} />
                     <Route path="/sales/reporting" element={<RepReporting />} />
                     <Route path="/sales/profile" element={<RepProfile />} />

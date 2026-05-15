@@ -6,8 +6,9 @@ import {
   CollectionAttempt, CollectionStatus,
   RoutePlan, RoutePlanStop,
   ProductivityMetrics,
+  Order,
 } from '../types';
-import { VISITS, FOLLOW_UPS, TASKS, COLLECTION_ATTEMPTS, ROUTE_PLANS } from '../data';
+import { VISITS, FOLLOW_UPS, TASKS, COLLECTION_ATTEMPTS, ROUTE_PLANS, ORDERS } from '../data';
 
 interface SalesExecutionContextValue {
   // Visit
@@ -54,6 +55,11 @@ interface SalesExecutionContextValue {
   removeStopFromRoute: (repId: string, customerId: string) => void;
   reorderRouteStops: (repId: string, newCustomerIdOrder: string[]) => void;
 
+  // Orders
+  orders: Order[];
+  createOrder: (data: Omit<Order, 'id'>) => string;
+  getRepOrders: (repId: string) => Order[];
+
   // Productivity
   getProductivityMetrics: (repId: string) => ProductivityMetrics;
 }
@@ -90,6 +96,7 @@ export const SalesExecutionProvider: React.FC<{ children: React.ReactNode }> = (
   );
   const [collectionAttempts, setCollectionAttempts] = useState<CollectionAttempt[]>(COLLECTION_ATTEMPTS);
   const [routePlans, setRoutePlans] = useState<RoutePlan[]>(ROUTE_PLANS);
+  const [orders, setOrders] = useState<Order[]>(ORDERS);
 
   // ── Visit ──────────────────────────────────────────────────────────────────
 
@@ -108,6 +115,12 @@ export const SalesExecutionProvider: React.FC<{ children: React.ReactNode }> = (
       notes: '',
     };
     setVisits(prev => [visit, ...prev]);
+    // Auto-mark matching route stop as Visited
+    const todayStr = today();
+    setRoutePlans(prev => prev.map(r => {
+      if (r.repId !== repId || r.date !== todayStr) return r;
+      return { ...r, stops: r.stops.map(s => s.customerId === customerId ? { ...s, status: 'Visited' as RoutePlanStop['status'] } : s) };
+    }));
     return id;
   }, []);
 
@@ -338,6 +351,17 @@ export const SalesExecutionProvider: React.FC<{ children: React.ReactNode }> = (
     }));
   }, []);
 
+  // ── Orders ─────────────────────────────────────────────────────────────────
+
+  const createOrder = useCallback((data: Omit<Order, 'id'>): string => {
+    const id = `ORD-${Date.now()}`;
+    setOrders(prev => [{ ...data, id }, ...prev]);
+    return id;
+  }, []);
+
+  const getRepOrders = useCallback((repId: string) =>
+    orders.filter(o => o.repId === repId), [orders]);
+
   // ── Productivity ───────────────────────────────────────────────────────────
 
   const getProductivityMetrics = useCallback((repId: string): ProductivityMetrics => {
@@ -381,6 +405,7 @@ export const SalesExecutionProvider: React.FC<{ children: React.ReactNode }> = (
     getRepCollections, getCustomerCollections,
     routePlans, getTodayRoute, markStopVisited, markStopSkipped,
     createOrUpdateRoute, addStopToRoute, removeStopFromRoute, reorderRouteStops,
+    orders, createOrder, getRepOrders,
     getProductivityMetrics,
   };
 

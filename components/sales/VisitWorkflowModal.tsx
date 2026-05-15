@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, MapPin, CheckSquare, Square, Plus, Clock, Star, ChevronRight } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { X, MapPin, CheckSquare, Square, Plus, Clock, Star, ChevronRight, ShoppingCart, Package } from 'lucide-react';
 import { VisitObjective, VisitObjectiveType, VisitOutcome, FollowUpType, FollowUpPriority } from '../../types';
 import { useSalesExecution } from '../../context/SalesExecutionContext';
 import { useAuth } from '../../context/AuthContext';
@@ -12,20 +13,31 @@ interface Props {
   customerName: string;
   onComplete: (visitId: string) => void;
   onClose: () => void;
+  initialStep?: Step;
+  initialVisitId?: string;
+  initialLinkedOrderId?: string;
+  initialLinkedOrderTotal?: number;
 }
 
 type Step = 'confirm' | 'objectives' | 'outcome' | 'followup' | 'summary';
 const STEPS: Step[] = ['confirm', 'objectives', 'outcome', 'followup', 'summary'];
 const STEP_LABELS = ['Confirm', 'Objectives', 'Outcome', 'Follow-Up', 'Summary'];
 
-const VisitWorkflowModal: React.FC<Props> = ({ customerId, customerName, onComplete, onClose }) => {
+const VisitWorkflowModal: React.FC<Props> = ({
+  customerId, customerName, onComplete, onClose,
+  initialStep, initialVisitId, initialLinkedOrderId, initialLinkedOrderTotal,
+}) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { startVisit, updateVisitObjective, endVisit, getActiveVisit, addFollowUp } = useSalesExecution();
 
-  const [step, setStep] = useState<Step>('confirm');
-  const [visitId, setVisitId] = useState<string | null>(null);
+  const [step, setStep] = useState<Step>(initialStep ?? 'confirm');
+  const [visitId, setVisitId] = useState<string | null>(initialVisitId ?? null);
   const [startTime] = useState(new Date());
   const [elapsed, setElapsed] = useState(0);
+  const [linkedOrderId, setLinkedOrderId] = useState<string | null>(initialLinkedOrderId ?? null);
+  const [linkedOrderTotal, setLinkedOrderTotal] = useState<number | null>(initialLinkedOrderTotal ?? null);
 
   // Objectives step
   const [selectedObjectives, setSelectedObjectives] = useState<VisitObjectiveType[]>([]);
@@ -54,6 +66,7 @@ const VisitWorkflowModal: React.FC<Props> = ({ customerId, customerName, onCompl
     return () => clearInterval(interval);
   }, [startTime]);
 
+
   const formatElapsed = (s: number) => {
     const m = Math.floor(s / 60); const sec = s % 60;
     return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
@@ -75,7 +88,8 @@ const VisitWorkflowModal: React.FC<Props> = ({ customerId, customerName, onCompl
   const handleEndVisit = () => {
     if (!visitId) return;
     const outcome: VisitOutcome = {
-      orderAmount: orderAmount ? parseFloat(orderAmount) : undefined,
+      orderId: linkedOrderId ?? undefined,
+      orderAmount: orderAmount ? parseFloat(orderAmount) : (linkedOrderTotal ?? undefined),
       collectionAmount: collectionAmount ? parseFloat(collectionAmount) : undefined,
       productsDiscussed: productsDiscussed.split(',').map(p => p.trim()).filter(Boolean),
       notes: outcomeNotes,
@@ -99,8 +113,12 @@ const VisitWorkflowModal: React.FC<Props> = ({ customerId, customerName, onCompl
   const activeVisitData = visitId ? (getActiveVisit(user?.id ?? '') ?? null) : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex flex-col justify-end sm:items-center sm:justify-center sm:p-6 bg-black/50">
+      <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        {/* Drag handle — mobile only */}
+        <div className="flex justify-center pt-3 pb-1 sm:hidden flex-shrink-0">
+          <div className="h-1 w-10 bg-slate-200 rounded-full" />
+        </div>
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-slate-100 sticky top-0 bg-white rounded-t-2xl">
           <div>
@@ -128,7 +146,7 @@ const VisitWorkflowModal: React.FC<Props> = ({ customerId, customerName, onCompl
         <div className="p-5">
           {/* Step 1: Confirm */}
           {step === 'confirm' && (
-            <div className="space-y-5">
+            <div className="space-y-4">
               <div className="flex items-center gap-3 p-4 bg-indigo-50 rounded-2xl">
                 <div className="h-12 w-12 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
                   <MapPin className="h-6 w-6 text-indigo-600" />
@@ -139,26 +157,57 @@ const VisitWorkflowModal: React.FC<Props> = ({ customerId, customerName, onCompl
                   <p className="text-xs text-slate-400">{new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</p>
                 </div>
               </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-700 mb-3">Select visit objectives</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {OBJECTIVE_TYPES.map(type => {
-                    const selected = selectedObjectives.includes(type);
-                    return (
-                      <button key={type} onClick={() => setSelectedObjectives(prev =>
-                        selected ? prev.filter(t => t !== type) : [...prev, type]
-                      )} className={`flex items-center gap-2 p-3 rounded-xl border text-left transition-all ${
-                        selected ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 hover:border-slate-300'
-                      }`}>
-                        {selected ? <CheckSquare className="h-4 w-4 text-indigo-600 flex-shrink-0" /> : <Square className="h-4 w-4 text-slate-300 flex-shrink-0" />}
-                        <span className="text-xs font-semibold text-slate-700">{type}</span>
-                      </button>
-                    );
-                  })}
+
+              {/* Primary action: Take Order */}
+              <button
+                onClick={() => {
+                  const objectives = [
+                    { type: 'Order' as VisitObjectiveType, description: 'Order', completed: false },
+                    ...selectedObjectives.filter(t => t !== 'Order').map(type => ({ type, description: type, completed: false })),
+                  ];
+                  const id = startVisit(customerId, customerName, user?.id ?? '', user?.name ?? '', objectives);
+                  navigate('/sales/orders/new', {
+                    state: { customerId, customerName, visitId: id, repId: user?.id ?? '', returnPath: location.pathname },
+                  });
+                }}
+                className="w-full flex items-center justify-between px-4 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <ShoppingCart className="h-5 w-5" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-black">Take Order</p>
+                    <p className="text-xs text-indigo-200">Start visit &amp; create order</p>
+                  </div>
                 </div>
+                <ChevronRight className="h-5 w-5 text-indigo-300" />
+              </button>
+
+              {/* Divider */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-px bg-slate-100" />
+                <span className="text-xs text-slate-400 font-medium">or select objectives</span>
+                <div className="flex-1 h-px bg-slate-100" />
               </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {OBJECTIVE_TYPES.filter(t => t !== 'Order').map(type => {
+                  const selected = selectedObjectives.includes(type);
+                  return (
+                    <button key={type} onClick={() => setSelectedObjectives(prev =>
+                      selected ? prev.filter(t => t !== type) : [...prev, type]
+                    )} className={`flex items-center gap-2 p-3 rounded-xl border text-left transition-all ${
+                      selected ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 hover:border-slate-300'
+                    }`}>
+                      {selected ? <CheckSquare className="h-4 w-4 text-indigo-600 flex-shrink-0" /> : <Square className="h-4 w-4 text-slate-300 flex-shrink-0" />}
+                      <span className="text-xs font-semibold text-slate-700">{type}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
               <button onClick={handleStartVisit}
-                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
+                className="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
                 <MapPin className="h-4 w-4" /> Start Visit
               </button>
             </div>
@@ -168,21 +217,52 @@ const VisitWorkflowModal: React.FC<Props> = ({ customerId, customerName, onCompl
           {step === 'objectives' && visitId && (
             <div className="space-y-4">
               <p className="text-sm text-slate-500">Visit in progress. Track objectives as you complete them.</p>
+
+              {/* Linked order chip */}
+              {linkedOrderId && (
+                <div className="flex items-center gap-2 px-3 py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl">
+                  <Package className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-emerald-700">Order placed</p>
+                    <p className="text-xs text-emerald-600">#{linkedOrderId}{linkedOrderTotal ? ` · £${linkedOrderTotal.toFixed(2)}` : ''}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Create Order button — always visible when no order linked */}
+              {!linkedOrderId && (
+                <button
+                  onClick={() => navigate('/sales/orders/new', {
+                    state: {
+                      customerId, customerName, visitId,
+                      repId: user?.id ?? '',
+                      returnPath: location.pathname,
+                    },
+                  })}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors">
+                  <ShoppingCart className="h-4 w-4" /> Create Order for {customerName}
+                </button>
+              )}
+
               {activeVisitData ? (
                 <div className="space-y-2">
                   {activeVisitData.objectives.length === 0 && (
                     <p className="text-sm text-slate-400 text-center py-4">No objectives set</p>
                   )}
                   {activeVisitData.objectives.map(obj => (
-                    <button key={obj.id} onClick={() => handleConfirmObjective(visitId, obj.id, !obj.completed)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
-                        obj.completed ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-white hover:border-indigo-200'
-                      }`}>
-                      {obj.completed
-                        ? <CheckSquare className="h-5 w-5 text-emerald-600 flex-shrink-0" />
-                        : <Square className="h-5 w-5 text-slate-300 flex-shrink-0" />}
-                      <span className={`text-sm font-semibold ${obj.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}>{obj.type}</span>
-                    </button>
+                    <div key={obj.id} className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                      obj.completed ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-white'
+                    }`}>
+                      <button onClick={() => handleConfirmObjective(visitId, obj.id, !obj.completed)}
+                        className="flex-shrink-0">
+                        {obj.completed
+                          ? <CheckSquare className="h-5 w-5 text-emerald-600" />
+                          : <Square className="h-5 w-5 text-slate-300" />}
+                      </button>
+                      <span className={`text-sm font-semibold flex-1 ${obj.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+                        {obj.type}
+                      </span>
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -198,6 +278,15 @@ const VisitWorkflowModal: React.FC<Props> = ({ customerId, customerName, onCompl
           {/* Step 3: Outcome */}
           {step === 'outcome' && (
             <div className="space-y-4">
+              {linkedOrderId && (
+                <div className="flex items-center gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                  <Package className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold text-emerald-700">Order linked to this visit</p>
+                    <p className="text-xs text-emerald-600">#{linkedOrderId}{linkedOrderTotal ? ` · £${linkedOrderTotal.toFixed(2)}` : ''}</p>
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-semibold text-slate-600 mb-1 block">Order Amount £</label>

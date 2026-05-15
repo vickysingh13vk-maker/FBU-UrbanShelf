@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { MapPin, Clock, CheckCircle, XCircle, Calendar, Plus, Search, X, Route, AlertCircle } from 'lucide-react';
 import { Card } from '../../components/ui';
 import VisitWorkflowModal from '../../components/sales/VisitWorkflowModal';
@@ -16,14 +16,25 @@ const STATUS_CONFIG: Record<VisitStatus, { icon: React.ReactNode; color: string;
   cancelled: { icon: <XCircle className="h-3.5 w-3.5" />,     color: 'text-slate-400',   bg: 'bg-slate-50',   label: 'Cancelled' },
 };
 
+type VisitModalState = {
+  customerId: string;
+  customerName: string;
+  initialStep?: 'confirm' | 'objectives' | 'outcome' | 'followup' | 'summary';
+  initialVisitId?: string;
+  initialLinkedOrderId?: string;
+  initialLinkedOrderTotal?: number;
+};
+
 const RepVisits: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
-  const { getRepVisits, getActiveVisit, endVisit, getTodayRoute } = useSalesExecution();
+  const { getRepVisits, getActiveVisit, endVisit, getTodayRoute, updateVisitObjective } = useSalesExecution();
   const { getRepCustomers } = useSalesCRM();
+  const handledReturnRef = useRef(false);
 
   const [tab, setTab] = useState<'today' | 'history'>('today');
-  const [visitModal, setVisitModal] = useState<{ customerId: string; customerName: string } | null>(null);
+  const [visitModal, setVisitModal] = useState<VisitModalState | null>(null);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
   const [pickerSearch, setPickerSearch] = useState('');
@@ -32,6 +43,29 @@ const RepVisits: React.FC = () => {
   const repId = user?.id ?? '';
   const allVisits = getRepVisits(repId);
   const activeVisit = getActiveVisit(repId);
+
+  // Reopen modal when returning from RepOrderCreate
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.returnedOrderId && !handledReturnRef.current) {
+      handledReturnRef.current = true;
+      const av = getActiveVisit(repId);
+      if (av) {
+        // Auto-complete Order objective
+        const orderObj = av.objectives.find(o => o.type === 'Order' && !o.completed);
+        if (orderObj) updateVisitObjective(av.id, orderObj.id, true);
+        // Reopen modal at objectives step
+        setVisitModal({
+          customerId: av.customerId,
+          customerName: av.customerName,
+          initialStep: 'objectives',
+          initialVisitId: av.id,
+          initialLinkedOrderId: state.returnedOrderId,
+          initialLinkedOrderTotal: state.returnedOrderTotal,
+        });
+      }
+    }
+  }, []);
   const myCustomers = getRepCustomers(repId);
   const todayRoute = getTodayRoute(repId);
 
@@ -210,6 +244,11 @@ const RepVisits: React.FC = () => {
                     <p className="text-sm font-semibold text-slate-400 mb-1">No pending stops on today's route</p>
                     <p className="text-xs text-slate-300 mb-4">All stops visited or no route planned</p>
                     <button
+                      onClick={() => { setShowCustomerPicker(false); navigate('/sales/route'); }}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors mb-3">
+                      <Route className="h-4 w-4" /> Plan Today's Route
+                    </button>
+                    <button
                       onClick={() => setPickerTab('all')}
                       className="text-indigo-500 text-sm font-bold">
                       Pick any customer →
@@ -307,10 +346,14 @@ const RepVisits: React.FC = () => {
         </div>
       )}
 
-      {visitModal && !activeVisit && (
+      {visitModal && (
         <VisitWorkflowModal
           customerId={visitModal.customerId}
           customerName={visitModal.customerName}
+          initialStep={visitModal.initialStep}
+          initialVisitId={visitModal.initialVisitId}
+          initialLinkedOrderId={visitModal.initialLinkedOrderId}
+          initialLinkedOrderTotal={visitModal.initialLinkedOrderTotal}
           onComplete={() => setVisitModal(null)}
           onClose={() => setVisitModal(null)}
         />
