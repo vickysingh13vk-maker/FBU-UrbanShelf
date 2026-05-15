@@ -2,12 +2,14 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   MapPin, Clock, CheckCircle, AlertCircle, Plus, X,
-  ChevronUp, ChevronDown, Search, ArrowRight, Route, Wallet, Phone, Check,
+  ChevronUp, ChevronDown, Search, ArrowRight, Route, Wallet, Phone, Check, WifiOff,
 } from 'lucide-react';
 import { useSalesExecution } from '../../context/SalesExecutionContext';
 import { useSalesCRM } from '../../context/SalesCRMContext';
 import { useAuth } from '../../context/AuthContext';
 import VisitWorkflowModal from '../../components/sales/VisitWorkflowModal';
+import { useOnlineStatus } from '../../hooks/useOnlineStatus';
+import { useWorkSession } from '../../context/WorkSessionContext';
 
 type VisitModalState = {
   customerId: string;
@@ -28,6 +30,9 @@ const RepRoute: React.FC = () => {
   } = useSalesExecution();
   const { getRepCustomers } = useSalesCRM();
 
+  const isOnline = useOnlineStatus();
+  const { isOnline: isSessionActive } = useWorkSession();
+  const canAct = isOnline && isSessionActive;
   const [search, setSearch] = useState('');
   const [visitModal, setVisitModal] = useState<VisitModalState | null>(null);
   const handledReturnRef = useRef(false);
@@ -117,6 +122,20 @@ const RepRoute: React.FC = () => {
         <h1 className="text-xl font-black text-slate-800">Today's Route</h1>
         <p className="text-xs text-slate-500 mt-0.5">{today}</p>
       </div>
+
+      {/* Session / network banners */}
+      {!isSessionActive && (
+        <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
+          <WifiOff className="h-4 w-4 text-amber-500 flex-shrink-0" />
+          <p className="text-xs font-bold text-amber-700">Start your work session before logging visits</p>
+        </div>
+      )}
+      {isSessionActive && !isOnline && (
+        <div className="flex items-center gap-2 px-4 py-3 bg-rose-50 border border-rose-200 rounded-xl">
+          <WifiOff className="h-4 w-4 text-rose-500 flex-shrink-0" />
+          <p className="text-xs font-bold text-rose-700">You're offline — internet required to start a visit</p>
+        </div>
+      )}
 
       {/* Active visit banner */}
       {activeVisit && (
@@ -237,9 +256,10 @@ const RepRoute: React.FC = () => {
                       </button>
                       <button
                         onClick={() => handleStartVisit(stop.customerId, stop.customerName)}
-                        disabled={!!activeVisit}
+                        disabled={!!activeVisit || !canAct}
+                        title={!isSessionActive ? 'Start your work session first' : !isOnline ? 'No internet connection' : undefined}
                         className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-40">
-                        Visit
+                        {!canAct ? <WifiOff className="h-3.5 w-3.5" /> : 'Visit'}
                       </button>
                       {!activeVisit && (
                         <button onClick={() => removeStopFromRoute(repId, stop.customerId)}

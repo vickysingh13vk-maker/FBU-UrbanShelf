@@ -670,7 +670,7 @@ export const VISITS: Visit[] = [
       { id: 'O001', type: 'Order', description: 'Take monthly restock order', completed: true },
       { id: 'O002', type: 'Collection', description: 'Collect outstanding £150', completed: false },
     ],
-    outcome: { orderAmount: 1186.26, orderId: '326', collectionAmount: 0, productsDiscussed: ['Lost Mary BM6000', 'Elf Bar 600'], notes: 'Owner happy with new range. Placed large order.', customerSatisfaction: 5 },
+    outcome: { orderAmount: 1186.26, orderId: '326', collectionAmount: 0, productsDiscussed: ['Lost Mary BM6000', 'Elf Bar 600'], notes: 'Owner happy with new range. Placed large order.' },
     notes: 'Great visit. Owner very receptive to new LM range.', sessionId: 'WS001',
   },
   {
@@ -681,7 +681,7 @@ export const VISITS: Visit[] = [
       { id: 'O003', type: 'Collection', description: 'Collect overdue balance £45.50', completed: true },
       { id: 'O004', type: 'Order', description: 'Discuss new Velo range', completed: true },
     ],
-    outcome: { collectionAmount: 45.50, productsDiscussed: ['Velo Nicotine Pouches'], notes: 'Collected balance. Owner interested in Velo 11mg.', customerSatisfaction: 4 },
+    outcome: { collectionAmount: 45.50, productsDiscussed: ['Velo Nicotine Pouches'], notes: 'Collected balance. Owner interested in Velo 11mg.' },
     notes: 'Quick efficient visit.', sessionId: 'WS001',
   },
   {
@@ -689,7 +689,7 @@ export const VISITS: Visit[] = [
     status: 'completed', date: '2026-05-07', startTime: '2026-05-07T09:30:00Z', endTime: '2026-05-07T10:15:00Z', durationMinutes: 45,
     gpsLat: 51.5074, gpsLng: -0.1278,
     objectives: [{ id: 'O005', type: 'Relationship', description: 'Monthly check-in', completed: true }],
-    outcome: { productsDiscussed: ['Lost Mary BM6000'], notes: 'Routine check-in. Stock levels reviewed.', customerSatisfaction: 4 },
+    outcome: { productsDiscussed: ['Lost Mary BM6000'], notes: 'Routine check-in. Stock levels reviewed.' },
     notes: 'Good relationship maintained.', sessionId: 'WS001',
   },
   {
@@ -697,7 +697,7 @@ export const VISITS: Visit[] = [
     status: 'completed', date: '2026-05-06', startTime: '2026-05-06T10:00:00Z', endTime: '2026-05-06T10:25:00Z', durationMinutes: 25,
     gpsLat: 51.5150, gpsLng: -0.1415,
     objectives: [{ id: 'O006', type: 'Collection', description: 'First collection attempt', completed: false }],
-    outcome: { productsDiscussed: [], notes: 'Owner not available. Left message.', customerSatisfaction: 2 },
+    outcome: { productsDiscussed: [], notes: 'Owner not available. Left message.' },
     notes: 'Unsuccessful collection — owner absent.', sessionId: 'WS002',
   },
   {
@@ -708,7 +708,7 @@ export const VISITS: Visit[] = [
       { id: 'O007', type: 'Collection', description: 'Discuss disputed invoice', completed: true },
       { id: 'O008', type: 'Relationship', description: 'Repair relationship', completed: true },
     ],
-    outcome: { productsDiscussed: [], notes: 'Owner agreed to pay 50% now, rest by end of month.', customerSatisfaction: 3 },
+    outcome: { productsDiscussed: [], notes: 'Owner agreed to pay 50% now, rest by end of month.' },
     notes: 'Sensitive visit. Managed well.', sessionId: 'WS002',
   },
   {

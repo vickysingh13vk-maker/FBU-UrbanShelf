@@ -32,6 +32,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const isDashboard = location.pathname === '/';
   const isSupplier = user?.roleName === 'Supplier';
+  const isSalesRep = user?.roleName === 'Sales Rep';
+  const isSalesDashboard = location.pathname === '/sales/dashboard';
+  const showBackButton = isSalesRep && !isSalesDashboard && window.history.length > 1;
 
   const roles: { id: DashboardRole; label: string; icon: any }[] = [
     { id: 'admin', label: 'Admin', icon: Shield },
@@ -60,13 +63,22 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-30 h-14 flex items-center">
       <div className="flex items-center justify-between w-full px-6">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <button
             className="lg:hidden p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors"
             onClick={onMenuClick}
           >
             <Menu className="h-5 w-5" />
           </button>
+          {showBackButton && (
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors text-xs font-semibold"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Back</span>
+            </button>
+          )}
         </div>
 
         {/* Global Search */}

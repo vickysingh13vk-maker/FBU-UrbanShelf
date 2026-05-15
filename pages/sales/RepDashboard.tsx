@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   MapPin, Users, Plus, Phone,
   ChevronRight, CheckCircle2, TrendingUp, Route,
   CheckSquare, Banknote, Briefcase, Navigation,
-  AlertCircle, X, Search, Clock,
+  AlertCircle, X, Search, Clock, ClipboardList, Lock,
 } from 'lucide-react';
 import { Card, ViewModeToggle } from '../../components/ui';
 import WorkSessionBanner from '../../components/sales/WorkSessionBanner';
@@ -14,10 +14,12 @@ import ProductivityWidget from '../../components/sales/ProductivityWidget';
 import FollowUpCard from '../../components/sales/FollowUpCard';
 import TaskCard from '../../components/sales/TaskCard';
 import VisitWorkflowModal from '../../components/sales/VisitWorkflowModal';
+import TimelineLogForm from '../../components/sales/TimelineLogForm';
 import { useWorkSession } from '../../context/WorkSessionContext';
 import { useSalesCRM } from '../../context/SalesCRMContext';
 import { useSalesExecution } from '../../context/SalesExecutionContext';
 import { useAuth } from '../../context/AuthContext';
+import { TimelineEventType } from '../../types';
 import { WORK_SESSIONS } from '../../data';
 
 type SheetType = 'route' | 'followups' | 'collections' | 'tasks';
@@ -73,9 +75,10 @@ const RepGroupedKpiCard: React.FC<RepKpiCardProps> = ({ title, icon: Icon, color
 
 const RepDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { isOnline, startSession, endSession, todayStats, elapsedSeconds, lastSummary, clearLastSummary } = useWorkSession();
-  const { getRepCustomers, getRepLeads } = useSalesCRM();
+  const { getRepCustomers, getRepLeads, addTimelineEntry } = useSalesCRM();
   const {
     getActiveVisit, getTodayFollowUps, getOverdueFollowUps, getRepTasks,
     completeFollowUp, dismissFollowUp, getProductivityMetrics, getTodayRoute,
@@ -87,12 +90,22 @@ const RepDashboard: React.FC = () => {
 
   // Field mode state
   const [activeSheet, setActiveSheet] = useState<SheetType | null>(null);
-  const [visitModal, setVisitModal] = useState<{ customerId: string; customerName: string } | null>(null);
+  const [visitModal, setVisitModal] = useState<{
+    customerId: string;
+    customerName: string;
+    initialStep?: 'confirm' | 'objectives' | 'end' | 'summary';
+    initialVisitId?: string;
+    initialLinkedOrderId?: string;
+    initialLinkedOrderTotal?: number;
+  } | null>(null);
   const [showVisitPicker, setShowVisitPicker] = useState(false);
   const [pickerTab, setPickerTab] = useState<'route' | 'all'>('route');
   const [pickerSearch, setPickerSearch] = useState('');
   const [collectionAmounts, setCollectionAmounts] = useState<Record<string, string>>({});
   const [collectionLogged, setCollectionLogged] = useState<Set<string>>(new Set());
+
+  // Activity log state
+  const [showActivityForm, setShowActivityForm] = useState(false);
 
   const repId = user?.id ?? '';
   const repName = user?.name ?? '';
@@ -121,6 +134,30 @@ const RepDashboard: React.FC = () => {
   const weekOrders = mySessions.reduce((a, s) => a + s.totalOrders, 0) + todayStats.orders;
   const weekCollections = mySessions.reduce((a, s) => a + s.totalCollections, 0) + todayStats.collections;
 
+  // Re-open end-visit modal after returning from order creation
+  useEffect(() => {
+    const state = location.state as {
+      returnedOrderId?: string;
+      returnedOrderTotal?: number;
+      returnedVisitId?: string;
+    } | null;
+    if (state?.returnedVisitId) {
+      const visit = getActiveVisit(repId);
+      if (visit) {
+        setVisitModal({
+          customerId: visit.customerId,
+          customerName: visit.customerName,
+          initialStep: 'end',
+          initialVisitId: visit.id,
+          initialLinkedOrderId: state.returnedOrderId,
+          initialLinkedOrderTotal: state.returnedOrderTotal,
+        });
+      }
+      // Clear state so back-navigation doesn't re-trigger
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.state]);
+
   const handleToggleSession = () => {
     if (isOnline) endSession();
     else startSession(repId, repName);
@@ -128,6 +165,16 @@ const RepDashboard: React.FC = () => {
 
   const openSheet = (sheet: SheetType) => setActiveSheet(sheet);
   const closeSheet = () => setActiveSheet(null);
+
+  const openEndVisitModal = () => {
+    if (!activeVisit) return;
+    setVisitModal({
+      customerId: activeVisit.customerId,
+      customerName: activeVisit.customerName,
+      initialStep: 'end',
+      initialVisitId: activeVisit.id,
+    });
+  };
 
   const openVisitPicker = () => {
     setPickerSearch('');
@@ -159,16 +206,59 @@ const RepDashboard: React.FC = () => {
     setTimeout(() => setCollectionLogged(prev => { const n = new Set(prev); n.delete(customerId); return n; }), 2500);
   };
 
+  const handleSaveActivity = (customerId: string, type: TimelineEventType, notes: string, outcome: string, nextAction: string, amount?: number) => {
+    addTimelineEntry({
+      customerId,
+      type,
+      repId,
+      repName,
+      timestamp: new Date().toISOString(),
+      notes,
+      outcome: outcome || undefined,
+      nextAction: nextAction || undefined,
+      amount,
+    });
+    setShowActivityForm(false);
+  };
+
   const filteredCustomers = myCustomers.filter(c =>
     !pickerSearch || c.storeName.toLowerCase().includes(pickerSearch.toLowerCase())
   );
 
   // Field secondary actions (open sheets)
   const fieldSecondaryActions = [
-    { label: 'My Route',    icon: Route,       iconColor: 'text-violet-600', iconBg: 'bg-violet-50',  sheet: 'route' as SheetType,       badge: routePending },
-    { label: 'Follow-Ups',  icon: Phone,       iconColor: 'text-amber-600',  iconBg: 'bg-amber-50',   sheet: 'followups' as SheetType,    badge: overdueFU.length },
-    { label: 'Collections', icon: Banknote,    iconColor: 'text-emerald-600',iconBg: 'bg-emerald-50', sheet: 'collections' as SheetType,  badge: overdueCollections.length },
-    { label: 'Tasks',       icon: CheckSquare, iconColor: 'text-blue-600',   iconBg: 'bg-blue-50',    sheet: 'tasks' as SheetType,        badge: activeTasks.length },
+    {
+      label: 'My Route',
+      subtitle: routePending > 0 ? `${routePending} stop${routePending !== 1 ? 's' : ''} pending` : routeVisited > 0 ? `${routeVisited} visited` : 'No route',
+      icon: Route, iconColor: 'text-violet-600', iconBg: 'bg-violet-50',
+      sheet: 'route' as SheetType,
+      badge: routePending, badgeColor: 'bg-violet-500',
+      subtitleColor: routePending > 0 ? 'text-violet-500' : 'text-slate-400',
+    },
+    {
+      label: 'Follow-Ups',
+      subtitle: overdueFU.length > 0 ? `${overdueFU.length} overdue` : todayFU.length > 0 ? `${todayFU.length} due today` : 'All clear',
+      icon: Phone, iconColor: 'text-amber-600', iconBg: 'bg-amber-50',
+      sheet: 'followups' as SheetType,
+      badge: overdueFU.length || todayFU.length, badgeColor: overdueFU.length > 0 ? 'bg-rose-500' : 'bg-amber-500',
+      subtitleColor: overdueFU.length > 0 ? 'text-rose-500' : todayFU.length > 0 ? 'text-amber-500' : 'text-emerald-500',
+    },
+    {
+      label: 'Collections',
+      subtitle: overdueCollections.length > 0 ? `${overdueCollections.length} outstanding` : 'All clear',
+      icon: Banknote, iconColor: 'text-emerald-600', iconBg: 'bg-emerald-50',
+      sheet: 'collections' as SheetType,
+      badge: overdueCollections.length, badgeColor: 'bg-rose-500',
+      subtitleColor: overdueCollections.length > 0 ? 'text-rose-500' : 'text-emerald-500',
+    },
+    {
+      label: 'Tasks',
+      subtitle: activeTasks.length > 0 ? `${activeTasks.length} open` : 'All done',
+      icon: CheckSquare, iconColor: 'text-blue-600', iconBg: 'bg-blue-50',
+      sheet: 'tasks' as SheetType,
+      badge: activeTasks.length, badgeColor: 'bg-blue-500',
+      subtitleColor: activeTasks.length > 0 ? 'text-blue-500' : 'text-emerald-500',
+    },
   ];
 
   const sheetTitles: Record<SheetType, { title: string; subtitle: string }> = {
@@ -188,12 +278,6 @@ const RepDashboard: React.FC = () => {
             {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
-        {isOnline && (
-          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-1.5">
-            <span className="h-2 w-2 bg-emerald-500 rounded-full animate-pulse" />
-            <span className="text-sm font-mono font-bold text-emerald-700">{formatTime(elapsedSeconds)}</span>
-          </div>
-        )}
       </div>
 
       {/* Office / Field Tab Switcher */}
@@ -224,7 +308,7 @@ const RepDashboard: React.FC = () => {
         <div className="space-y-4">
           <ViewModeToggle />
           <WorkSessionBanner onToggle={handleToggleSession} />
-          {activeVisit && <ActiveVisitPanel visit={activeVisit} onEnd={() => navigate('/sales/visits')} />}
+          {activeVisit && <ActiveVisitPanel visit={activeVisit} onEnd={openEndVisitModal} />}
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <RepGroupedKpiCard title="TODAY'S ACTIVITY" icon={MapPin} color="indigo" onClick={() => navigate('/sales/visits')}
@@ -261,26 +345,7 @@ const RepDashboard: React.FC = () => {
             />
           </div>
 
-          <Card padding="sm">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2.5">Quick Actions</p>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { label: 'Start Visit', color: 'bg-indigo-600 text-white hover:bg-indigo-700', icon: <MapPin className="h-3.5 w-3.5" />,      path: '/sales/visits' },
-                { label: 'My Route',    color: 'bg-violet-600 text-white hover:bg-violet-700', icon: <Route className="h-3.5 w-3.5" />,        path: '/sales/route' },
-                { label: 'Follow-Ups',  color: 'bg-amber-500 text-white hover:bg-amber-600',   icon: <Phone className="h-3.5 w-3.5" />,         path: '/sales/follow-ups' },
-                { label: 'Tasks',       color: 'bg-blue-600 text-white hover:bg-blue-700',     icon: <CheckSquare className="h-3.5 w-3.5" />,   path: '/sales/tasks' },
-                { label: 'Collections', color: 'bg-emerald-600 text-white hover:bg-emerald-700',icon: <Banknote className="h-3.5 w-3.5" />,    path: '/sales/collections' },
-                { label: 'Add Lead',    color: 'bg-slate-700 text-white hover:bg-slate-800',   icon: <Plus className="h-3.5 w-3.5" />,          path: '/sales/leads' },
-              ].map(action => (
-                <button key={action.label} onClick={() => navigate(action.path)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors ${action.color}`}>
-                  {action.icon} {action.label}
-                </button>
-              ))}
-            </div>
-          </Card>
-
-          <ProductivityWidget metrics={metrics} />
+<ProductivityWidget metrics={metrics} />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2">
@@ -416,79 +481,157 @@ const RepDashboard: React.FC = () => {
       {dashTab === 'field' && (
         <div className="space-y-4">
           <WorkSessionBanner onToggle={handleToggleSession} />
-          {activeVisit && <ActiveVisitPanel visit={activeVisit} onEnd={() => navigate('/sales/visits')} />}
+          {activeVisit && <ActiveVisitPanel visit={activeVisit} onEnd={openEndVisitModal} />}
 
           {/* Field Action Grid */}
-          <div className="space-y-2.5">
-            {/* Primary: Start Visit */}
-            <button
-              onClick={openVisitPicker}
-              className="w-full flex items-center gap-4 px-5 py-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-2xl font-bold text-base transition-all shadow-md hover:shadow-lg">
-              <div className="p-2 bg-white/20 rounded-xl flex-shrink-0">
-                <MapPin className="h-5 w-5" />
-              </div>
-              <span className="flex-1 text-left">Start Visit</span>
-              <ChevronRight className="h-4 w-4 opacity-60 flex-shrink-0" />
-            </button>
-
-            {/* Secondary: sheet openers */}
-            <div className="grid grid-cols-2 gap-2.5">
-              {fieldSecondaryActions.map(action => (
-                <button
-                  key={action.label}
-                  onClick={() => openSheet(action.sheet)}
-                  className="relative flex flex-col items-center justify-center gap-2 p-4 bg-white border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/40 rounded-2xl font-semibold text-xs text-slate-700 transition-all shadow-sm hover:shadow-md min-h-[80px]">
-                  <div className={`p-2.5 ${action.iconBg} rounded-xl`}>
-                    <action.icon className={`h-5 w-5 ${action.iconColor}`} />
-                  </div>
-                  {action.label}
-                  {action.badge > 0 && (
-                    <span className="absolute top-2 right-2 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
-                      {action.badge}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            {/* Tertiary: My Customers navigate */}
-            <button
-              onClick={() => navigate('/sales/customers')}
-              className="w-full flex items-center gap-3 px-4 py-3.5 bg-white border border-slate-100 hover:border-slate-200 hover:bg-slate-50 rounded-2xl font-semibold text-sm text-slate-700 transition-all shadow-sm">
-              <div className="p-2 bg-slate-100 rounded-xl flex-shrink-0">
-                <Users className="h-4 w-4 text-slate-600" />
-              </div>
-              <span className="flex-1 text-left">My Customers</span>
-              <span className="text-xs text-slate-400 font-normal">{myCustomers.length} assigned</span>
-              <ChevronRight className="h-4 w-4 text-slate-300 flex-shrink-0" />
-            </button>
-          </div>
-
-          {/* Compact route preview — tap to open route sheet */}
-          <Card padding="sm" className="cursor-pointer hover:shadow-md transition-all" onClick={() => openSheet('route')}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-violet-50 rounded-xl">
-                  <Route className="h-4 w-4 text-violet-600" />
+          {!isOnline ? (
+            /* ── SESSION LOCKED STATE ── */
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-center space-y-4">
+                <div className="mx-auto h-11 w-11 bg-white border border-slate-200 rounded-2xl shadow-sm flex items-center justify-center">
+                  <Lock className="h-5 w-5 text-slate-400" />
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-700">Today's Route</p>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    {routeStop.length === 0 ? 'No route planned' : `${routeVisited} visited · ${routePending} pending`}
+                <div className="space-y-1.5">
+                  <p className="text-sm font-bold text-slate-700">Session not started</p>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Tap <span className="font-bold text-emerald-600">Go Online</span> above to unlock visits,<br />collections, tasks and activity logging
                   </p>
                 </div>
+                {/* Preview counts even when locked */}
+                <div className="flex items-center justify-center gap-3 pt-1">
+                  {overdueFU.length > 0 && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 border border-rose-100 rounded-xl">
+                      <span className="h-2 w-2 rounded-full bg-rose-400" />
+                      <span className="text-xs font-semibold text-rose-600">{overdueFU.length} overdue FU</span>
+                    </div>
+                  )}
+                  {activeTasks.length > 0 && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-xl">
+                      <span className="h-2 w-2 rounded-full bg-blue-400" />
+                      <span className="text-xs font-semibold text-blue-600">{activeTasks.length} tasks</span>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                {routePending > 0 && (
-                  <span className="px-2 py-0.5 bg-violet-100 text-violet-700 text-xs font-bold rounded-full">{routePending} left</span>
-                )}
-                {routeStop.length === 0 && (
-                  <span className="text-xs text-indigo-500 font-semibold">Plan →</span>
-                )}
-                <ChevronRight className="h-4 w-4 text-slate-300" />
+              <button
+                onClick={() => navigate('/sales/customers')}
+                className="w-full flex items-center gap-3 px-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+                <div className="p-1.5 bg-slate-100 rounded-xl flex-shrink-0">
+                  <Users className="h-4 w-4 text-slate-500" />
+                </div>
+                <span className="flex-1 text-left">Browse Customers</span>
+                <span className="text-xs text-slate-400 font-normal">view only</span>
+                <ChevronRight className="h-4 w-4 text-slate-300 flex-shrink-0" />
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {/* Primary: Start Visit */}
+              <button
+                onClick={openVisitPicker}
+                className="w-full flex items-center gap-4 px-5 py-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-2xl font-bold text-base transition-all shadow-lg shadow-indigo-200 hover:shadow-xl hover:shadow-indigo-200 group">
+                <div className="p-2.5 bg-white/20 rounded-xl flex-shrink-0 group-hover:bg-white/30 transition-colors">
+                  <MapPin className="h-5 w-5" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="font-black text-base leading-none">Start Visit</p>
+                  <p className="text-indigo-200 text-xs font-medium mt-0.5">
+                    {activeVisit ? 'Visit already active' : myCustomers.length > 0 ? `${myCustomers.length} customers available` : 'Select a customer'}
+                  </p>
+                </div>
+                <ChevronRight className="h-5 w-5 opacity-50 flex-shrink-0 group-hover:opacity-80 group-hover:translate-x-0.5 transition-all" />
+              </button>
+
+              {/* Secondary: sheet openers 2x2 grid */}
+              <div className="grid grid-cols-2 gap-2">
+                {fieldSecondaryActions.map(action => (
+                  <button
+                    key={action.label}
+                    onClick={() => openSheet(action.sheet)}
+                    className="relative flex flex-col gap-2.5 p-4 bg-white border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30 rounded-2xl transition-all shadow-sm hover:shadow-md group text-left">
+                    <div className="flex items-start justify-between">
+                      <div className={`p-2.5 ${action.iconBg} rounded-xl group-hover:scale-105 transition-transform`}>
+                        <action.icon className={`h-4.5 w-4.5 ${action.iconColor}`} style={{ width: 18, height: 18 }} />
+                      </div>
+                      {action.badge > 0 && (
+                        <span className={`min-w-[20px] h-5 px-1.5 ${action.badgeColor} text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none`}>
+                          {action.badge}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-700">{action.label}</p>
+                      <p className={`text-[11px] font-semibold mt-0.5 ${action.subtitleColor}`}>{action.subtitle}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Tertiary rows */}
+              <div className="space-y-1.5 pt-1">
+                {/* Log Activity */}
+                <button
+                  onClick={() => setShowActivityForm(true)}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 bg-white border border-slate-100 hover:border-teal-200 hover:bg-teal-50/40 rounded-2xl transition-all shadow-sm hover:shadow group">
+                  <div className="p-2 bg-teal-50 rounded-xl flex-shrink-0 group-hover:bg-teal-100 transition-colors">
+                    <ClipboardList className="h-4 w-4 text-teal-600" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-bold text-slate-700">Log Activity</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Call · Note · Order · more</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-slate-300 flex-shrink-0" />
+                </button>
+
+                {/* My Customers */}
+                <button
+                  onClick={() => navigate('/sales/customers')}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 bg-white border border-slate-100 hover:border-slate-200 hover:bg-slate-50 rounded-2xl transition-all shadow-sm hover:shadow group">
+                  <div className="p-2 bg-slate-100 rounded-xl flex-shrink-0 group-hover:bg-slate-200 transition-colors">
+                    <Users className="h-4 w-4 text-slate-600" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="text-sm font-bold text-slate-700">My Customers</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{myCustomers.length} assigned</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-slate-300 flex-shrink-0" />
+                </button>
               </div>
             </div>
-          </Card>
+          )}
+
+          {/* Route preview card */}
+          <button
+            className={`w-full flex items-center gap-3 px-4 py-3.5 bg-white border rounded-2xl transition-all text-left ${
+              isOnline
+                ? 'border-violet-100 hover:border-violet-200 hover:bg-violet-50/30 cursor-pointer shadow-sm hover:shadow'
+                : 'border-slate-100 opacity-50 cursor-default'
+            }`}
+            onClick={isOnline ? () => openSheet('route') : undefined}
+            disabled={!isOnline}>
+            <div className="p-2 bg-violet-50 rounded-xl flex-shrink-0">
+              <Route className="h-4 w-4 text-violet-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-slate-700">Today's Route</p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {routeStop.length === 0
+                  ? 'No route planned'
+                  : routePending === 0
+                  ? `All ${routeVisited} stops visited ✓`
+                  : `${routeVisited} visited · ${routePending} remaining`}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {routePending > 0 && (
+                <span className="px-2 py-1 bg-violet-100 text-violet-700 text-xs font-bold rounded-xl">{routePending} left</span>
+              )}
+              {routeStop.length === 0 && (
+                <span className="text-xs text-indigo-500 font-semibold">Plan</span>
+              )}
+              <ChevronRight className="h-4 w-4 text-slate-300" />
+            </div>
+          </button>
         </div>
       )}
 
@@ -510,10 +653,10 @@ const RepDashboard: React.FC = () => {
             {/* Sheet header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
               <div>
-                <h3 className="text-base font-bold text-slate-800">{sheetTitles[activeSheet].title}</h3>
-                <p className="text-xs text-slate-400 mt-0.5">{sheetTitles[activeSheet].subtitle}</p>
+                <h3 className="text-base font-black text-slate-800">{sheetTitles[activeSheet].title}</h3>
+                <p className="text-xs text-slate-400 font-medium mt-0.5">{sheetTitles[activeSheet].subtitle}</p>
               </div>
-              <button onClick={closeSheet} className="p-1.5 rounded-xl hover:bg-slate-100 transition-colors">
+              <button onClick={closeSheet} className="h-8 w-8 rounded-xl hover:bg-slate-100 transition-colors flex items-center justify-center">
                 <X className="h-4 w-4 text-slate-500" />
               </button>
             </div>
@@ -530,7 +673,7 @@ const RepDashboard: React.FC = () => {
                       <p className="text-sm text-slate-400 mb-4">No pending stops</p>
                       <button
                         onClick={() => { closeSheet(); navigate('/sales/route'); }}
-                        className="px-5 py-2.5 bg-violet-600 text-white text-sm font-bold rounded-xl">
+                        className="px-5 py-2.5 bg-violet-600 text-white text-sm font-black rounded-2xl">
                         Plan Route
                       </button>
                     </div>
@@ -550,20 +693,22 @@ const RepDashboard: React.FC = () => {
                               {stop.hasOverdueFollowUp && <span className="text-[10px] font-bold text-amber-500">FU due</span>}
                             </div>
                           </div>
-                          {!activeVisit ? (
+                          {activeVisit ? (
+                            <span className="text-[10px] text-slate-400 flex-shrink-0">Active visit</span>
+                          ) : isOnline ? (
                             <button
                               onClick={() => { closeSheet(); setVisitModal({ customerId: stop.customerId, customerName: stop.customerName }); }}
                               className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg flex-shrink-0 transition-colors">
                               Visit
                             </button>
                           ) : (
-                            <span className="text-[10px] text-slate-400 flex-shrink-0">Active visit</span>
+                            <span className="flex items-center gap-1 text-[10px] text-slate-400 flex-shrink-0"><Lock className="h-3 w-3" /> Locked</span>
                           )}
                         </div>
                       ))}
                       <button
                         onClick={() => { closeSheet(); navigate('/sales/route'); }}
-                        className="w-full py-3 border border-slate-200 text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-colors mt-1">
+                        className="w-full py-3 border border-slate-200 text-slate-600 text-sm font-semibold rounded-2xl hover:bg-slate-50 transition-colors mt-1">
                         Edit Full Route →
                       </button>
                     </>
@@ -586,10 +731,16 @@ const RepDashboard: React.FC = () => {
                         Overdue ({overdueFU.length})
                       </p>
                     )}
+                    {!isOnline && (
+                      <div className="flex items-center gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-xl mb-2">
+                        <Lock className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
+                        <p className="text-xs font-semibold text-amber-700">Go online to complete follow-ups</p>
+                      </div>
+                    )}
                     {[...overdueFU, ...todayFU].map(fu => (
                       <FollowUpCard key={fu.id} followUp={fu} compact
-                        onComplete={id => completeFollowUp(id, 'Completed from field')}
-                        onDismiss={dismissFollowUp}
+                        onComplete={isOnline ? id => completeFollowUp(id, 'Completed from field') : undefined}
+                        onDismiss={isOnline ? dismissFollowUp : undefined}
                       />
                     ))}
                   </>
@@ -637,9 +788,10 @@ const RepDashboard: React.FC = () => {
                         </div>
                         <button
                           onClick={() => handleLogCollection(c.id, c.storeName, Math.abs(c.walletBalance))}
-                          disabled={!collectionAmounts[c.id] || parseFloat(collectionAmounts[c.id]) <= 0}
-                          className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold rounded-xl transition-colors flex-shrink-0">
-                          Log
+                          disabled={!isOnline || !collectionAmounts[c.id] || parseFloat(collectionAmounts[c.id]) <= 0}
+                          title={!isOnline ? 'Go online to log collections' : undefined}
+                          className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold rounded-2xl transition-colors flex-shrink-0">
+                          {isOnline ? 'Log' : <Lock className="h-4 w-4" />}
                         </button>
                       </div>
                     </div>
@@ -659,11 +811,18 @@ const RepDashboard: React.FC = () => {
                     <div key={task.id}
                       className="flex items-center gap-3 p-3.5 bg-white border border-slate-100 hover:border-slate-200 rounded-xl transition-colors">
                       <button
-                        onClick={() => completeTask(task.id)}
-                        className="h-5 w-5 rounded-md border-2 border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 flex-shrink-0 flex items-center justify-center transition-colors">
+                        onClick={() => isOnline && completeTask(task.id)}
+                        disabled={!isOnline}
+                        title={!isOnline ? 'Go online to complete tasks' : undefined}
+                        className={`h-5 w-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
+                          isOnline
+                            ? 'border-slate-200 hover:border-emerald-400 hover:bg-emerald-50'
+                            : 'border-slate-100 bg-slate-50 cursor-not-allowed'
+                        }`}>
+                        {!isOnline && <Lock className="h-2.5 w-2.5 text-slate-300" />}
                       </button>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slateetemail-800 truncate">{task.title}</p>
+                        <p className="text-sm font-semibold text-slate-800 truncate">{task.title}</p>
                         {task.dueDate && (
                           <p className="flex items-center gap-1 text-xs text-slate-400 mt-0.5">
                             <Clock className="h-3 w-3" /> Due {task.dueDate}
@@ -688,7 +847,7 @@ const RepDashboard: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md flex flex-col max-h-[85vh]">
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-slate-100 flex-shrink-0">
-              <h3 className="text-base font-bold text-slate-800">Start Visit</h3>
+              <h3 className="text-base font-black text-slate-800">Start Visit</h3>
               <button onClick={() => { setShowVisitPicker(false); setPickerSearch(''); }}
                 className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 transition-colors">
                 <X className="h-4 w-4" />
@@ -783,12 +942,41 @@ const RepDashboard: React.FC = () => {
       )}
 
       {/* VisitWorkflowModal */}
-      {visitModal && !activeVisit && (
+      {visitModal && (
         <VisitWorkflowModal
+          key={`${visitModal.customerId}-${visitModal.initialStep ?? 'confirm'}-${visitModal.initialLinkedOrderId ?? ''}`}
           customerId={visitModal.customerId}
           customerName={visitModal.customerName}
+          initialStep={visitModal.initialStep}
+          initialVisitId={visitModal.initialVisitId}
+          initialLinkedOrderId={visitModal.initialLinkedOrderId}
+          initialLinkedOrderTotal={visitModal.initialLinkedOrderTotal}
           onComplete={() => setVisitModal(null)}
           onClose={() => setVisitModal(null)}
+        />
+      )}
+
+      {/* ══ ACTIVITY CUSTOMER PICKER ══ */}
+      {/* ══ ACTIVITY LOG FORM ══ */}
+      {showActivityForm && (
+        <TimelineLogForm
+          onSave={handleSaveActivity}
+          onClose={() => setShowActivityForm(false)}
+          customers={myCustomers.map(c => ({ id: c.id, storeName: c.storeName, contactName: c.name }))}
+          onLaunchVisit={(customerId, customerName) => {
+            setShowActivityForm(false);
+            if (customerId && customerName) {
+              setVisitModal({ customerId, customerName });
+            } else {
+              openVisitPicker();
+            }
+          }}
+          onLaunchOrder={(customerId, customerName) => {
+            setShowActivityForm(false);
+            navigate('/sales/orders/new', {
+              state: { customerId, customerName, repId, returnPath: location.pathname },
+            });
+          }}
         />
       )}
 

@@ -641,13 +641,17 @@ export interface VisitObjective {
   completed: boolean;
 }
 
+export type PaymentStatus = 'Paid' | 'Pending' | 'On Credit';
+export type PaymentMethod = 'Link' | 'Card';
+
 export interface VisitOutcome {
   orderId?: string;
   orderAmount?: number;
   collectionAmount?: number;
   productsDiscussed: string[];
   notes: string;
-  customerSatisfaction?: 1 | 2 | 3 | 4 | 5;
+  paymentStatus?: PaymentStatus;
+  paymentMethod?: PaymentMethod;
 }
 
 export interface Visit {

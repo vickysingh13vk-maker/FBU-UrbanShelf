@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MapPin, Clock, CheckCircle, XCircle, Calendar, Plus, Search, X, Route, AlertCircle } from 'lucide-react';
+import { MapPin, Clock, CheckCircle, XCircle, Calendar, Plus, Search, X, Route, AlertCircle, WifiOff } from 'lucide-react';
+import { useOnlineStatus } from '../../hooks/useOnlineStatus';
+import { useWorkSession } from '../../context/WorkSessionContext';
 import { Card } from '../../components/ui';
 import VisitWorkflowModal from '../../components/sales/VisitWorkflowModal';
 import ActiveVisitPanel from '../../components/sales/ActiveVisitPanel';
@@ -40,6 +42,9 @@ const RepVisits: React.FC = () => {
   const [pickerSearch, setPickerSearch] = useState('');
   const [pickerTab, setPickerTab] = useState<'route' | 'all'>('route');
 
+  const isOnline = useOnlineStatus();
+  const { isOnline: isSessionActive } = useWorkSession();
+  const canAct = isOnline && isSessionActive;
   const repId = user?.id ?? '';
   const allVisits = getRepVisits(repId);
   const activeVisit = getActiveVisit(repId);
@@ -109,15 +114,35 @@ const RepVisits: React.FC = () => {
 
   return (
     <div className="space-y-5">
+      {/* Session / network banners */}
+      {!isSessionActive && (
+        <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
+          <WifiOff className="h-4 w-4 text-amber-500 flex-shrink-0" />
+          <p className="text-xs font-bold text-amber-700">Start your work session before logging visits</p>
+        </div>
+      )}
+      {isSessionActive && !isOnline && (
+        <div className="flex items-center gap-2 px-4 py-3 bg-rose-50 border border-rose-200 rounded-xl">
+          <WifiOff className="h-4 w-4 text-rose-500 flex-shrink-0" />
+          <p className="text-xs font-bold text-rose-700">You're offline — internet required to start a visit</p>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-black text-slate-800">Visits</h1>
           <p className="text-xs text-slate-500 mt-0.5">{todayVisits.length} today · {allVisits.filter(v => v.status === 'completed').length} total completed</p>
         </div>
         {!activeVisit && (
-          <button onClick={openPicker}
-            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors">
-            <Plus className="h-4 w-4" /> Start Visit
+          <button
+            onClick={canAct ? openPicker : undefined}
+            disabled={!canAct}
+            title={!isSessionActive ? 'Start your work session first' : !isOnline ? 'No internet connection' : undefined}
+            className={`flex items-center gap-2 px-4 py-2.5 text-white text-sm font-bold rounded-xl transition-colors ${
+              canAct ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-300 cursor-not-allowed'
+            }`}>
+            {canAct ? <Plus className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
+            {canAct ? 'Start Visit' : !isSessionActive ? 'Offline' : 'No Internet'}
           </button>
         )}
       </div>

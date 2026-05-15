@@ -1,12 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { X, MapPin, CheckSquare, Square, Plus, Clock, Star, ChevronRight, ShoppingCart, Package } from 'lucide-react';
-import { VisitObjective, VisitObjectiveType, VisitOutcome, FollowUpType, FollowUpPriority } from '../../types';
+import {
+  X, MapPin, CheckSquare, Square, Clock, ChevronRight,
+  ShoppingCart, Package, WifiOff, CheckCircle2,
+  CreditCard, Link2, Calendar, Plus,
+  Phone, RefreshCw, Handshake, FlaskConical, Wallet,
+} from 'lucide-react';
+import { VisitObjective, VisitObjectiveType, VisitOutcome, FollowUpType, FollowUpPriority, PaymentStatus, PaymentMethod } from '../../types';
 import { useSalesExecution } from '../../context/SalesExecutionContext';
 import { useAuth } from '../../context/AuthContext';
+import { useOnlineStatus } from '../../hooks/useOnlineStatus';
+import { useWorkSession } from '../../context/WorkSessionContext';
 
 const OBJECTIVE_TYPES: VisitObjectiveType[] = ['Order', 'Collection', 'Product Demo', 'Relationship', 'Sampling', 'Merchandising'];
 const FOLLOW_UP_TYPES: FollowUpType[] = ['Callback', 'Payment Reminder', 'Revisit', 'Product Demo', 'Negotiation', 'Trial Follow-Up', 'Collection Follow-Up'];
+
+const FU_TYPE_META: Record<FollowUpType, { icon: React.ElementType; color: string; activeBg: string; activeBorder: string }> = {
+  'Callback':             { icon: Phone,         color: 'text-blue-600',   activeBg: 'bg-blue-600',   activeBorder: 'border-blue-600' },
+  'Payment Reminder':     { icon: CreditCard,    color: 'text-rose-600',   activeBg: 'bg-rose-600',   activeBorder: 'border-rose-600' },
+  'Revisit':              { icon: MapPin,         color: 'text-indigo-600', activeBg: 'bg-indigo-600', activeBorder: 'border-indigo-600' },
+  'Product Demo':         { icon: FlaskConical,  color: 'text-violet-600', activeBg: 'bg-violet-600', activeBorder: 'border-violet-600' },
+  'Negotiation':          { icon: Handshake,     color: 'text-amber-600',  activeBg: 'bg-amber-600',  activeBorder: 'border-amber-600' },
+  'Trial Follow-Up':      { icon: RefreshCw,     color: 'text-teal-600',   activeBg: 'bg-teal-600',   activeBorder: 'border-teal-600' },
+  'Collection Follow-Up': { icon: Wallet,        color: 'text-orange-600', activeBg: 'bg-orange-600', activeBorder: 'border-orange-600' },
+};
+
+type Step = 'confirm' | 'objectives' | 'end' | 'summary';
+const STEPS: Step[] = ['confirm', 'objectives', 'end', 'summary'];
+const STEP_LABELS = ['Confirm', 'In Progress', 'Wrap Up', 'Done'];
 
 interface Props {
   customerId: string;
@@ -19,10 +40,6 @@ interface Props {
   initialLinkedOrderTotal?: number;
 }
 
-type Step = 'confirm' | 'objectives' | 'outcome' | 'followup' | 'summary';
-const STEPS: Step[] = ['confirm', 'objectives', 'outcome', 'followup', 'summary'];
-const STEP_LABELS = ['Confirm', 'Objectives', 'Outcome', 'Follow-Up', 'Summary'];
-
 const VisitWorkflowModal: React.FC<Props> = ({
   customerId, customerName, onComplete, onClose,
   initialStep, initialVisitId, initialLinkedOrderId, initialLinkedOrderTotal,
@@ -30,6 +47,9 @@ const VisitWorkflowModal: React.FC<Props> = ({
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const isOnline = useOnlineStatus();
+  const { isOnline: isSessionActive } = useWorkSession();
+  const canAct = isOnline && isSessionActive;
   const { startVisit, updateVisitObjective, endVisit, getActiveVisit, addFollowUp } = useSalesExecution();
 
   const [step, setStep] = useState<Step>(initialStep ?? 'confirm');
@@ -39,17 +59,16 @@ const VisitWorkflowModal: React.FC<Props> = ({
   const [linkedOrderId, setLinkedOrderId] = useState<string | null>(initialLinkedOrderId ?? null);
   const [linkedOrderTotal, setLinkedOrderTotal] = useState<number | null>(initialLinkedOrderTotal ?? null);
 
-  // Objectives step
+  // Confirm step
   const [selectedObjectives, setSelectedObjectives] = useState<VisitObjectiveType[]>([]);
 
-  // Outcome step
-  const [orderAmount, setOrderAmount] = useState('');
+  // End-visit form state
   const [collectionAmount, setCollectionAmount] = useState('');
-  const [productsDiscussed, setProductsDiscussed] = useState('');
   const [outcomeNotes, setOutcomeNotes] = useState('');
-  const [satisfaction, setSatisfaction] = useState<1|2|3|4|5>(4);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
 
-  // Follow-up step
+  // Follow-up state
   const [createFollowUp, setCreateFollowUp] = useState(false);
   const [fuType, setFuType] = useState<FollowUpType>('Revisit');
   const [fuPriority, setFuPriority] = useState<FollowUpPriority>('Medium');
@@ -58,42 +77,54 @@ const VisitWorkflowModal: React.FC<Props> = ({
   });
   const [fuNotes, setFuNotes] = useState('');
 
+  // Snapshot objectives before endVisit() makes activeVisitData null
+  const [snapshotObjectives, setSnapshotObjectives] = useState<VisitObjective[]>([]);
+
   const stepIndex = STEPS.indexOf(step);
-  const activeVisit = visitId ? getActiveVisit(user?.id ?? '') : null;
+  const activeVisitData = visitId ? (getActiveVisit(user?.id ?? '') ?? null) : null;
+  const liveObjectives = activeVisitData?.objectives ?? [];
+  const displayObjectives = step === 'summary' ? snapshotObjectives : liveObjectives;
+
+  const hasCollectionObj = displayObjectives.some(o => o.type === 'Collection');
+  const completedObjCount = displayObjectives.filter(o => o.completed).length;
 
   useEffect(() => {
-    const interval = setInterval(() => setElapsed(Math.floor((Date.now() - startTime.getTime()) / 1000)), 1000);
+    const start = initialVisitId
+      ? (activeVisitData ? new Date(activeVisitData.startTime).getTime() : startTime.getTime())
+      : startTime.getTime();
+    const interval = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000);
     return () => clearInterval(interval);
-  }, [startTime]);
+  }, [startTime, initialVisitId, activeVisitData?.startTime]);
 
-
-  const formatElapsed = (s: number) => {
+  const fmt = (s: number) => {
     const m = Math.floor(s / 60); const sec = s % 60;
     return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
   };
 
   const handleStartVisit = () => {
-    const objectives = selectedObjectives.map(type => ({
-      type, description: type, completed: false,
-    }));
-    const id = startVisit(customerId, customerName, user?.id ?? '', user?.name ?? '', objectives);
+    const objs = selectedObjectives.map(type => ({ type, description: type, completed: false }));
+    const id = startVisit(customerId, customerName, user?.id ?? '', user?.name ?? '', objs);
     setVisitId(id);
     setStep('objectives');
   };
 
-  const handleConfirmObjective = (visitId: string, objectiveId: string, completed: boolean) => {
-    updateVisitObjective(visitId, objectiveId, completed);
+  const handleToggleObjective = (vId: string, objectiveId: string, completed: boolean) => {
+    updateVisitObjective(vId, objectiveId, completed);
   };
 
   const handleEndVisit = () => {
     if (!visitId) return;
+    const captured = [...liveObjectives];
+    setSnapshotObjectives(captured);
+    const hasCol = captured.some(o => o.type === 'Collection');
     const outcome: VisitOutcome = {
       orderId: linkedOrderId ?? undefined,
-      orderAmount: orderAmount ? parseFloat(orderAmount) : (linkedOrderTotal ?? undefined),
-      collectionAmount: collectionAmount ? parseFloat(collectionAmount) : undefined,
-      productsDiscussed: productsDiscussed.split(',').map(p => p.trim()).filter(Boolean),
+      orderAmount: linkedOrderTotal ?? undefined,
+      collectionAmount: hasCol && collectionAmount ? parseFloat(collectionAmount) : undefined,
+      productsDiscussed: [],
       notes: outcomeNotes,
-      customerSatisfaction: satisfaction,
+      paymentStatus: paymentStatus ?? undefined,
+      paymentMethod: paymentStatus === 'Paid' ? (paymentMethod ?? undefined) : undefined,
     };
     endVisit(visitId, outcome);
     if (createFollowUp && fuNotes.trim()) {
@@ -106,84 +137,113 @@ const VisitWorkflowModal: React.FC<Props> = ({
     setStep('summary');
   };
 
-  const handleDone = () => {
-    if (visitId) onComplete(visitId);
-  };
-
-  const activeVisitData = visitId ? (getActiveVisit(user?.id ?? '') ?? null) : null;
+  const headerTitle =
+    step === 'summary' ? 'Visit Complete' :
+    step === 'end' ? 'End Visit' :
+    customerName;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end sm:items-center sm:justify-center sm:p-6 bg-black/50">
-      <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        {/* Drag handle — mobile only */}
+      <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[92vh] overflow-y-auto">
+
+        {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1 sm:hidden flex-shrink-0">
           <div className="h-1 w-10 bg-slate-200 rounded-full" />
         </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-slate-100 sticky top-0 bg-white rounded-t-2xl">
-          <div>
-            <h2 className="text-base font-black text-slate-800">Visit: {customerName}</h2>
-            <div className="flex items-center gap-2 mt-0.5">
-              <div className="flex gap-1">
-                {STEP_LABELS.map((label, i) => (
-                  <div key={label} className={`h-1.5 rounded-full transition-all ${i <= stepIndex ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                    style={{ width: i <= stepIndex ? '20px' : '12px' }} />
-                ))}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 sticky top-0 bg-white rounded-t-2xl z-10">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-base font-black text-slate-800 truncate">{headerTitle}</h2>
+            {step !== 'summary' ? (
+              <div className="flex items-center gap-2 mt-1.5">
+                <div className="flex items-center gap-1">
+                  {STEP_LABELS.map((label, i) => (
+                    <span key={label} className={`inline-block h-1.5 rounded-full transition-all duration-200 ${
+                      i < stepIndex ? 'bg-indigo-600 w-3' : i === stepIndex ? 'bg-indigo-600 w-5' : 'bg-slate-200 w-3'
+                    }`} />
+                  ))}
+                </div>
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{STEP_LABELS[stepIndex]}</span>
               </div>
-              <span className="text-xs text-slate-400">{STEP_LABELS[stepIndex]}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            {visitId && step !== 'summary' && (
-              <span className="flex items-center gap-1 text-xs font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
-                <Clock className="h-3 w-3" />{formatElapsed(elapsed)}
-              </span>
+            ) : (
+              <p className="text-xs text-slate-400 mt-0.5">Visit recorded successfully</p>
             )}
-            <button onClick={onClose} className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100"><X className="h-4 w-4" /></button>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+            {visitId && step !== 'summary' && (
+              <div className="flex items-center gap-1 text-xs font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 rounded-xl">
+                <Clock className="h-3 w-3" />{fmt(elapsed)}
+              </div>
+            )}
+            <button onClick={onClose} className="h-8 w-8 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-colors">
+              <X className="h-4 w-4" />
+            </button>
           </div>
         </div>
 
         <div className="p-5">
-          {/* Step 1: Confirm */}
+
+          {/* ══ CONFIRM ══ */}
           {step === 'confirm' && (
             <div className="space-y-4">
-              <div className="flex items-center gap-3 p-4 bg-indigo-50 rounded-2xl">
-                <div className="h-12 w-12 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <MapPin className="h-6 w-6 text-indigo-600" />
+              <div className="flex items-center gap-3.5 p-4 bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 rounded-2xl">
+                <div className="h-11 w-11 bg-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm shadow-indigo-200">
+                  <MapPin className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-slate-800">{customerName}</p>
-                  <p className="text-xs text-slate-500">Starting visit now</p>
-                  <p className="text-xs text-slate-400">{new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</p>
+                  <p className="text-sm font-black text-slate-800">{customerName}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Starting visit now</p>
+                  <p className="text-xs font-mono text-slate-400">{new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</p>
                 </div>
               </div>
 
-              {/* Primary action: Take Order */}
+              {!isSessionActive && (
+                <div className="flex items-center gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-xl">
+                  <WifiOff className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                  <p className="text-xs font-semibold text-amber-700">Start your work session before visiting</p>
+                </div>
+              )}
+              {isSessionActive && !isOnline && (
+                <div className="flex items-center gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-xl">
+                  <WifiOff className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                  <p className="text-xs font-semibold text-amber-700">No internet — go online to start a visit</p>
+                </div>
+              )}
+
+              {/* Take Order CTA */}
               <button
+                disabled={!canAct}
                 onClick={() => {
-                  const objectives = [
+                  if (!canAct) return;
+                  const objs = [
                     { type: 'Order' as VisitObjectiveType, description: 'Order', completed: false },
                     ...selectedObjectives.filter(t => t !== 'Order').map(type => ({ type, description: type, completed: false })),
                   ];
-                  const id = startVisit(customerId, customerName, user?.id ?? '', user?.name ?? '', objectives);
+                  const id = startVisit(customerId, customerName, user?.id ?? '', user?.name ?? '', objs);
                   navigate('/sales/orders/new', {
                     state: { customerId, customerName, visitId: id, repId: user?.id ?? '', returnPath: location.pathname },
                   });
                 }}
-                className="w-full flex items-center justify-between px-4 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl transition-colors">
+                className={`w-full flex items-center justify-between px-4 py-4 rounded-2xl transition-colors ${
+                  canAct ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                }`}>
                 <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <ShoppingCart className="h-5 w-5" />
+                  <div className={`h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0 ${canAct ? 'bg-white/20' : 'bg-slate-300'}`}>
+                    {canAct ? <ShoppingCart className="h-5 w-5" /> : <WifiOff className="h-5 w-5" />}
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-black">Take Order</p>
-                    <p className="text-xs text-indigo-200">Start visit &amp; create order</p>
+                    <p className="text-sm font-black">
+                      {canAct ? 'Take Order' : !isSessionActive ? 'Session Required' : 'Offline'}
+                    </p>
+                    <p className={`text-xs ${canAct ? 'text-indigo-200' : 'text-slate-400'}`}>
+                      {canAct ? 'Start visit & create order' : !isSessionActive ? 'Go online via dashboard' : 'Internet required'}
+                    </p>
                   </div>
                 </div>
-                <ChevronRight className="h-5 w-5 text-indigo-300" />
+                <ChevronRight className={`h-5 w-5 ${canAct ? 'text-indigo-300' : 'text-slate-400'}`} />
               </button>
 
-              {/* Divider */}
               <div className="flex items-center gap-2">
                 <div className="flex-1 h-px bg-slate-100" />
                 <span className="text-xs text-slate-400 font-medium">or select objectives</span>
@@ -192,34 +252,40 @@ const VisitWorkflowModal: React.FC<Props> = ({
 
               <div className="grid grid-cols-2 gap-2">
                 {OBJECTIVE_TYPES.filter(t => t !== 'Order').map(type => {
-                  const selected = selectedObjectives.includes(type);
+                  const sel = selectedObjectives.includes(type);
                   return (
-                    <button key={type} onClick={() => setSelectedObjectives(prev =>
-                      selected ? prev.filter(t => t !== type) : [...prev, type]
-                    )} className={`flex items-center gap-2 p-3 rounded-xl border text-left transition-all ${
-                      selected ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 hover:border-slate-300'
-                    }`}>
-                      {selected ? <CheckSquare className="h-4 w-4 text-indigo-600 flex-shrink-0" /> : <Square className="h-4 w-4 text-slate-300 flex-shrink-0" />}
+                    <button key={type}
+                      onClick={() => setSelectedObjectives(prev => sel ? prev.filter(t => t !== type) : [...prev, type])}
+                      className={`flex items-center gap-2 p-3 rounded-xl border text-left transition-all ${
+                        sel ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 hover:border-slate-300'
+                      }`}>
+                      {sel
+                        ? <CheckSquare className="h-4 w-4 text-indigo-600 flex-shrink-0" />
+                        : <Square className="h-4 w-4 text-slate-300 flex-shrink-0" />}
                       <span className="text-xs font-semibold text-slate-700">{type}</span>
                     </button>
                   );
                 })}
               </div>
 
-              <button onClick={handleStartVisit}
-                className="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
-                <MapPin className="h-4 w-4" /> Start Visit
+              <button
+                disabled={!canAct}
+                onClick={() => { if (canAct) handleStartVisit(); }}
+                className={`w-full py-3.5 text-sm font-black rounded-2xl transition-all flex items-center justify-center gap-2 ${
+                  canAct ? 'bg-slate-800 hover:bg-slate-900 text-white shadow-md shadow-slate-300' : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                }`}>
+                {canAct ? <MapPin className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
+                {canAct ? 'Start Visit' : !isSessionActive ? 'Session Required' : 'No Internet'}
               </button>
             </div>
           )}
 
-          {/* Step 2: Objectives (track during visit) */}
+          {/* ══ OBJECTIVES (active visit tracking) ══ */}
           {step === 'objectives' && visitId && (
             <div className="space-y-4">
-              <p className="text-sm text-slate-500">Visit in progress. Track objectives as you complete them.</p>
+              <p className="text-sm text-slate-500">Visit in progress — track objectives as you go.</p>
 
-              {/* Linked order chip */}
-              {linkedOrderId && (
+              {linkedOrderId ? (
                 <div className="flex items-center gap-2 px-3 py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl">
                   <Package className="h-4 w-4 text-emerald-600 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -227,195 +293,351 @@ const VisitWorkflowModal: React.FC<Props> = ({
                     <p className="text-xs text-emerald-600">#{linkedOrderId}{linkedOrderTotal ? ` · £${linkedOrderTotal.toFixed(2)}` : ''}</p>
                   </div>
                 </div>
-              )}
-
-              {/* Create Order button — always visible when no order linked */}
-              {!linkedOrderId && (
+              ) : (
                 <button
                   onClick={() => navigate('/sales/orders/new', {
-                    state: {
-                      customerId, customerName, visitId,
-                      repId: user?.id ?? '',
-                      returnPath: location.pathname,
-                    },
+                    state: { customerId, customerName, visitId, repId: user?.id ?? '', returnPath: location.pathname },
                   })}
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors">
                   <ShoppingCart className="h-4 w-4" /> Create Order for {customerName}
                 </button>
               )}
 
-              {activeVisitData ? (
-                <div className="space-y-2">
+              {activeVisitData && (
+                <div className="space-y-1.5">
                   {activeVisitData.objectives.length === 0 && (
                     <p className="text-sm text-slate-400 text-center py-4">No objectives set</p>
                   )}
                   {activeVisitData.objectives.map(obj => (
-                    <div key={obj.id} className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all ${
-                      obj.completed ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-white'
-                    }`}>
-                      <button onClick={() => handleConfirmObjective(visitId, obj.id, !obj.completed)}
-                        className="flex-shrink-0">
-                        {obj.completed
-                          ? <CheckSquare className="h-5 w-5 text-emerald-600" />
-                          : <Square className="h-5 w-5 text-slate-300" />}
-                      </button>
+                    <button key={obj.id}
+                      onClick={() => handleToggleObjective(visitId, obj.id, !obj.completed)}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${
+                        obj.completed ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-white hover:border-slate-300'
+                      }`}>
+                      {obj.completed
+                        ? <CheckSquare className="h-5 w-5 text-emerald-600 flex-shrink-0" />
+                        : <Square className="h-5 w-5 text-slate-300 flex-shrink-0" />}
                       <span className={`text-sm font-semibold flex-1 ${obj.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}>
                         {obj.type}
                       </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-slate-400 text-center py-4">Loading...</p>
-              )}
-              <button onClick={() => setStep('outcome')}
-                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
-                Log Outcome <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-
-          {/* Step 3: Outcome */}
-          {step === 'outcome' && (
-            <div className="space-y-4">
-              {linkedOrderId && (
-                <div className="flex items-center gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
-                  <Package className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                  <div>
-                    <p className="text-xs font-bold text-emerald-700">Order linked to this visit</p>
-                    <p className="text-xs text-emerald-600">#{linkedOrderId}{linkedOrderTotal ? ` · £${linkedOrderTotal.toFixed(2)}` : ''}</p>
-                  </div>
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Order Amount £</label>
-                  <input type="number" value={orderAmount} onChange={e => setOrderAmount(e.target.value)} placeholder="0.00" min="0" step="0.01"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Collection £</label>
-                  <input type="number" value={collectionAmount} onChange={e => setCollectionAmount(e.target.value)} placeholder="0.00" min="0" step="0.01"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">Products Discussed</label>
-                <input type="text" value={productsDiscussed} onChange={e => setProductsDiscussed(e.target.value)}
-                  placeholder="Lost Mary BM6000, Velo 11mg..."
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-600 mb-1 block">Notes</label>
-                <textarea value={outcomeNotes} onChange={e => setOutcomeNotes(e.target.value)} rows={3}
-                  placeholder="How did the visit go?"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-600 mb-2 block">Customer Satisfaction</label>
-                <div className="flex gap-2">
-                  {([1,2,3,4,5] as const).map(s => (
-                    <button key={s} onClick={() => setSatisfaction(s)}
-                      className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${satisfaction >= s ? 'text-amber-500' : 'text-slate-200'}`}>
-                      <Star className="h-5 w-5 mx-auto" fill={satisfaction >= s ? 'currentColor' : 'none'} />
+                      {obj.completed && <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />}
                     </button>
                   ))}
                 </div>
-              </div>
-              <button onClick={() => setStep('followup')}
-                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
-                Follow-Up <ChevronRight className="h-4 w-4" />
+              )}
+
+              <button onClick={() => setStep('end')}
+                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-black rounded-2xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-200">
+                <CheckCircle2 className="h-5 w-5" /> End Visit
               </button>
             </div>
           )}
 
-          {/* Step 4: Follow-Up */}
-          {step === 'followup' && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-                <button onClick={() => setCreateFollowUp(!createFollowUp)}
-                  className={`h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-colors ${createFollowUp ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300'}`}>
-                  {createFollowUp && <CheckSquare className="h-3.5 w-3.5 text-white" />}
-                </button>
-                <span className="text-sm font-semibold text-slate-700">Create a follow-up for this visit</span>
-              </div>
-              {createFollowUp && (
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600 mb-2 block">Type</label>
-                    <div className="flex flex-wrap gap-2">
-                      {FOLLOW_UP_TYPES.map(t => (
-                        <button key={t} onClick={() => setFuType(t)}
-                          className={`px-2 py-1 rounded-lg text-xs font-semibold border transition-colors ${fuType === t ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-200 text-slate-600'}`}>
-                          {t}
-                        </button>
-                      ))}
-                    </div>
+          {/* ══ END VISIT FORM ══ */}
+          {step === 'end' && visitId && (
+            <div className="space-y-5">
+
+              {/* Objectives summary */}
+              {liveObjectives.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Objectives</p>
+                    <p className="text-xs font-semibold text-slate-400">{completedObjCount}/{liveObjectives.length} done</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-slate-600 mb-1 block">Priority</label>
-                      <select value={fuPriority} onChange={e => setFuPriority(e.target.value as FollowUpPriority)}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none">
-                        <option>High</option><option>Medium</option><option>Low</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-slate-600 mb-1 block">Due Date</label>
-                      <input type="date" value={fuDate} onChange={e => setFuDate(e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600 mb-1 block">Notes</label>
-                    <textarea value={fuNotes} onChange={e => setFuNotes(e.target.value)} rows={2}
-                      placeholder="What needs to happen?"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none resize-none" />
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {liveObjectives.map(obj => (
+                      <button key={obj.id}
+                        onClick={() => handleToggleObjective(visitId, obj.id, !obj.completed)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all ${
+                          obj.completed ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200 hover:border-slate-300'
+                        }`}>
+                        {obj.completed
+                          ? <CheckSquare className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                          : <Square className="h-3.5 w-3.5 text-slate-300 flex-shrink-0" />}
+                        <span className={`text-xs font-semibold truncate ${obj.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+                          {obj.type}
+                        </span>
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}
+
+              {/* ── Order section ── */}
+              {linkedOrderId ? (
+                <div className="space-y-3">
+                  {/* Order summary card */}
+                  <div className="flex items-center gap-3 px-4 py-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl">
+                    <div className="h-10 w-10 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Package className="h-4.5 w-4.5 text-emerald-600" style={{ width: 18, height: 18 }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Order Placed</p>
+                      <p className="text-base font-black text-emerald-900">
+                        £{linkedOrderTotal?.toFixed(2) ?? '—'}
+                        <span className="text-xs font-semibold text-emerald-500 ml-2">#{linkedOrderId}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Payment status */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">Payment Status</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {([
+                        { value: 'Paid' as PaymentStatus, label: 'Payment\nDone' },
+                        { value: 'Pending' as PaymentStatus, label: 'Awaiting\nPayment' },
+                        { value: 'On Credit' as PaymentStatus, label: 'On\nCredit' },
+                      ]).map(opt => {
+                        const active = paymentStatus === opt.value;
+                        const activeClass =
+                          opt.value === 'Paid' ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm shadow-emerald-200' :
+                          opt.value === 'Pending' ? 'bg-amber-500 border-amber-500 text-white shadow-sm shadow-amber-200' :
+                          'bg-blue-600 border-blue-600 text-white shadow-sm shadow-blue-200';
+                        return (
+                          <button key={opt.value} onClick={() => { setPaymentStatus(opt.value); if (opt.value !== 'Paid') setPaymentMethod(null); }}
+                            className={`py-3 px-2 rounded-2xl border-2 text-xs font-bold text-center transition-all whitespace-pre-line leading-tight ${
+                              active ? activeClass : 'border-slate-200 text-slate-600 hover:border-slate-300 bg-white'
+                            }`}>
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Payment method — only if Paid */}
+                  {paymentStatus === 'Paid' && (
+                    <div>
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">Payment Method</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {([
+                          { value: 'Link' as PaymentMethod, label: 'Payment Link', Icon: Link2 },
+                          { value: 'Card' as PaymentMethod, label: 'Card Swipe', Icon: CreditCard },
+                        ]).map(m => (
+                          <button key={m.value} onClick={() => setPaymentMethod(m.value)}
+                            className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl border-2 transition-all ${
+                              paymentMethod === m.value
+                                ? 'border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm shadow-indigo-100'
+                                : 'border-slate-200 text-slate-600 hover:border-indigo-200 bg-white'
+                            }`}>
+                            <m.Icon className="h-4 w-4 flex-shrink-0" />
+                            <span className="text-xs font-bold">{m.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Status notices */}
+                  {paymentStatus === 'Pending' && (
+                    <div className="flex items-start gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-xl">
+                      <Clock className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-amber-700 font-medium">Order on hold — will be approved once payment is received.</p>
+                    </div>
+                  )}
+                  {paymentStatus === 'On Credit' && (
+                    <div className="flex items-start gap-2 px-3 py-2.5 bg-blue-50 border border-blue-200 rounded-xl">
+                      <CreditCard className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-blue-700 font-medium">Order approved on credit. Payment due per agreed terms.</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={() => navigate('/sales/orders/new', {
+                    state: { customerId, customerName, visitId, repId: user?.id ?? '', returnPath: location.pathname },
+                  })}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-indigo-200 text-indigo-600 text-sm font-semibold rounded-2xl hover:bg-indigo-50 transition-colors">
+                  <ShoppingCart className="h-4 w-4" /> Add Order
+                </button>
+              )}
+
+              {/* Collection — only if Collection objective was set */}
+              {hasCollectionObj && (
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Amount Collected</label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">£</span>
+                    <input type="number" value={collectionAmount} onChange={e => setCollectionAmount(e.target.value)}
+                      placeholder="0.00" min="0" step="0.01"
+                      className="w-full pl-8 pr-3 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">Online transfer received from customer</p>
+                </div>
+              )}
+
+              {/* Notes */}
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">
+                  Notes <span className="normal-case font-normal text-slate-400">(optional)</span>
+                </label>
+                <textarea value={outcomeNotes} onChange={e => setOutcomeNotes(e.target.value)} rows={2}
+                  placeholder="How did the visit go?"
+                  className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none" />
+              </div>
+
+              {/* ── Follow-Up section ── */}
+              <div className="space-y-3">
+                <button
+                  onClick={() => setCreateFollowUp(!createFollowUp)}
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border-2 transition-all text-left ${
+                    createFollowUp
+                      ? 'border-indigo-400 bg-indigo-50/80'
+                      : 'border-dashed border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/40'
+                  }`}>
+                  <div className={`h-8 w-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
+                    createFollowUp ? 'bg-indigo-600' : 'bg-slate-100'
+                  }`}>
+                    {createFollowUp
+                      ? <CheckCircle2 className="h-4 w-4 text-white" />
+                      : <Plus className="h-4 w-4 text-slate-500" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-bold ${createFollowUp ? 'text-indigo-700' : 'text-slate-700'}`}>
+                      {createFollowUp ? 'Follow-Up Scheduled' : 'Schedule Follow-Up'}
+                    </p>
+                    <p className={`text-xs mt-0.5 truncate ${createFollowUp ? 'text-indigo-500' : 'text-slate-400'}`}>
+                      {createFollowUp
+                        ? `${fuType} · Due ${new Date(fuDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+                        : 'Optional — set a reminder for next action'}
+                    </p>
+                  </div>
+                  <ChevronRight className={`h-4 w-4 flex-shrink-0 transition-transform ${createFollowUp ? 'rotate-90 text-indigo-400' : 'text-slate-300'}`} />
+                </button>
+
+                {createFollowUp && (
+                  <div className="space-y-3 bg-slate-50/80 rounded-2xl px-4 py-4">
+                    {/* Type — dropdown */}
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Type</label>
+                      <div className="relative flex items-center bg-white border-2 border-slate-200 rounded-xl overflow-hidden focus-within:border-indigo-400 transition-colors">
+                        {(() => { const Icon = FU_TYPE_META[fuType].icon; return <Icon className={`h-4 w-4 flex-shrink-0 ml-3 ${FU_TYPE_META[fuType].color}`} />; })()}
+                        <select
+                          value={fuType}
+                          onChange={e => setFuType(e.target.value as FollowUpType)}
+                          className="flex-1 appearance-none bg-transparent pl-2.5 pr-8 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none cursor-pointer"
+                        >
+                          {FOLLOW_UP_TYPES.map(t => (
+                            <option key={t} value={t}>{t}</option>
+                          ))}
+                        </select>
+                        <ChevronRight className="h-4 w-4 text-slate-400 rotate-90 absolute right-3 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* Priority pills */}
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Priority</label>
+                      <div className="flex gap-2">
+                        {(['High', 'Medium', 'Low'] as FollowUpPriority[]).map(p => (
+                          <button key={p} onClick={() => setFuPriority(p)}
+                            className={`flex-1 py-2 rounded-xl text-xs font-bold border-2 transition-all ${
+                              fuPriority === p
+                                ? p === 'High' ? 'bg-rose-500 border-rose-500 text-white'
+                                  : p === 'Medium' ? 'bg-amber-400 border-amber-400 text-white'
+                                  : 'bg-slate-400 border-slate-400 text-white'
+                                : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                            }`}>{p}</button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Date */}
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">Due Date</label>
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                        <input type="date" value={fuDate} onChange={e => setFuDate(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    <textarea value={fuNotes} onChange={e => setFuNotes(e.target.value)} rows={2}
+                      placeholder="What needs to happen?"
+                      className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none" />
+                  </div>
+                )}
+              </div>
+
+              {/* Complete Visit CTA */}
               <button onClick={handleEndVisit}
-                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors">
-                End Visit
+                className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-black rounded-2xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 hover:shadow-xl">
+                <CheckCircle2 className="h-5 w-5" /> Complete Visit
               </button>
             </div>
           )}
 
-          {/* Step 5: Summary */}
+          {/* ══ SUMMARY ══ */}
           {step === 'summary' && (
-            <div className="space-y-4 text-center">
-              <div className="h-16 w-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto">
-                <MapPin className="h-8 w-8 text-emerald-600" />
+            <div className="space-y-5 text-center">
+              <div className="flex items-center justify-center mx-auto h-24 w-24 rounded-3xl bg-emerald-50">
+                <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-200">
+                  <CheckCircle2 className="h-9 w-9 text-white" strokeWidth={2.5} />
+                </div>
               </div>
               <div>
-                <h3 className="text-lg font-black text-slate-800">Visit Complete!</h3>
-                <p className="text-sm text-slate-500">{customerName}</p>
+                <h3 className="text-xl font-black text-slate-800">Visit Complete!</h3>
+                <p className="text-sm text-slate-400 mt-0.5">{customerName}</p>
               </div>
-              <div className="grid grid-cols-2 gap-3 text-left">
-                {[
-                  { label: 'Duration', value: formatElapsed(elapsed) },
-                  { label: 'Satisfaction', value: `${satisfaction}/5 ⭐` },
-                  { label: 'Order', value: orderAmount ? `£${parseFloat(orderAmount).toFixed(2)}` : '—' },
-                  { label: 'Collected', value: collectionAmount ? `£${parseFloat(collectionAmount).toFixed(2)}` : '—' },
-                ].map(item => (
-                  <div key={item.label} className="p-3 bg-slate-50 rounded-xl">
-                    <p className="text-xs text-slate-400">{item.label}</p>
-                    <p className="text-sm font-bold text-slate-700">{item.value}</p>
+
+              <div className="grid grid-cols-2 gap-2.5 text-left">
+                {([
+                  { label: 'Duration', value: fmt(elapsed) },
+                  { label: 'Objectives', value: displayObjectives.length > 0 ? `${completedObjCount}/${displayObjectives.length}` : '—' },
+                  { label: 'Order Value', value: linkedOrderTotal ? `£${linkedOrderTotal.toFixed(2)}` : '—' },
+                  ...(hasCollectionObj ? [{ label: 'Collected', value: collectionAmount ? `£${parseFloat(collectionAmount).toFixed(2)}` : '—' }] : []),
+                ]).map(item => (
+                  <div key={item.label} className="p-3.5 bg-slate-50 border border-slate-100 rounded-2xl">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.label}</p>
+                    <p className="text-base font-black text-slate-800 mt-1">{item.value}</p>
                   </div>
                 ))}
               </div>
-              {createFollowUp && (
-                <div className="p-3 bg-indigo-50 rounded-xl text-left">
-                  <p className="text-xs font-bold text-indigo-600">Follow-up created: {fuType}</p>
-                  <p className="text-xs text-slate-500">Due {new Date(fuDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
+
+              {/* Payment status */}
+              {linkedOrderId && paymentStatus && (
+                <div className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl border ${
+                  paymentStatus === 'Paid' ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  : paymentStatus === 'Pending' ? 'bg-amber-50 border-amber-200 text-amber-700'
+                  : 'bg-blue-50 border-blue-200 text-blue-700'
+                }`}>
+                  {paymentStatus === 'Paid'
+                    ? <CheckCircle2 className="h-4 w-4" />
+                    : paymentStatus === 'Pending'
+                    ? <Clock className="h-4 w-4" />
+                    : <CreditCard className="h-4 w-4" />}
+                  <span className="text-sm font-bold">
+                    {paymentStatus === 'Paid'
+                      ? `Payment Done${paymentMethod ? ` · ${paymentMethod === 'Link' ? 'Payment Link' : 'Card Swipe'}` : ''}`
+                      : paymentStatus}
+                  </span>
                 </div>
               )}
-              <button onClick={handleDone}
-                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors">
+
+              {/* Follow-up chip */}
+              {createFollowUp && fuNotes.trim() && (
+                <div className="flex items-center gap-3 p-3.5 bg-indigo-50 border border-indigo-100 rounded-2xl text-left">
+                  <div className="h-8 w-8 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="h-4 w-4 text-indigo-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-indigo-700">Follow-up scheduled</p>
+                    <p className="text-xs text-indigo-500 mt-0.5">
+                      {fuType} · Due {new Date(fuDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <button onClick={() => onComplete(visitId!)}
+                className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-black rounded-2xl transition-colors shadow-md shadow-indigo-200">
                 Done
               </button>
             </div>
           )}
+
         </div>
       </div>
     </div>
