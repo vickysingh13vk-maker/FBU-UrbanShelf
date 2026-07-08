@@ -64,6 +64,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const allNavigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard, group: 'main', module: 'Dashboard' },
     { name: 'Sales Rep Dashboard', href: '/sales-rep-dashboard', icon: Activity, group: 'main', module: 'Dashboard' },
+    { name: 'New Dashboard', href: '/new-dashboard', icon: LayoutDashboard, group: 'main', module: 'Dashboard' },
     { name: 'Analytics', href: '/analytics', icon: PieChart, group: 'analytics', module: 'Analytics' },
     { name: 'Rep Performance', href: '/rep-performance', icon: BarChart3, group: 'analytics', module: 'Analytics' },
     { name: 'Orders', href: '/orders', icon: ShoppingCart, group: 'analytics', module: 'Orders' },

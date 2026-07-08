@@ -3,6 +3,7 @@ import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import Dashboard from './pages/Dashboard';
+import NewDashboard from './pages/NewDashboard';
 import ProductsPage from './pages/Products';
 import InventoryPage from './pages/Inventory';
 import OrdersPage from './pages/Orders';
@@ -124,6 +125,7 @@ const App: React.FC = () => {
                 <Layout>
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
+                    <Route path="/new-dashboard" element={<NewDashboard />} />
 
                     {/* Supplier */}
                     <Route path="/supplier/dashboard" element={<SupplierDashboard />} />

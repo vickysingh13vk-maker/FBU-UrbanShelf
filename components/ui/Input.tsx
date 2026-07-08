@@ -35,15 +35,21 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
   error?: string;
   action?: React.ReactNode;
+  icon?: React.ReactNode;
   options?: (string | { label: string; value: string })[];
 }
 
-export const Select: React.FC<SelectProps> = ({ label, error, action, className = '', children, options, ...props }) => (
+export const Select: React.FC<SelectProps> = ({ label, error, action, icon, className = '', children, options, ...props }) => (
   <div className="w-full">
      {label && <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">{label}</label>}
      <div className="relative group">
+       {icon && (
+         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-600 transition-colors z-10">
+           {icon}
+         </div>
+       )}
        <select
-        className={`block w-full rounded-xl border border-slate-200 bg-white shadow-sm focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/10 focus:outline-none sm:text-sm py-2.5 pl-3.5 pr-10 appearance-none transition-all cursor-pointer hover:border-slate-300 ${error ? 'border-rose-500 ring-rose-500/10' : ''} ${className}`}
+        className={`block w-full rounded-xl border border-slate-200 bg-white shadow-sm focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/10 focus:outline-none sm:text-sm py-2.5 ${icon ? 'pl-10' : 'pl-3.5'} pr-10 appearance-none transition-all cursor-pointer hover:border-slate-300 ${error ? 'border-rose-500 ring-rose-500/10' : ''} ${className}`}
         {...props}
        >
          {options ? options.map(opt => {
