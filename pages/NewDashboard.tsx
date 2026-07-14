@@ -92,32 +92,48 @@ import {
 
 // --- Sub-Components ---
 
-const GroupedKpiCard = ({ title, icon: Icon, color, items, compact }: any) => {
+const GroupedKpiCard = ({ title, icon: Icon, color, items, compact, hero }: any) => {
   const colorMap: any = {
-    blue: 'text-blue-600 bg-blue-50/50',
-    indigo: 'text-indigo-600 bg-indigo-50/50',
-    amber: 'text-amber-600 bg-amber-50/50',
-    emerald: 'text-emerald-600 bg-emerald-50/50',
-    rose: 'text-rose-600 bg-rose-50/50',
+    blue: 'text-blue-600 bg-blue-50',
+    indigo: 'text-indigo-600 bg-indigo-50',
+    amber: 'text-amber-600 bg-amber-50',
+    emerald: 'text-emerald-600 bg-emerald-50',
+    rose: 'text-rose-600 bg-rose-50',
   };
 
-  return (
-    <Card padding="none" className="overflow-hidden flex flex-col hover:shadow-lg transition-all border-slate-100 group">
-      <div className={`${compact ? 'p-[12px_18px]' : 'p-4'} border-b border-slate-50 flex items-center justify-between bg-white group-hover:bg-slate-50/30 transition-colors`}>
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg ${colorMap[color]} group-hover:scale-110 transition-transform`}>
-            <Icon className="h-4 w-4" />
-          </div>
-          <h3 className={`${compact ? 'text-[10px]' : 'text-[11px]'} font-bold text-slate-500 uppercase tracking-[0.1em]`}>{title}</h3>
+  if (hero) {
+    return (
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-700 p-4 text-white shadow-lg shadow-indigo-500/20 h-full flex flex-col">
+        <div className="absolute -right-3 -top-3 opacity-10 pointer-events-none">
+          <Icon className="h-20 w-20" />
         </div>
-        <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-indigo-500 transition-colors" />
+        <p className="relative text-[11px] font-bold uppercase tracking-widest text-indigo-200">{title}</p>
+        <div className="relative mt-3 grid grid-cols-2 gap-x-4 gap-y-3 flex-1 content-start">
+          {items.map((item: any, idx: number) => (
+            <div key={idx} className="space-y-1 min-w-0">
+              <p className="text-[10px] font-bold text-indigo-200 uppercase tracking-wider truncate" title={item.label}>{item.label}</p>
+              <p className="text-xl font-black tracking-tight text-white tabular-nums leading-tight">{item.value}</p>
+            </div>
+          ))}
+        </div>
       </div>
-      <div className={`${compact ? 'p-[14px_18px]' : 'p-5'} grid grid-cols-2 gap-x-4 gap-y-3.5 bg-white flex-1 content-start`}>
+    );
+  }
+
+  return (
+    <Card padding="none" className="rounded-2xl border-slate-100 hover:shadow-md hover:border-slate-200 transition-all flex flex-col h-full p-4">
+      <div className="flex items-center justify-between">
+        <p className={`${compact ? 'text-[10px]' : 'text-[11px]'} font-bold text-slate-500 uppercase tracking-widest`}>{title}</p>
+        <div className={`rounded-lg p-1.5 ${colorMap[color]}`}>
+          <Icon className="h-3.5 w-3.5" />
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3.5 flex-1 content-start">
         {items.map((item: any, idx: number) => (
           <div key={idx} className="space-y-1 min-w-0">
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate" title={item.label}>{item.label}</p>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-base font-bold text-slate-900 tabular-nums leading-tight">{item.value}</span>
+              <span className="text-base font-semibold text-slate-900 tabular-nums leading-tight">{item.value}</span>
               {item.trend && (
                 <span className={`text-[10px] font-bold ${item.trendColor}`}>{item.trend}</span>
               )}
@@ -547,6 +563,9 @@ const InventoryHoverTooltip = ({ active, payload, data }: any) => {
 
 const parsePendingAmount = (pending: string): number => parseFloat(pending.replace(/[£,]/g, '')) || 0;
 
+const parseEarning = (earning: string): number => parseFloat(earning.replace(/[£,]/g, '')) || 0;
+const SALE_EARNINGS_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#f43f5e', '#0ea5e9'];
+
 // Tiers derived from the existing "pending" figures — no new data, just visual weight by amount
 const getDueTier = (pending: string): { border: string; bg: string; badge: 'danger' | 'warning' | 'neutral' } => {
   const amount = parsePendingAmount(pending);
@@ -567,8 +586,8 @@ const getStockBrand = (name: string): string => {
 
 const NewAdminPanel: React.FC = () => {
   const kpiIconMap: any = {
-    sales: { icon: ShoppingCart, color: 'blue' },
-    customer: { icon: Users, color: 'indigo' },
+    sales: { icon: ShoppingCart, color: 'indigo', hero: true },
+    customer: { icon: Users, color: 'blue' },
     finance: { icon: Wallet, color: 'emerald' },
     inventory: { icon: Warehouse, color: 'amber' },
   };
@@ -614,27 +633,16 @@ const NewAdminPanel: React.FC = () => {
       : <ArrowDown className="h-3 w-3 text-indigo-600 inline ml-1" />;
   };
 
-  const [ledgerSort, setLedgerSort] = useState<SortState>(null);
-  const sortedLedger = useMemo(() => {
-    if (!ledgerSort) return CUSTOMER_LEDGER_NEW;
-    const { key, dir } = ledgerSort;
-    const mul = dir === 'asc' ? 1 : -1;
-    return [...CUSTOMER_LEDGER_NEW].sort((a: any, b: any) =>
-      key === 'customer' ? a.customer.localeCompare(b.customer) * mul : (a[key] - b[key]) * mul
-    );
-  }, [ledgerSort]);
+  // Dashboard card is a preview only — full sort/search/pagination lives on the dedicated /customer-ledger page
+  const LEDGER_PREVIEW_COUNT = 8;
+  const ledgerPreview = useMemo(
+    () => [...CUSTOMER_LEDGER_NEW].sort((a, b) => a.balance - b.balance).slice(0, LEDGER_PREVIEW_COUNT),
+    []
+  );
 
-  const [dueSort, setDueSort] = useState<SortState>(null);
-  const sortedDueRows = useMemo(() => {
-    if (!dueSort) return PAYMENT_DUE_28_DAYS_NEW.rows;
-    const { key, dir } = dueSort;
-    const mul = dir === 'asc' ? 1 : -1;
-    return [...PAYMENT_DUE_28_DAYS_NEW.rows].sort((a, b) => {
-      if (key === 'name') return a.name.localeCompare(b.name) * mul;
-      if (key === 'pending') return (parsePendingAmount(a.pending) - parsePendingAmount(b.pending)) * mul;
-      return (a.orders - b.orders) * mul;
-    });
-  }, [dueSort]);
+  // Dashboard card is a preview only — full sort/search/pagination lives on the dedicated /payments-due page
+  const DUE_PREVIEW_COUNT = 10;
+  const duePreview = PAYMENT_DUE_28_DAYS_NEW.rows.slice(0, DUE_PREVIEW_COUNT);
 
   const [topSellingSort, setTopSellingSort] = useState<SortState>(null);
   const sortedTopSelling = useMemo(() => {
@@ -649,39 +657,32 @@ const NewAdminPanel: React.FC = () => {
   return (
     <div className="space-y-6 pb-20">
 
-      {/* QUICK LINKS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {QUICK_LINKS_NEW.map((link) => (
-          <Link
-            key={link.title}
-            to={link.href}
-            className={`flex items-center justify-between p-4 rounded-xl border transition-all hover:shadow-sm ${focusRing} ${
-              link.color === 'green'
-                ? 'bg-emerald-50/70 border-emerald-100 hover:border-emerald-200 hover:bg-emerald-50'
-                : 'bg-indigo-50/70 border-indigo-100 hover:border-indigo-200 hover:bg-indigo-50'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className={`p-2.5 rounded-lg ${link.color === 'green' ? 'bg-emerald-500' : 'bg-indigo-500'} text-white shrink-0`}>
-                {link.color === 'green' ? <BarChart3 className="h-4 w-4" /> : <Package className="h-4 w-4" />}
-              </div>
-              <div>
-                <p className="text-sm font-bold text-slate-900">{link.title}</p>
-                <p className="text-xs text-slate-500 font-medium">{link.desc}</p>
-              </div>
-            </div>
-            <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
-          </Link>
-        ))}
-      </div>
-
-      {/* HEADER SECTION */}
+      {/* HEADER SECTION + QUICK LINKS */}
       <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6 pt-1">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Operational Control Center</h1>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Operational Control Center</h1>
           <p className="text-slate-500 font-medium">Wholesale Distribution ERP Dashboard</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          {QUICK_LINKS_NEW.map((link) => (
+            <Link
+              key={link.title}
+              to={link.href}
+              className={`flex items-center gap-2.5 px-3.5 py-2 rounded-xl border transition-all hover:shadow-sm min-h-[44px] ${focusRing} ${
+                link.color === 'green'
+                  ? 'bg-emerald-50/70 border-emerald-100 hover:border-emerald-200 hover:bg-emerald-50'
+                  : 'bg-indigo-50/70 border-indigo-100 hover:border-indigo-200 hover:bg-indigo-50'
+              }`}
+            >
+              <div className={`p-1.5 rounded-lg ${link.color === 'green' ? 'bg-emerald-500' : 'bg-indigo-500'} text-white shrink-0`}>
+                {link.color === 'green' ? <BarChart3 className="h-3.5 w-3.5" /> : <Package className="h-3.5 w-3.5" />}
+              </div>
+              <div className="text-left">
+                <p className="text-xs font-bold text-slate-900 leading-tight whitespace-nowrap">{link.title}</p>
+                <p className="text-[10px] text-slate-500 font-medium leading-tight whitespace-nowrap">{link.desc}</p>
+              </div>
+            </Link>
+          ))}
           <Button variant="primary" icon={<PlusCircle className="h-4 w-4" />} className="min-h-[44px]">
             New Order
           </Button>
@@ -697,105 +698,159 @@ const NewAdminPanel: React.FC = () => {
             title={group.title}
             icon={kpiIconMap[key].icon}
             color={kpiIconMap[key].color}
+            hero={kpiIconMap[key].hero}
             items={group.items.map((i) => ({ ...i, trend: '', trendColor: '' }))}
             compact
           />
         ))}
       </div>
 
-      {/* PAYMENTS RECEIVED TODAY */}
-      <Card padding="none" className="overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-xl transition-all duration-300">
-        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 shrink-0">
-              <Wallet className="h-4.5 w-4.5" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900 tracking-tight">Payments received today</h3>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">Customer payments recorded today</p>
-            </div>
-          </div>
-          <Badge variant="neutral" className="text-[11px] gap-1.5">
-            <Calendar className="h-3 w-3" /> {PAYMENTS_TODAY_NEW.date}
-          </Badge>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="rounded-xl p-4 border border-slate-100 bg-slate-50 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-white border border-slate-200 text-indigo-500 shrink-0">
-              <Users className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Customers</p>
-              <p className="text-xl font-bold text-slate-900 tabular-nums leading-tight">{PAYMENTS_TODAY_NEW.customers}</p>
-            </div>
-          </div>
-          <div className="rounded-xl p-4 border border-slate-100 bg-slate-50 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-white border border-slate-200 text-indigo-500 shrink-0">
-              <FileText className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Payments</p>
-              <p className="text-xl font-bold text-slate-900 tabular-nums leading-tight">{PAYMENTS_TODAY_NEW.payments}</p>
-            </div>
-          </div>
-          <div className="rounded-xl p-4 border border-emerald-100 bg-gradient-to-br from-emerald-50 to-emerald-50/40 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-emerald-500 text-white shrink-0">
-              <CheckCircle2 className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Total received</p>
-              <p className="text-xl font-bold text-emerald-700 tabular-nums leading-tight">{PAYMENTS_TODAY_NEW.totalReceived}</p>
-            </div>
-          </div>
-        </div>
-
-        <Input
-          icon={<Search className="h-4 w-4" />}
-          type="text"
-          placeholder="Search by name or phone..."
-          aria-label="Search payments by name or phone"
-          className="mb-4"
-        />
-
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Today's Payments</p>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{PAYMENTS_TODAY_NEW.rows.length} of {PAYMENTS_TODAY_NEW.customers}</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {PAYMENTS_TODAY_NEW.rows.map((row) => (
-            <div
-              key={row.customer}
-              className="flex items-center justify-between gap-3 border border-slate-100 rounded-xl px-4 py-3.5 hover:border-slate-200 hover:bg-slate-50/50 transition-colors"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="h-10 w-10 rounded-full bg-indigo-100 text-indigo-600 text-sm font-bold flex items-center justify-center shrink-0">
-                  {row.avatar}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-slate-900 truncate">{row.customer}</p>
-                  <p className="text-[11px] text-indigo-600 font-medium flex items-center gap-1 mt-0.5">
-                    <Phone className="h-3 w-3 shrink-0" /> {row.phone}
-                  </p>
-                </div>
+      {/* PAYMENTS RECEIVED TODAY + CUSTOMER LEDGER OVERVIEW */}
+      <div className="grid grid-cols-12 gap-5 items-start">
+        <Card padding="none" className="rounded-2xl col-span-12 lg:col-span-6 overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
+          <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 shrink-0">
+                <Wallet className="h-4.5 w-4.5" />
               </div>
-              <div className="text-right shrink-0">
-                <p className="text-sm font-bold text-emerald-600 tabular-nums">{row.totalPaid}</p>
-                <div className="flex items-center gap-1.5 justify-end mt-1.5">
-                  <div className="h-1.5 w-14 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${row.paidPct}%` }} />
+              <div>
+                <h3 className="text-base font-bold text-slate-900 tracking-tight">Payments received today</h3>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">Customer payments recorded today</p>
+              </div>
+            </div>
+            <Badge variant="neutral" className="text-[11px] gap-1.5">
+              <Calendar className="h-3 w-3" /> {PAYMENTS_TODAY_NEW.date}
+            </Badge>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 mb-5">
+            <div className="rounded-xl p-3 border border-slate-100 bg-slate-50">
+              <div className="flex items-center gap-1.5 text-slate-400 mb-2">
+                <Users className="h-3.5 w-3.5" />
+                <p className="text-[10px] font-bold uppercase tracking-wider">Customers</p>
+              </div>
+              <p className="text-lg font-semibold text-slate-900 tabular-nums leading-tight">{PAYMENTS_TODAY_NEW.customers}</p>
+            </div>
+            <div className="rounded-xl p-3 border border-slate-100 bg-slate-50">
+              <div className="flex items-center gap-1.5 text-slate-400 mb-2">
+                <FileText className="h-3.5 w-3.5" />
+                <p className="text-[10px] font-bold uppercase tracking-wider">Payments</p>
+              </div>
+              <p className="text-lg font-semibold text-slate-900 tabular-nums leading-tight">{PAYMENTS_TODAY_NEW.payments}</p>
+            </div>
+            <div className="rounded-xl p-3 border border-emerald-100 bg-gradient-to-br from-emerald-50 to-emerald-50/40">
+              <div className="flex items-center gap-1.5 text-emerald-600 mb-2">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <p className="text-[10px] font-bold uppercase tracking-wider">Received</p>
+              </div>
+              <p className="text-lg font-semibold text-emerald-700 tabular-nums leading-tight">{PAYMENTS_TODAY_NEW.totalReceived}</p>
+            </div>
+          </div>
+
+          <Input
+            icon={<Search className="h-4 w-4" />}
+            type="text"
+            placeholder="Search by name or phone..."
+            aria-label="Search payments by name or phone"
+            className="mb-4"
+          />
+
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Today's Payments</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{PAYMENTS_TODAY_NEW.rows.length} of {PAYMENTS_TODAY_NEW.customers}</p>
+          </div>
+          <div className="space-y-2.5 flex-1">
+            {PAYMENTS_TODAY_NEW.rows.map((row) => (
+              <div
+                key={row.customer}
+                className="flex items-center justify-between gap-3 border border-slate-100 rounded-xl px-4 py-3.5 hover:border-slate-200 hover:bg-slate-50/50 transition-colors"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-10 w-10 rounded-full bg-indigo-100 text-indigo-600 text-sm font-bold flex items-center justify-center shrink-0">
+                    {row.avatar}
                   </div>
-                  <span className="text-[10px] text-slate-400 font-semibold whitespace-nowrap">{row.payments} pmt{row.payments !== 1 ? 's' : ''}</span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-slate-900 truncate">{row.customer}</p>
+                    <p className="text-[11px] text-indigo-600 font-medium flex items-center gap-1 mt-0.5">
+                      <Phone className="h-3 w-3 shrink-0" /> {row.phone}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-black text-emerald-600 tabular-nums">{row.totalPaid}</p>
+                  <div className="flex items-center gap-1.5 justify-end mt-1.5">
+                    <div className="h-1.5 w-14 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${row.paidPct}%` }} />
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-semibold whitespace-nowrap">{row.payments} pmt{row.payments !== 1 ? 's' : ''}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </Card>
+            ))}
+          </div>
+        </Card>
 
-      {/* INVENTORY STOCK OVERVIEW + BALANCE RANKING */}
-      <div className="grid grid-cols-12 gap-5 items-stretch">
-        <Card padding="none" className="col-span-12 lg:col-span-8 flex flex-col p-6 border-slate-100 hover:shadow-xl transition-all duration-300">
+        <Card padding="none" className="rounded-2xl col-span-12 lg:col-span-6 overflow-hidden flex flex-col border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
+          <div className="flex items-center justify-between p-6 border-b border-slate-100 flex-wrap gap-3">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                <FileText className="h-4 w-4 text-indigo-500" />
+                Customer Ledger Overview
+              </h3>
+              <p className="text-xs text-slate-500 font-medium mt-1">
+                Top {LEDGER_PREVIEW_COUNT} by outstanding balance · {CUSTOMER_LEDGER_NEW.length} customers total
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" size="sm" icon={<FileDown className="h-3.5 w-3.5" />}>
+                Download Ledger
+              </Button>
+              <Link
+                to="/customer-ledger"
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors whitespace-nowrap ${focusRing}`}
+              >
+                View All {CUSTOMER_LEDGER_NEW.length} <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <Table className="w-full">
+              <THead>
+                <TR>
+                  <TH className="py-2">Customer</TH>
+                  <TH align="right" className="py-2">Total Orders</TH>
+                  <TH align="right" className="py-2">Total Paid</TH>
+                  <TH align="right" className="py-2">Outstanding Balance</TH>
+                  <TH align="right" className="py-2">Actions</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {ledgerPreview.map((item, idx) => (
+                  <TR key={idx}>
+                    <TD className="py-2 text-xs font-medium text-slate-900">{item.customer}</TD>
+                    <TD align="right" className="py-2 text-xs text-slate-600 tabular-nums">{item.orders}</TD>
+                    <TD align="right" className="py-2 text-xs font-medium text-emerald-600 tabular-nums">{item.paid.toLocaleString()}</TD>
+                    <TD align="right" className="py-2">
+                      <span className={`text-xs font-medium tabular-nums ${item.balance !== 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+                        {item.balance.toLocaleString()}
+                      </span>
+                    </TD>
+                    <TD align="right" className="py-2">
+                      <button className={`text-[11px] font-bold text-indigo-600 hover:text-indigo-700 uppercase tracking-widest ${focusRing} rounded`}>
+                        View Statement
+                      </button>
+                    </TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
+          </div>
+        </Card>
+      </div>
+
+      {/* INVENTORY STOCK OVERVIEW + TOP SELLING PRODUCTS */}
+      <div className="grid grid-cols-12 gap-5 items-start">
+        <Card padding="none" className="rounded-2xl col-span-12 lg:col-span-6 flex flex-col p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
           <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
             <div>
               <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
@@ -898,33 +953,38 @@ const NewAdminPanel: React.FC = () => {
           </div>
         </Card>
 
-        <Card padding="none" className="col-span-12 lg:col-span-4 overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-xl transition-all duration-300">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                <Wallet className="h-4 w-4 text-amber-500" />
-                Balance Ranking
-              </h3>
-              <p className="text-xs text-slate-500 font-medium mt-1">Top accounts by outstanding</p>
-            </div>
-            <Link to="/customers" className={`text-[11px] font-bold text-indigo-600 hover:underline uppercase tracking-widest whitespace-nowrap ${focusRing} rounded`}>View All →</Link>
-          </div>
-          <div className="overflow-y-auto flex-1 -mx-6 custom-scrollbar">
-            <Table className="w-full">
+        <Card padding="none" className="rounded-2xl col-span-12 lg:col-span-6 overflow-hidden flex flex-col border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
+          <CardHeader title="Top Selling Products" description="Ranked by boxes sold this month" className="p-6 border-b border-slate-100 mb-0" />
+          <div className="overflow-x-auto">
+            <Table>
               <THead>
                 <TR>
-                  <TH>Customer</TH>
-                  <TH align="right">Outstanding</TH>
+                  <TH className="py-2">Rank</TH>
+                  <TH className="py-2 group" onClick={() => toggleSort(topSellingSort, setTopSellingSort, 'product', 'asc')}>
+                    Product <SortIcon sort={topSellingSort} sortKey="product" />
+                  </TH>
+                  <TH align="right" className="py-2 group" onClick={() => toggleSort(topSellingSort, setTopSellingSort, 'boxes')}>
+                    Boxes <SortIcon sort={topSellingSort} sortKey="boxes" />
+                  </TH>
+                  <TH align="right" className="py-2 group" onClick={() => toggleSort(topSellingSort, setTopSellingSort, 'units')}>
+                    Units <SortIcon sort={topSellingSort} sortKey="units" />
+                  </TH>
+                  <TH align="center" className="py-2">Trend</TH>
                 </TR>
               </THead>
               <TBody>
-                {BALANCE_RANKING_NEW.map((item) => (
-                  <TR key={item.name}>
-                    <TD>
-                      <span className="text-sm font-medium text-slate-700 block truncate max-w-[150px]">{item.name}</span>
+                {sortedTopSelling.map((row) => (
+                  <TR key={row.rank}>
+                    <TD className="py-2">
+                      <span className="h-6 w-6 rounded-lg bg-slate-100 text-slate-600 text-[11px] font-bold flex items-center justify-center tabular-nums">{row.rank}</span>
                     </TD>
-                    <TD align="right">
-                      <span className="text-sm font-bold text-rose-600 tabular-nums">{item.outstanding}</span>
+                    <TD className="py-2 text-xs font-medium text-slate-900 truncate max-w-[160px]">{row.product}</TD>
+                    <TD align="right" className="py-2 text-xs font-medium text-slate-600 tabular-nums">{row.boxes}</TD>
+                    <TD align="right" className="py-2 text-xs font-medium text-slate-600 tabular-nums">{row.units}</TD>
+                    <TD align="center" className="py-2">
+                      {row.trend === 'up'
+                        ? <TrendingUp className="h-4 w-4 text-emerald-500 inline" />
+                        : <TrendingDown className="h-4 w-4 text-rose-500 inline" />}
                     </TD>
                   </TR>
                 ))}
@@ -934,135 +994,132 @@ const NewAdminPanel: React.FC = () => {
         </Card>
       </div>
 
-      {/* 28 DAYS PAYMENT DUE */}
-      <Card padding="none" className="overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-xl transition-all duration-300">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-lg font-bold text-slate-900 tracking-tight">28 Days Payment Due</h3>
-              <Badge variant="danger" className="text-[10px] uppercase tracking-wider">{PAYMENT_DUE_28_DAYS_NEW.rows.length} accounts</Badge>
+      {/* BALANCE RANKING + 28 DAYS PAYMENT DUE */}
+      <div className="grid grid-cols-12 gap-5 items-stretch">
+        <Card padding="none" className="rounded-2xl col-span-12 lg:col-span-5 overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                <Wallet className="h-4 w-4 text-amber-500" />
+                Balance Ranking
+              </h3>
+              <p className="text-xs text-slate-500 font-medium mt-1">Top 10 by outstanding</p>
             </div>
-            <p className="text-xs text-slate-500 font-medium mt-1">All accounts below are 28+ days overdue, sorted by amount pending</p>
+            <Link to="/customers" className={`text-[11px] font-bold text-indigo-600 hover:underline uppercase tracking-widest whitespace-nowrap ${focusRing} rounded`}>View All →</Link>
           </div>
-          <div className="text-right bg-rose-50 border border-rose-100 rounded-xl px-4 py-2">
-            <p className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">Total Outstanding</p>
-            <p className="text-xl font-bold text-rose-600 tabular-nums">£{PAYMENT_DUE_28_DAYS_NEW.totalOutstanding.replace('£', '')}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-4 mb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-rose-500" /> £15k+</span>
-          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-amber-400" /> £5k–£15k</span>
-          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-slate-300" /> Under £5k</span>
-        </div>
-        <div className="max-h-[480px] overflow-y-auto -mx-6 custom-scrollbar">
-          <Table className="w-full">
-            <THead className="sticky top-0 z-10 shadow-sm">
-              <TR>
-                <TH className="py-2.5 group" onClick={() => toggleSort(dueSort, setDueSort, 'name', 'asc')}>
-                  Customer <SortIcon sort={dueSort} sortKey="name" />
-                </TH>
-                <TH className="py-2.5">Email</TH>
-                <TH align="right" className="py-2.5 group" onClick={() => toggleSort(dueSort, setDueSort, 'pending')}>
-                  Total Pending <SortIcon sort={dueSort} sortKey="pending" />
-                </TH>
-                <TH align="right" className="py-2.5 group" onClick={() => toggleSort(dueSort, setDueSort, 'orders')}>
-                  Orders <SortIcon sort={dueSort} sortKey="orders" />
-                </TH>
-              </TR>
-            </THead>
-            <TBody>
-              {sortedDueRows.map((row) => {
-                const tier = getDueTier(row.pending);
-                return (
-                  <TR key={row.name}>
+          <div className="-mx-6">
+            <Table className="w-full">
+              <THead>
+                <TR>
+                  <TH className="py-2">Customer</TH>
+                  <TH align="right" className="py-2">Outstanding</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {BALANCE_RANKING_NEW.map((item) => (
+                  <TR key={item.name}>
                     <TD className="py-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className={`h-2 w-2 rounded-full shrink-0 ${tier.border.replace('border-', 'bg-')}`} />
-                        <span className="text-sm font-bold text-indigo-600 truncate">{row.name}</span>
-                      </div>
+                      <span className="text-xs font-medium text-slate-700 block truncate max-w-[150px]">{item.name}</span>
                     </TD>
-                    <TD className="py-2 text-xs text-slate-500 font-medium truncate max-w-[180px]">{row.email}</TD>
-                    <TD align="right" className="py-2 font-bold text-rose-600 tabular-nums">{row.pending}</TD>
-                    <TD align="right" className="py-2 font-bold text-slate-900 tabular-nums">{row.orders}</TD>
+                    <TD align="right" className="py-2">
+                      <span className="text-xs font-medium text-rose-600 tabular-nums">{item.outstanding}</span>
+                    </TD>
                   </TR>
-                );
-              })}
-            </TBody>
-          </Table>
-        </div>
-      </Card>
+                ))}
+              </TBody>
+            </Table>
+          </div>
+        </Card>
 
-      {/* SALE EARNINGS */}
-      <Card padding="none" className="overflow-hidden flex flex-col border-slate-100 hover:shadow-xl transition-all duration-300">
-        <CardHeader title="Sale Earnings" description="Monthly commission earnings per sales rep" className="p-6 border-b border-slate-100 mb-0" />
-        <div className="overflow-x-auto">
-          <Table className="w-full">
-            <THead>
-              <TR>
-                <TH>S.No</TH>
-                <TH>Sales Person</TH>
-                <TH>Earning</TH>
-              </TR>
-            </THead>
-            <TBody>
-              {SALE_EARNINGS_NEW.map((row) => (
-                <TR key={row.no}>
-                  <TD className="text-slate-500">{row.no}</TD>
-                  <TD className="font-bold text-slate-900">{row.person}</TD>
-                  <TD className="font-bold text-emerald-600 tabular-nums">{row.earning}</TD>
+        <Card padding="none" className="rounded-2xl col-span-12 lg:col-span-7 overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base font-bold text-slate-900 tracking-tight">28 Days Payment Due</h3>
+                <Badge variant="danger" className="text-[10px] uppercase tracking-wider">{PAYMENT_DUE_28_DAYS_NEW.rows.length} accounts</Badge>
+              </div>
+              <p className="text-xs text-slate-500 font-medium mt-1">Top {DUE_PREVIEW_COUNT} by amount pending</p>
+            </div>
+            <Link to="/payments-due" className={`text-[11px] font-bold text-indigo-600 hover:underline uppercase tracking-widest whitespace-nowrap ${focusRing} rounded`}>View All →</Link>
+          </div>
+          <div className="-mx-6">
+            <Table className="w-full">
+              <THead>
+                <TR>
+                  <TH className="py-2">Customer</TH>
+                  <TH align="right" className="py-2">Total Pending</TH>
+                  <TH align="right" className="py-2">Orders</TH>
                 </TR>
-              ))}
-            </TBody>
-          </Table>
-        </div>
-      </Card>
+              </THead>
+              <TBody>
+                {duePreview.map((row) => {
+                  const tier = getDueTier(row.pending);
+                  return (
+                    <TR key={row.name}>
+                      <TD className="py-1.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={`h-2 w-2 rounded-full shrink-0 ${tier.border.replace('border-', 'bg-')}`} />
+                          <span className="text-xs font-medium text-indigo-600 truncate">{row.name}</span>
+                        </div>
+                      </TD>
+                      <TD align="right" className="py-1.5 text-xs font-medium text-rose-600 tabular-nums">{row.pending}</TD>
+                      <TD align="right" className="py-1.5 text-xs font-medium text-slate-900 tabular-nums">{row.orders}</TD>
+                    </TR>
+                  );
+                })}
+              </TBody>
+            </Table>
+          </div>
+        </Card>
+      </div>
 
-      {/* TOP SELLING PRODUCTS */}
-      <Card padding="none" className="overflow-hidden flex flex-col border-slate-100 hover:shadow-xl transition-all duration-300">
-        <CardHeader title="Top Selling Products" description="Ranked by boxes sold this month" className="p-6 border-b border-slate-100 mb-0" />
-        <div className="overflow-x-auto">
-          <Table>
-            <THead>
-              <TR>
-                <TH>Rank</TH>
-                <TH className="group" onClick={() => toggleSort(topSellingSort, setTopSellingSort, 'product', 'asc')}>
-                  Product <SortIcon sort={topSellingSort} sortKey="product" />
-                </TH>
-                <TH>Category</TH>
-                <TH align="right" className="group" onClick={() => toggleSort(topSellingSort, setTopSellingSort, 'boxes')}>
-                  Boxes Sold <SortIcon sort={topSellingSort} sortKey="boxes" />
-                </TH>
-                <TH align="right" className="group" onClick={() => toggleSort(topSellingSort, setTopSellingSort, 'units')}>
-                  Units Sold <SortIcon sort={topSellingSort} sortKey="units" />
-                </TH>
-                <TH align="center">Trend</TH>
-              </TR>
-            </THead>
-            <TBody>
-              {sortedTopSelling.map((row) => (
-                <TR key={row.rank}>
-                  <TD>
-                    <span className="h-6 w-6 rounded-lg bg-slate-100 text-slate-600 text-[11px] font-bold flex items-center justify-center tabular-nums">{row.rank}</span>
-                  </TD>
-                  <TD className="font-bold text-slate-900">{row.product}</TD>
-                  <TD><Badge variant="neutral" className="text-[10px]">{row.category}</Badge></TD>
-                  <TD align="right" className="text-slate-600 tabular-nums">{row.boxes}</TD>
-                  <TD align="right" className="text-slate-600 tabular-nums">{row.units}</TD>
-                  <TD align="center">
-                    {row.trend === 'up'
-                      ? <TrendingUp className="h-4 w-4 text-emerald-500 inline" />
-                      : <TrendingDown className="h-4 w-4 text-rose-500 inline" />}
-                  </TD>
-                </TR>
-              ))}
-            </TBody>
-          </Table>
-        </div>
-      </Card>
+      {/* SALE EARNINGS + REVENUE TREND + RECENT ORDERS */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <Card padding="none" className="rounded-2xl flex flex-col p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
+          <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <Wallet className="h-4 w-4 text-emerald-500" />
+            Sale Earnings
+          </h3>
+          <p className="text-xs text-slate-500 font-medium mt-1">Monthly commission earnings per sales rep</p>
+          <div className="flex-1 min-h-[240px] mt-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={SALE_EARNINGS_NEW}
+                  dataKey={(row: typeof SALE_EARNINGS_NEW[number]) => parseEarning(row.earning)}
+                  nameKey="person"
+                  innerRadius={58}
+                  outerRadius={92}
+                  paddingAngle={3}
+                  strokeWidth={0}
+                >
+                  {SALE_EARNINGS_NEW.map((row, idx) => (
+                    <Cell key={row.no} fill={SALE_EARNINGS_COLORS[idx % SALE_EARNINGS_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{ borderRadius: '12px', border: '1px solid #f1f5f9', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)', padding: '10px 14px' }}
+                  labelStyle={{ fontSize: '11px', fontWeight: 700, color: '#64748b', marginBottom: 4 }}
+                  itemStyle={{ fontSize: '12px', fontWeight: 700 }}
+                  formatter={(val: number) => `£${val.toFixed(2)}`}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="space-y-1.5 mt-2">
+            {SALE_EARNINGS_NEW.map((row, idx) => (
+              <div key={row.no} className="flex items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: SALE_EARNINGS_COLORS[idx % SALE_EARNINGS_COLORS.length] }} />
+                  <span className="font-medium text-slate-700 truncate">{row.person}</span>
+                </div>
+                <span className="font-medium text-emerald-600 tabular-nums shrink-0">{row.earning}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
 
-      {/* REVENUE TREND + RECENT ORDERS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <Card padding="none" className="flex flex-col p-6 border-slate-100 hover:shadow-xl transition-all duration-300">
+        <Card padding="none" className="rounded-2xl flex flex-col p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
           <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
             <div>
               <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
@@ -1119,7 +1176,7 @@ const NewAdminPanel: React.FC = () => {
           </div>
         </Card>
 
-        <Card padding="none" className="overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-xl transition-all duration-300">
+        <Card padding="none" className="rounded-2xl overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
@@ -1130,62 +1187,29 @@ const NewAdminPanel: React.FC = () => {
             </div>
             <Link to="/orders" className={`text-[11px] font-bold text-indigo-600 hover:underline uppercase tracking-widest whitespace-nowrap ${focusRing} rounded`}>View All →</Link>
           </div>
-          <div className="overflow-x-auto flex-1 -mx-6">
-            <Table className="w-full">
-              <THead>
-                <TR>
-                  <TH>ID</TH>
-                  <TH>Customer</TH>
-                  <TH align="right">Status</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {RECENT_ORDERS_NEW.map((order) => (
-                  <TR key={order.id}>
-                    <TD className="font-bold text-slate-900 tabular-nums">{order.id}</TD>
-                    <TD className="text-slate-600 truncate max-w-[160px]">{order.customer}</TD>
-                    <TD align="right"><Badge variant="success" className="text-[10px] px-2 py-0.5 uppercase tracking-wider">{order.status}</Badge></TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
+          <div className="space-y-2 flex-1">
+            {RECENT_ORDERS_NEW.map((order) => (
+              <div
+                key={order.id}
+                className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50/50 transition-colors"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-slate-900 truncate">{order.customer}</p>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">ORD-{order.id}</p>
+                </div>
+                <Badge variant="success" className="text-[10px] px-2 py-0.5 uppercase tracking-wider shrink-0">{order.status}</Badge>
+              </div>
+            ))}
           </div>
-          <div className="mt-auto pt-4 border-t border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">
+          <div className="mt-4 pt-4 border-t border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">
             Last updated: Just now
-          </div>
-        </Card>
-      </div>
-
-      {/* VISIT TYPE DISTRIBUTION (placeholder) + DECISION MAKER SURVEY (placeholder) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <Card padding="none" className="p-6 border-slate-100 hover:shadow-xl transition-all duration-300 flex flex-col min-h-[160px]">
-          <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Phone className="h-4 w-4 text-indigo-500" />
-            Visit Type Distribution
-          </h3>
-          <p className="text-xs text-slate-500 font-medium mt-1">Sales rep engagement activity</p>
-          <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center py-4">
-            <div className="p-2.5 rounded-full bg-slate-50 border border-slate-100">
-              <Activity className="h-4 w-4 text-slate-300" />
-            </div>
-            <p className="text-xs font-medium text-slate-400">No data available yet</p>
-          </div>
-        </Card>
-        <Card padding="none" className="p-6 border-slate-100 hover:shadow-xl transition-all duration-300 flex flex-col min-h-[160px]">
-          <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Users className="h-4 w-4 text-emerald-500" />
-            Decision Maker Survey
-          </h3>
-          <p className="text-xs text-slate-500 font-medium mt-1">Sales visit effectiveness</p>
-          <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center py-4">
-            <Badge variant="neutral" className="text-[10px] uppercase tracking-wider">Coming Soon</Badge>
           </div>
         </Card>
       </div>
 
       {/* ACTIVE CUSTOMER CARTS + INVENTORY MOVEMENT */}
       <div className="grid grid-cols-12 gap-5">
-        <Card padding="none" className="col-span-12 lg:col-span-5 overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-xl transition-all duration-300">
+        <Card padding="none" className="rounded-2xl col-span-12 lg:col-span-5 overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
@@ -1218,7 +1242,7 @@ const NewAdminPanel: React.FC = () => {
           </button>
         </Card>
 
-        <Card padding="none" className="col-span-12 lg:col-span-7 overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-xl transition-all duration-300">
+        <Card padding="none" className="rounded-2xl col-span-12 lg:col-span-7 overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
           <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
             <div>
               <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
@@ -1263,91 +1287,9 @@ const NewAdminPanel: React.FC = () => {
         </Card>
       </div>
 
-      {/* CUSTOMER LEDGER OVERVIEW */}
-      <Card padding="none" className="col-span-12 overflow-hidden flex flex-col border-slate-100 hover:shadow-xl transition-all duration-300">
-        <div className="flex items-center justify-between p-6 border-b border-slate-100 flex-wrap gap-3">
-          <div>
-            <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
-              <FileText className="h-4 w-4 text-indigo-500" />
-              Customer Ledger Overview
-            </h3>
-            <p className="text-xs text-slate-500 font-medium mt-1">
-              Real-time balance and payment tracking · {CUSTOMER_LEDGER_NEW.length} customers
-            </p>
-          </div>
-          <Button variant="secondary" size="sm" icon={<FileDown className="h-3.5 w-3.5" />}>
-            Download Ledger
-          </Button>
-        </div>
-        <div className="relative">
-          <div className="overflow-x-auto max-h-[600px] overflow-y-auto custom-scrollbar">
-            <Table className="w-full">
-              <THead className="sticky top-0 z-10 shadow-sm">
-                <TR>
-                  <TH onClick={() => toggleSort(ledgerSort, setLedgerSort, 'customer', 'asc')} className="group">
-                    Customer <SortIcon sort={ledgerSort} sortKey="customer" />
-                  </TH>
-                  <TH align="right" onClick={() => toggleSort(ledgerSort, setLedgerSort, 'orders')} className="group">
-                    Total Orders <SortIcon sort={ledgerSort} sortKey="orders" />
-                  </TH>
-                  <TH align="right" onClick={() => toggleSort(ledgerSort, setLedgerSort, 'paid')} className="group">
-                    Total Paid <SortIcon sort={ledgerSort} sortKey="paid" />
-                  </TH>
-                  <TH align="right" onClick={() => toggleSort(ledgerSort, setLedgerSort, 'balance', 'asc')} className="group">
-                    Outstanding Balance <SortIcon sort={ledgerSort} sortKey="balance" />
-                  </TH>
-                  <TH align="right">Actions</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {sortedLedger.map((item, idx) => (
-                  <TR key={idx} className={idx % 2 === 1 ? 'bg-slate-50/40' : ''}>
-                    <TD className="font-bold text-slate-900">{item.customer}</TD>
-                    <TD align="right" className="text-slate-600 tabular-nums">{item.orders}</TD>
-                    <TD align="right" className="text-emerald-600 font-medium tabular-nums">{item.paid.toLocaleString()}</TD>
-                    <TD align="right">
-                      <span className={`font-bold tabular-nums ${item.balance !== 0 ? 'text-rose-600' : 'text-slate-400'}`}>
-                        {item.balance.toLocaleString()}
-                      </span>
-                    </TD>
-                    <TD align="right">
-                      <button className={`text-[11px] font-bold text-indigo-600 hover:text-indigo-700 uppercase tracking-widest ${focusRing} rounded`}>
-                        View Statement
-                      </button>
-                    </TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
-          </div>
-          {/* mobile scroll hint */}
-          <div className="md:hidden pointer-events-none absolute top-12 right-0 bottom-0 w-6 bg-gradient-to-l from-slate-400/25 to-transparent" />
-          <div className="md:hidden flex items-center justify-center gap-1.5 py-2 border-t border-slate-100 bg-slate-50/60 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-            <ChevronLeft className="h-3 w-3" /> Scroll for more columns <ChevronRight className="h-3 w-3" />
-          </div>
-        </div>
-      </Card>
-
-      {/* SYSTEM NOTIFICATIONS */}
-      <Card padding="none" className="overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-xl transition-all duration-300">
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Bell className="h-4 w-4 text-indigo-500" />
-            System Notifications
-          </h3>
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Recent Events</span>
-        </div>
-        <div className="flex flex-col items-center justify-center gap-2 text-center py-6">
-          <div className="p-2.5 rounded-full bg-slate-50 border border-slate-100">
-            <Bell className="h-4 w-4 text-slate-300" />
-          </div>
-          <p className="text-sm font-medium text-slate-400">Coming soon</p>
-        </div>
-      </Card>
-
       {/* CUSTOMER LOCATION MAP + VISIT TYPE / DECISION MAKER (real donuts) */}
       <div className="grid grid-cols-12 gap-5">
-        <Card padding="none" className="col-span-12 lg:col-span-8 overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-xl transition-all duration-300">
+        <Card padding="none" className="rounded-2xl col-span-12 lg:col-span-8 overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
           <div className="mb-6">
             <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
               <MapPin className="h-4 w-4 text-rose-500" />
@@ -1396,7 +1338,7 @@ const NewAdminPanel: React.FC = () => {
         </Card>
 
         <div className="col-span-12 lg:col-span-4 flex flex-col gap-5">
-          <Card padding="none" className="overflow-hidden p-6 border-slate-100 hover:shadow-xl transition-all duration-300 flex flex-col flex-1">
+          <Card padding="none" className="rounded-2xl overflow-hidden p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all flex flex-col flex-1">
             <div className="mb-4">
               <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
                 <Activity className="h-4 w-4 text-indigo-500" />
@@ -1434,7 +1376,7 @@ const NewAdminPanel: React.FC = () => {
             </div>
           </Card>
 
-          <Card padding="none" className="overflow-hidden p-6 border-slate-100 hover:shadow-xl transition-all duration-300 flex flex-col flex-1">
+          <Card padding="none" className="rounded-2xl overflow-hidden p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all flex flex-col flex-1">
             <div className="mb-4">
               <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
                 <Users className="h-4 w-4 text-emerald-500" />
@@ -1472,6 +1414,49 @@ const NewAdminPanel: React.FC = () => {
             </div>
           </Card>
         </div>
+      </div>
+
+      {/* VISIT TYPE DISTRIBUTION (placeholder) + DECISION MAKER SURVEY (placeholder) + SYSTEM NOTIFICATIONS */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <Card padding="none" className="rounded-2xl p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all flex flex-col min-h-[160px]">
+          <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <Phone className="h-4 w-4 text-indigo-500" />
+            Visit Type Distribution
+          </h3>
+          <p className="text-xs text-slate-500 font-medium mt-1">Sales rep engagement activity</p>
+          <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center py-4">
+            <div className="p-2.5 rounded-full bg-slate-50 border border-slate-100">
+              <Activity className="h-4 w-4 text-slate-300" />
+            </div>
+            <p className="text-xs font-medium text-slate-400">No data available yet</p>
+          </div>
+        </Card>
+        <Card padding="none" className="rounded-2xl p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all flex flex-col min-h-[160px]">
+          <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <Users className="h-4 w-4 text-emerald-500" />
+            Decision Maker Survey
+          </h3>
+          <p className="text-xs text-slate-500 font-medium mt-1">Sales visit effectiveness</p>
+          <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center py-4">
+            <div className="p-2.5 rounded-full bg-slate-50 border border-slate-100">
+              <Users className="h-4 w-4 text-slate-300" />
+            </div>
+            <p className="text-xs font-medium text-slate-400">Coming soon</p>
+          </div>
+        </Card>
+        <Card padding="none" className="rounded-2xl p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all flex flex-col min-h-[160px]">
+          <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <Bell className="h-4 w-4 text-indigo-500" />
+            System Notifications
+          </h3>
+          <p className="text-xs text-slate-500 font-medium mt-1">Recent events</p>
+          <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center py-4">
+            <div className="p-2.5 rounded-full bg-slate-50 border border-slate-100">
+              <Bell className="h-4 w-4 text-slate-300" />
+            </div>
+            <p className="text-xs font-medium text-slate-400">Coming soon</p>
+          </div>
+        </Card>
       </div>
     </div>
   );
