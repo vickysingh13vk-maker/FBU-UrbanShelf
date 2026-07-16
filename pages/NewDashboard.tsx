@@ -1012,91 +1012,84 @@ const NewAdminPanel: React.FC = () => {
         </Card>
       </div>
 
-      {/* BALANCE RANKING + 28 DAYS PAYMENT DUE */}
-      <div className="grid grid-cols-12 gap-5 items-stretch">
+      {/* ACTIVE CUSTOMER CARTS + INVENTORY MOVEMENT */}
+      <div className="grid grid-cols-12 gap-5">
         <Card padding="none" className="rounded-2xl col-span-12 lg:col-span-5 overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
             <div>
-              <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                <Wallet className="h-4 w-4 text-amber-500" />
-                Balance Ranking
-              </h3>
-              <p className="text-xs text-slate-500 font-medium mt-1">Top 10 by outstanding</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                  <ShoppingCart className="h-4 w-4 text-indigo-500" />
+                  Active Customer Carts
+                </h3>
+                <Badge variant="primary" className="text-[10px] whitespace-nowrap">{ACTIVE_CARTS_BADGE_NEW}</Badge>
+              </div>
+              <p className="text-xs text-slate-500 font-medium mt-1">Real-time abandoned cart monitoring</p>
             </div>
-            <Link
-              to="/customers"
-              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors whitespace-nowrap ${focusRing}`}
-            >
+            <button className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors whitespace-nowrap ${focusRing}`}>
               View All <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+            </button>
           </div>
-          <div className="-mx-6">
-            <Table className="w-full">
-              <THead>
-                <TR>
-                  <TH className="py-2">Customer</TH>
-                  <TH align="right" className="py-2">Outstanding</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {BALANCE_RANKING_NEW.map((item) => (
-                  <TR key={item.name}>
-                    <TD className="py-2">
-                      <span className="text-xs font-medium text-slate-700 block truncate max-w-[150px]">{item.name}</span>
-                    </TD>
-                    <TD align="right" className="py-2">
-                      <span className="text-xs font-medium text-rose-600 tabular-nums">{item.outstanding}</span>
-                    </TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
+          <div className="space-y-2.5 flex-1">
+            {ACTIVE_CARTS_NEW.map((cart) => (
+              <div key={cart.name} className="flex items-center justify-between border border-slate-100 rounded-xl px-4 py-3 hover:border-slate-200 hover:bg-slate-50/50 transition-colors">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-9 w-9 rounded-full bg-indigo-100 text-indigo-600 text-xs font-bold flex items-center justify-center shrink-0">{cart.avatar}</div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-slate-900 truncate">{cart.name}</p>
+                    <p className="text-[11px] text-slate-500 font-medium">{cart.items} item{cart.items !== 1 ? 's' : ''}</p>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-bold text-slate-900 tabular-nums">{cart.value}</p>
+                  <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Cart Value</p>
+                </div>
+              </div>
+            ))}
           </div>
         </Card>
 
-        <Card padding="none" className="rounded-2xl col-span-12 lg:col-span-7 overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
-          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <Card padding="none" className="rounded-2xl col-span-12 lg:col-span-7 overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all min-w-0">
+          <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-base font-bold text-slate-900 tracking-tight">28 Days Payment Due</h3>
-                <Badge variant="danger" className="text-[10px] uppercase tracking-wider">{PAYMENT_DUE_28_DAYS_NEW.rows.length} accounts</Badge>
-              </div>
-              <p className="text-xs text-slate-500 font-medium mt-1">Top {DUE_PREVIEW_COUNT} by amount pending</p>
+              <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                <RefreshCw className="h-4 w-4 text-emerald-500" />
+                Inventory Movement
+              </h3>
+              <p className="text-xs text-slate-500 font-medium mt-1">Stock inflow vs outflow</p>
             </div>
-            <Link
-              to="/payments-due"
-              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors whitespace-nowrap ${focusRing}`}
-            >
-              View All <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5">
+                <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                <span className="text-[10px] font-bold text-slate-500 uppercase">In</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="h-2 w-2 rounded-full bg-amber-500" />
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Mid</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="h-2 w-2 rounded-full bg-rose-500" />
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Out</span>
+              </div>
+            </div>
           </div>
-          <div className="-mx-6">
-            <Table className="w-full">
-              <THead>
-                <TR>
-                  <TH className="py-2">Customer</TH>
-                  <TH align="right" className="py-2">Total Pending</TH>
-                  <TH align="right" className="py-2">Orders</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {duePreview.map((row) => {
-                  const tier = getDueTier(row.pending);
-                  return (
-                    <TR key={row.name}>
-                      <TD className="py-1.5">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className={`h-2 w-2 rounded-full shrink-0 ${tier.border.replace('border-', 'bg-')}`} />
-                          <span className="text-xs font-medium text-indigo-600 truncate">{row.name}</span>
-                        </div>
-                      </TD>
-                      <TD align="right" className="py-1.5 text-xs font-medium text-rose-600 tabular-nums">{row.pending}</TD>
-                      <TD align="right" className="py-1.5 text-xs font-medium text-slate-900 tabular-nums">{row.orders}</TD>
-                    </TR>
-                  );
-                })}
-              </TBody>
-            </Table>
+          <div key={viewportWidth} className="flex-1 min-h-[230px] min-w-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={INVENTORY_MOVEMENT_NEW} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barGap={3}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="brand" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} width={32} />
+                <Tooltip
+                  contentStyle={{ borderRadius: '12px', border: '1px solid #f1f5f9', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)', padding: '10px 14px' }}
+                  labelStyle={{ fontSize: '11px', fontWeight: 700, color: '#64748b', marginBottom: 4 }}
+                  itemStyle={{ fontSize: '12px', fontWeight: 700 }}
+                  cursor={{ fill: '#f8fafc' }}
+                />
+                <Bar dataKey="in" name="In" fill="#10b981" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="mid" name="Mid" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="out" name="Out" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </Card>
       </div>
@@ -1240,84 +1233,91 @@ const NewAdminPanel: React.FC = () => {
         </Card>
       </div>
 
-      {/* ACTIVE CUSTOMER CARTS + INVENTORY MOVEMENT */}
-      <div className="grid grid-cols-12 gap-5">
+      {/* BALANCE RANKING + 28 DAYS PAYMENT DUE */}
+      <div className="grid grid-cols-12 gap-5 items-stretch">
         <Card padding="none" className="rounded-2xl col-span-12 lg:col-span-5 overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
-          <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                  <ShoppingCart className="h-4 w-4 text-indigo-500" />
-                  Active Customer Carts
-                </h3>
-                <Badge variant="primary" className="text-[10px] whitespace-nowrap">{ACTIVE_CARTS_BADGE_NEW}</Badge>
-              </div>
-              <p className="text-xs text-slate-500 font-medium mt-1">Real-time abandoned cart monitoring</p>
+              <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                <Wallet className="h-4 w-4 text-amber-500" />
+                Balance Ranking
+              </h3>
+              <p className="text-xs text-slate-500 font-medium mt-1">Top 10 by outstanding</p>
             </div>
-            <button className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors whitespace-nowrap ${focusRing}`}>
+            <Link
+              to="/customers"
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors whitespace-nowrap ${focusRing}`}
+            >
               View All <ArrowRight className="h-3.5 w-3.5" />
-            </button>
+            </Link>
           </div>
-          <div className="space-y-2.5 flex-1">
-            {ACTIVE_CARTS_NEW.map((cart) => (
-              <div key={cart.name} className="flex items-center justify-between border border-slate-100 rounded-xl px-4 py-3 hover:border-slate-200 hover:bg-slate-50/50 transition-colors">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="h-9 w-9 rounded-full bg-indigo-100 text-indigo-600 text-xs font-bold flex items-center justify-center shrink-0">{cart.avatar}</div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-slate-900 truncate">{cart.name}</p>
-                    <p className="text-[11px] text-slate-500 font-medium">{cart.items} item{cart.items !== 1 ? 's' : ''}</p>
-                  </div>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-sm font-bold text-slate-900 tabular-nums">{cart.value}</p>
-                  <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Cart Value</p>
-                </div>
-              </div>
-            ))}
+          <div className="-mx-6">
+            <Table className="w-full">
+              <THead>
+                <TR>
+                  <TH className="py-2">Customer</TH>
+                  <TH align="right" className="py-2">Outstanding</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {BALANCE_RANKING_NEW.map((item) => (
+                  <TR key={item.name}>
+                    <TD className="py-2">
+                      <span className="text-xs font-medium text-slate-700 block truncate max-w-[150px]">{item.name}</span>
+                    </TD>
+                    <TD align="right" className="py-2">
+                      <span className="text-xs font-medium text-rose-600 tabular-nums">{item.outstanding}</span>
+                    </TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
           </div>
         </Card>
 
-        <Card padding="none" className="rounded-2xl col-span-12 lg:col-span-7 overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all min-w-0">
-          <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <Card padding="none" className="rounded-2xl col-span-12 lg:col-span-7 overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
             <div>
-              <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                <RefreshCw className="h-4 w-4 text-emerald-500" />
-                Inventory Movement
-              </h3>
-              <p className="text-xs text-slate-500 font-medium mt-1">Stock inflow vs outflow</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base font-bold text-slate-900 tracking-tight">28 Days Payment Due</h3>
+                <Badge variant="danger" className="text-[10px] uppercase tracking-wider">{PAYMENT_DUE_28_DAYS_NEW.rows.length} accounts</Badge>
+              </div>
+              <p className="text-xs text-slate-500 font-medium mt-1">Top {DUE_PREVIEW_COUNT} by amount pending</p>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5">
-                <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                <span className="text-[10px] font-bold text-slate-500 uppercase">In</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="h-2 w-2 rounded-full bg-amber-500" />
-                <span className="text-[10px] font-bold text-slate-500 uppercase">Mid</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="h-2 w-2 rounded-full bg-rose-500" />
-                <span className="text-[10px] font-bold text-slate-500 uppercase">Out</span>
-              </div>
-            </div>
+            <Link
+              to="/payments-due"
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors whitespace-nowrap ${focusRing}`}
+            >
+              View All <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
-          <div key={viewportWidth} className="flex-1 min-h-[230px] min-w-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={INVENTORY_MOVEMENT_NEW} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barGap={3}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="brand" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} width={32} />
-                <Tooltip
-                  contentStyle={{ borderRadius: '12px', border: '1px solid #f1f5f9', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)', padding: '10px 14px' }}
-                  labelStyle={{ fontSize: '11px', fontWeight: 700, color: '#64748b', marginBottom: 4 }}
-                  itemStyle={{ fontSize: '12px', fontWeight: 700 }}
-                  cursor={{ fill: '#f8fafc' }}
-                />
-                <Bar dataKey="in" name="In" fill="#10b981" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="mid" name="Mid" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="out" name="Out" fill="#f43f5e" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="-mx-6">
+            <Table className="w-full">
+              <THead>
+                <TR>
+                  <TH className="py-2">Customer</TH>
+                  <TH align="right" className="py-2">Total Pending</TH>
+                  <TH align="right" className="py-2">Orders</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {duePreview.map((row) => {
+                  const tier = getDueTier(row.pending);
+                  return (
+                    <TR key={row.name}>
+                      <TD className="py-1.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={`h-2 w-2 rounded-full shrink-0 ${tier.border.replace('border-', 'bg-')}`} />
+                          <span className="text-xs font-medium text-indigo-600 truncate">{row.name}</span>
+                        </div>
+                      </TD>
+                      <TD align="right" className="py-1.5 text-xs font-medium text-rose-600 tabular-nums">{row.pending}</TD>
+                      <TD align="right" className="py-1.5 text-xs font-medium text-slate-900 tabular-nums">{row.orders}</TD>
+                    </TR>
+                  );
+                })}
+              </TBody>
+            </Table>
           </div>
         </Card>
       </div>
