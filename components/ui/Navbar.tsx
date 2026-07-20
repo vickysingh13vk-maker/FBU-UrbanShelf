@@ -30,7 +30,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  const isDashboard = location.pathname === '/';
+  const isDashboard = location.pathname === '/' || location.pathname === '/new-dashboard';
   const isSupplier = user?.roleName === 'Supplier';
   const isSalesRep = user?.roleName === 'Sales Rep';
   const isSalesDashboard = location.pathname === '/sales/dashboard';

@@ -194,6 +194,101 @@ export const DECISION_MAKER_SURVEY_NEW = [
   { name: 'No', value: 410, color: '#ef4444' },
 ];
 
+export const SALES_PERFORMANCE_KPI_NEW = {
+  totalSales: '£69,314',
+  totalOrders: 10,
+};
+
+export const SALES_COMMISSION_LEDGER_NEW = [
+  { name: 'Rishi Arora', role: 'Sales Rep', earned: '£319.66', paid: '£0.00' },
+  { name: 'Alex Chawla', role: 'Sales Rep', earned: '£653.58', paid: '£0.00' },
+  { name: 'Manjit Singh', role: 'Sales Rep', earned: '£262.28', paid: '£0.00' },
+];
+
+export const FINANCE_PERFORMANCE_KPI_NEW = {
+  totalReceivable: '£0',
+  overduePayments: '£0',
+  totalRevenue: '£69,314',
+  receivedToday: '£15,348',
+};
+
+export const INVENTORY_PERFORMANCE_KPI_NEW = {
+  totalSkus: 614,
+  unitsInStock: 1045252,
+  inventoryValue: '£2,388,246.56',
+  lowStockSkus: 228,
+  outOfStock: 225,
+  overstockSkus: 50,
+};
+
+// Transcribed from the Inventory tab's own capture — a different snapshot from
+// INVENTORY_STOCK_OVERVIEW_NEW (used by Admin/Sales/Finance), so kept separate
+// rather than overwritten.
+export const INVENTORY_TAB_STOCK_NEW: { name: string; stock: number; health: 'healthy' | 'low' | 'critical' }[] = [
+  { name: 'VELO NICOTINE POUCHE 4MG', stock: 0, health: 'critical' },
+  { name: 'OXVA NEXLIM GO KIT', stock: 2216, health: 'low' },
+  { name: 'LOST MARY NERA 30K KIT', stock: 7648, health: 'healthy' },
+  { name: 'VELO NICOTINE POUCHE 10MG', stock: 11725, health: 'healthy' },
+  { name: 'LOST MARY BM6000 KIT', stock: 8819, health: 'healthy' },
+  { name: 'Minecraft Drink', stock: 19002, health: 'healthy' },
+  { name: 'ELFBAR PLUS50 PACK', stock: 30118, health: 'healthy' },
+  { name: 'ELFBAR PLUS12 KIT', stock: 16326, health: 'healthy' },
+  { name: 'LOST MARY NERA 15K POD', stock: 101034, health: 'healthy' },
+  { name: 'ELFBAR 600 KIT', stock: 89051, health: 'healthy' },
+  { name: 'LOST MARY NERA15K KIT', stock: 65215, health: 'healthy' },
+  { name: 'HAWCOS CRYSTAL 600 KIT', stock: 300118, health: 'healthy' },
+  { name: 'VELO NICOTINE POUCHE 8MG', stock: 120, health: 'critical' },
+  { name: 'VELO NICOTINE POUCHE 17MG', stock: 4320, health: 'healthy' },
+  { name: 'VELO NICOTINE POUCHE 14MG', stock: 3100, health: 'healthy' },
+  { name: 'ELFBAR 600 POD', stock: 51290, health: 'healthy' },
+  { name: 'HAGIMI PRO MAX CDU', stock: 12500, health: 'healthy' },
+  { name: 'LOST MARY BM600 KIT', stock: 7440, health: 'healthy' },
+  { name: 'LOST MARY BM6000 POD', stock: 2110, health: 'low' },
+  { name: 'LOST MARY BM600 POD', stock: 1480, health: 'critical' },
+  { name: 'HAWCOS CRYSTAL 600 POD', stock: 264550, health: 'healthy' },
+  { name: 'VELO NICOTINE POUCHE 6MG', stock: 740, health: 'critical' },
+  { name: 'GEEKBAR HAGIMI PRO MAX POD', stock: 10000, health: 'healthy' },
+  { name: 'GEEKBAR HAGIMI PRO MAX KIT', stock: 3980, health: 'healthy' },
+  { name: 'ELFBAR PLUS50 KIT', stock: 7310, health: 'healthy' },
+  { name: 'OXVA XLIM TOP FILL CARTRIDGE', stock: 9400, health: 'healthy' },
+  { name: 'OXVA NEXLIM CARTRIDGE', stock: 5100, health: 'healthy' },
+  { name: 'OXVA XLIM PRO 3 KIT', stock: 2640, health: 'low' },
+  { name: 'OXVA XLIM GO 2 KIT', stock: 1600, health: 'critical' },
+  { name: 'OXVA XLIM GO LITE KIT', stock: 4000, health: 'healthy' },
+  { name: 'OXVA NEXLIM KIT', stock: 2300, health: 'low' },
+];
+
+export const INVENTORY_AI_INSIGHTS_NEW: { text: string; tag: 'CRITICAL' | 'WARNING' | 'ACTION' }[] = [
+  { text: '225 SKUs are out of stock and need immediate restocking.', tag: 'CRITICAL' },
+  { text: '228 SKUs are running low (≤1000 units remaining).', tag: 'WARNING' },
+  { text: '50 SKUs are overstocked (≥3000 units). Consider running promotions.', tag: 'ACTION' },
+  { text: '20 SKUs have zero sales in this period — review for clearance or removal.', tag: 'WARNING' },
+  { text: 'Top-selling SKU "ELFBAR 600 KIT" moved 40980 units — ensure adequate stock levels.', tag: 'ACTION' },
+];
+
+export const WORST_PERFORMING_SKUS_NEW = [
+  { sku: '8008006344939', product: 'LOST MARY BM600 POD', brand: 'Lost Mary', type: 'Lost Mary BM600 Prefilled Pods', sales: 0, stock: 400 },
+  { sku: '5000393179500', product: 'VELO NICOTINE POUCHE 10MG', brand: 'Velo', type: 'Velo', sales: 0, stock: 1200 },
+  { sku: '5000393179531', product: 'VELO NICOTINE POUCHE 10MG', brand: 'Velo', type: 'Velo', sales: 0, stock: 960 },
+  { sku: '5000393190796', product: 'VELO NICOTINE POUCHE 14MG', brand: 'Velo', type: 'Velo', sales: 0, stock: 120 },
+  { sku: '5000393190611', product: 'VELO NICOTINE POUCHE 14MG', brand: 'Velo', type: 'Velo', sales: 0, stock: 80 },
+  { sku: '5000393021588', product: 'VELO NICOTINE POUCHE 8MG', brand: 'Velo', type: 'Velo', sales: 0, stock: 110 },
+  { sku: '5000393184252', product: 'VELO NICOTINE POUCHE 10MG', brand: 'Velo', type: 'Velo', sales: 0, stock: 50 },
+  { sku: '5000393191069', product: 'VELO NICOTINE POUCHE 10MG', brand: 'Velo', type: 'Velo', sales: 0, stock: 1200 },
+  { sku: '699f2ce5803910e6c52ec5d8', product: 'LOST MARY BM6000 POD', brand: 'Lost Mary', type: 'Lost Mary BM 6000 Prefilled Pods', sales: 0, stock: 400 },
+  { sku: '69a6255f33ab25f42e7e6bcc', product: 'LOST MARY BM600 KIT', brand: 'Lost Mary', type: 'Lost Mary BM600 Prefilled Kits', sales: 0, stock: 400 },
+  { sku: '8008006337092', product: 'LOST MARY BM600 KIT', brand: 'Lost Mary', type: 'Lost Mary BM600 Prefilled Kits', sales: 0, stock: 400 },
+  { sku: '69af32fdf23b451a66fe8d17', product: 'LOST MARY BM6000 POD', brand: 'Lost Mary', type: 'Lost Mary BM 6000 Prefilled Pods', sales: 0, stock: 200 },
+  { sku: '69af32f6f23b451a66fe8d16', product: 'LOST MARY BM6000 POD', brand: 'Lost Mary', type: 'Lost Mary BM 6000 Prefilled Pods', sales: 0, stock: 200 },
+  { sku: '6a313ee92598aa64f84a9954', product: 'LOST MARY BM6000 KIT', brand: 'Lost Mary', type: 'Lost Mary BM 6000 Prefilled Kits', sales: 0, stock: 200 },
+  { sku: '6a400265196f09d7bb0fbcd9', product: 'LOST MARY BM6000 POD', brand: 'Lost Mary', type: 'Lost Mary BM 6000 Prefilled Kits', sales: 0, stock: 200 },
+  { sku: '6a400402196f09d7bb1042ed', product: 'LOST MARY BM600 KIT', brand: 'Lost Mary', type: 'LOST MARY BM600 KIT', sales: 0, stock: 400 },
+  { sku: '6a400403196f09d7bb1042f7', product: 'LOST MARY BM600 KIT', brand: 'Lost Mary', type: 'LOST MARY BM600 KIT', sales: 0, stock: 400 },
+  { sku: '6a400405196f09d7bb104301', product: 'LOST MARY BM600 KIT', brand: 'Lost Mary', type: 'LOST MARY BM600 KIT', sales: 0, stock: 400 },
+  { sku: '6a400408196f09d7bb10430b', product: 'LOST MARY BM600 KIT', brand: 'Lost Mary', type: 'LOST MARY BM600 KIT', sales: 0, stock: 400 },
+  { sku: '6a4933573859280db358e79a', product: 'OXVA XLIM PRO 3 KIT', brand: 'OXVA', type: 'OXVA XLIM PRO 3 KIT', sales: 0, stock: 300 },
+];
+
 export const CUSTOMER_LOCATIONS_NEW = [
   { city: 'Southall, West London', lat: 51.5077, lng: -0.3720, count: 1 },
   { city: 'City of London / Westminster', lat: 51.5074, lng: -0.1278, count: 1 },

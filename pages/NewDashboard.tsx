@@ -9,7 +9,7 @@ import {
   PlusCircle, Printer, FileDown, Search, Bell, User as UserIcon,
   ChevronRight, ChevronLeft, MapPin, MoreHorizontal, Filter, Info, RefreshCw, ArrowUp, ArrowDown, ArrowUpDown,
   Plus, Minus, RotateCcw, Activity, Phone, Mail, Lock, UserPlus, Upload, ShieldCheck, Check, X,
-  CheckCircle2, Zap
+  CheckCircle2, Zap, Briefcase, ShoppingBag
 } from 'lucide-react';
 import { 
   Card, Button, Badge, Table, THead, TBody, TR, TH, TD, CardHeader,
@@ -88,6 +88,8 @@ import {
   REVENUE_TREND_NEW, RECENT_ORDERS_NEW, ACTIVE_CARTS_BADGE_NEW, ACTIVE_CARTS_NEW,
   INVENTORY_MOVEMENT_NEW, VISIT_TYPE_DISTRIBUTION_NEW, DECISION_MAKER_SURVEY_NEW,
   CUSTOMER_LOCATIONS_NEW, CUSTOMER_LEDGER_NEW,
+  SALES_PERFORMANCE_KPI_NEW, SALES_COMMISSION_LEDGER_NEW, FINANCE_PERFORMANCE_KPI_NEW,
+  INVENTORY_PERFORMANCE_KPI_NEW, INVENTORY_TAB_STOCK_NEW, INVENTORY_AI_INSIGHTS_NEW, WORST_PERFORMING_SKUS_NEW,
 } from '../data/newDashboardData';
 
 // --- Sub-Components ---
@@ -584,6 +586,254 @@ const getStockBrand = (name: string): string => {
   return 'OTHER';
 };
 
+const InventoryStockOverviewCard: React.FC<{ data?: typeof INVENTORY_STOCK_OVERVIEW_NEW }> = ({ data = INVENTORY_STOCK_OVERVIEW_NEW }) => {
+  const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus-visible:ring-offset-1';
+
+  const [stockSearch, setStockSearch] = useState('');
+  const [stockBrandFilter, setStockBrandFilter] = useState('All');
+  const [stockStatusFilter, setStockStatusFilter] = useState('All');
+  const stockBrands = useMemo(
+    () => Array.from(new Set(data.map((item) => getStockBrand(item.name)))).sort(),
+    [data]
+  );
+  // "Overstock" has no dedicated health flag in the source data — the only remaining
+  // (green) bucket once Critical and Low are accounted for is "healthy", so it maps there.
+  const STOCK_STATUS_TO_HEALTH: Record<string, string> = {
+    'Critical Stock': 'critical',
+    'Low Stock': 'low',
+    'Overstock': 'healthy',
+  };
+  const filteredStockOverview = useMemo(() => {
+    const query = stockSearch.trim().toLowerCase();
+    return data.filter((item) => {
+      const matchesSearch = !query || item.name.toLowerCase().includes(query);
+      const matchesBrand = stockBrandFilter === 'All' || getStockBrand(item.name) === stockBrandFilter;
+      const matchesStatus = stockStatusFilter === 'All' || item.health === STOCK_STATUS_TO_HEALTH[stockStatusFilter];
+      return matchesSearch && matchesBrand && matchesStatus;
+    });
+  }, [data, stockSearch, stockBrandFilter, stockStatusFilter]);
+  const hasActiveStockFilters = !!stockSearch.trim() || stockBrandFilter !== 'All' || stockStatusFilter !== 'All';
+  const maxStock = useMemo(() => Math.max(...data.map((item) => item.stock)), [data]);
+
+  return (
+    <Card padding="none" className="rounded-2xl col-span-12 lg:col-span-6 flex flex-col p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div>
+          <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <Warehouse className="h-4 w-4 text-indigo-500" />
+            Inventory Stock Overview
+          </h3>
+          <p className="text-xs text-slate-500 font-medium mt-1">
+            Stock levels per product line · {filteredStockOverview.length} of {data.length} SKUs · scroll for more
+          </p>
+        </div>
+        <Link
+          to="/inventory"
+          className={`text-[11px] font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors uppercase tracking-wider ${focusRing}`}
+        >
+          Manage Inventory
+        </Link>
+      </div>
+      <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 mb-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          <Input
+            icon={<Search className="h-4 w-4" />}
+            type="text"
+            placeholder="Search product name..."
+            aria-label="Search stock overview by product name"
+            value={stockSearch}
+            onChange={(e) => setStockSearch(e.target.value)}
+            className="text-xs py-2 bg-white flex-1 sm:min-w-[180px]"
+          />
+          <div className="shrink-0 sm:w-[150px]">
+            <Select
+              id="stock-brand-filter"
+              icon={<Tag className="h-3.5 w-3.5" />}
+              aria-label="Filter stock overview by brand"
+              value={stockBrandFilter}
+              onChange={(e) => setStockBrandFilter(e.target.value)}
+              className="text-xs py-2 bg-white"
+              options={['All', ...stockBrands]}
+            />
+          </div>
+          <div className="shrink-0 sm:w-[170px]">
+            <Select
+              id="stock-status-filter"
+              icon={<Filter className="h-3.5 w-3.5" />}
+              aria-label="Filter stock overview by stock status"
+              value={stockStatusFilter}
+              onChange={(e) => setStockStatusFilter(e.target.value)}
+              className="text-xs py-2 bg-white"
+              options={['All', 'Critical Stock', 'Low Stock', 'Overstock']}
+            />
+          </div>
+          {hasActiveStockFilters && (
+            <button
+              onClick={() => { setStockSearch(''); setStockBrandFilter('All'); setStockStatusFilter('All'); }}
+              className={`flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-rose-600 bg-white border border-rose-100 hover:bg-rose-50 rounded-xl transition-colors shrink-0 ${focusRing}`}
+            >
+              <X className="h-3.5 w-3.5" /> Clear
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="flex-1 min-h-0 max-h-[420px] overflow-y-auto space-y-2.5 pr-1 custom-scrollbar">
+        {filteredStockOverview.length === 0 && (
+          <p className="text-sm text-slate-400 font-medium text-center py-8">No SKUs match your filters.</p>
+        )}
+        {filteredStockOverview.map((item) => {
+          const barColor = item.health === 'critical' ? 'bg-rose-500' : item.health === 'low' ? 'bg-amber-500' : 'bg-emerald-500';
+          const ratio = Math.min(100, (item.stock / maxStock) * 100);
+          return (
+            <div key={item.name} className="flex items-center gap-4">
+              <span className="text-[11px] text-slate-600 font-bold w-56 text-right truncate shrink-0" title={item.name}>{item.name}</span>
+              <div className="flex-1 h-2.5 bg-slate-100 rounded-full relative overflow-hidden">
+                <div className={`h-full rounded-full ${barColor} transition-[width] duration-500`} style={{ width: `${Math.max(ratio, item.stock > 0 ? 1 : 0)}%` }} />
+              </div>
+              <span className="text-[11px] font-bold text-slate-500 w-16 text-right font-mono tabular-nums shrink-0">{item.stock.toLocaleString()}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-6 pt-4 border-t border-slate-100 flex justify-between items-center flex-wrap gap-3">
+        <div className="flex gap-5">
+          <div className="flex items-center gap-2">
+            <div className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Healthy</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Low</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-2.5 w-2.5 rounded-full bg-rose-500" />
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Critical</span>
+          </div>
+        </div>
+        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100">Target: 30% Buffer</span>
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2.5">
+        <span className="px-3 py-1.5 rounded-lg bg-rose-50 text-rose-600 text-[11px] font-bold uppercase tracking-wider border border-rose-100">Critical Stock</span>
+        <span className="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-600 text-[11px] font-bold uppercase tracking-wider border border-amber-100">Low Stock</span>
+        <span className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 text-[11px] font-bold uppercase tracking-wider border border-emerald-100">Overstock</span>
+      </div>
+    </Card>
+  );
+};
+
+const TopSellingProductsCard: React.FC = () => {
+  type SortDir = 'asc' | 'desc';
+  type SortState = { key: string; dir: SortDir } | null;
+  const toggleSort = (current: SortState, setter: (s: SortState) => void, key: string, defaultDir: SortDir = 'desc') => {
+    if (!current || current.key !== key) return setter({ key, dir: defaultDir });
+    setter({ key, dir: current.dir === 'asc' ? 'desc' : 'asc' });
+  };
+  const SortIcon = ({ sort, sortKey }: { sort: SortState; sortKey: string }) => {
+    if (!sort || sort.key !== sortKey) return <ArrowUpDown className="h-3 w-3 text-slate-300 group-hover:text-slate-400 inline ml-1" />;
+    return sort.dir === 'asc'
+      ? <ArrowUp className="h-3 w-3 text-indigo-600 inline ml-1" />
+      : <ArrowDown className="h-3 w-3 text-indigo-600 inline ml-1" />;
+  };
+
+  const [topSellingSort, setTopSellingSort] = useState<SortState>(null);
+  const sortedTopSelling = useMemo(() => {
+    if (!topSellingSort) return TOP_SELLING_NEW;
+    const { key, dir } = topSellingSort;
+    const mul = dir === 'asc' ? 1 : -1;
+    return [...TOP_SELLING_NEW].sort((a: any, b: any) =>
+      key === 'product' ? a.product.localeCompare(b.product) * mul : (a[key] - b[key]) * mul
+    );
+  }, [topSellingSort]);
+
+  return (
+    <Card padding="none" className="rounded-2xl col-span-12 lg:col-span-6 overflow-hidden flex flex-col border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
+      <CardHeader title="Top Selling Products" description="Ranked by boxes sold this month" className="p-6 border-b border-slate-100 mb-0" />
+      <div className="overflow-x-auto">
+        <Table>
+          <THead>
+            <TR>
+              <TH className="py-2">Rank</TH>
+              <TH className="py-2 group" onClick={() => toggleSort(topSellingSort, setTopSellingSort, 'product', 'asc')}>
+                Product <SortIcon sort={topSellingSort} sortKey="product" />
+              </TH>
+              <TH align="right" className="py-2 group" onClick={() => toggleSort(topSellingSort, setTopSellingSort, 'boxes')}>
+                Boxes <SortIcon sort={topSellingSort} sortKey="boxes" />
+              </TH>
+              <TH align="right" className="py-2 group" onClick={() => toggleSort(topSellingSort, setTopSellingSort, 'units')}>
+                Units <SortIcon sort={topSellingSort} sortKey="units" />
+              </TH>
+              <TH align="center" className="py-2">Trend</TH>
+            </TR>
+          </THead>
+          <TBody>
+            {sortedTopSelling.map((row) => (
+              <TR key={row.rank}>
+                <TD className="py-2">
+                  <span className="h-6 w-6 rounded-lg bg-slate-100 text-slate-600 text-[11px] font-bold flex items-center justify-center tabular-nums">{row.rank}</span>
+                </TD>
+                <TD className="py-2 text-xs font-medium text-slate-900 truncate max-w-[160px]">{row.product}</TD>
+                <TD align="right" className="py-2 text-xs font-medium text-slate-600 tabular-nums">{row.boxes}</TD>
+                <TD align="right" className="py-2 text-xs font-medium text-slate-600 tabular-nums">{row.units}</TD>
+                <TD align="center" className="py-2">
+                  {row.trend === 'up'
+                    ? <TrendingUp className="h-4 w-4 text-emerald-500 inline" />
+                    : <TrendingDown className="h-4 w-4 text-rose-500 inline" />}
+                </TD>
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      </div>
+    </Card>
+  );
+};
+
+const BalanceRankingCard: React.FC = () => {
+  const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus-visible:ring-offset-1';
+
+  return (
+    <Card padding="none" className="rounded-2xl col-span-12 lg:col-span-5 overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <Wallet className="h-4 w-4 text-amber-500" />
+            Balance Ranking
+          </h3>
+          <p className="text-xs text-slate-500 font-medium mt-1">Top 10 by outstanding</p>
+        </div>
+        <Link
+          to="/customers"
+          className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors whitespace-nowrap ${focusRing}`}
+        >
+          View All <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
+      <div className="-mx-6">
+        <Table className="w-full">
+          <THead>
+            <TR>
+              <TH className="py-2">Customer</TH>
+              <TH align="right" className="py-2">Outstanding</TH>
+            </TR>
+          </THead>
+          <TBody>
+            {BALANCE_RANKING_NEW.map((item) => (
+              <TR key={item.name}>
+                <TD className="py-2">
+                  <span className="text-xs font-medium text-slate-700 block truncate max-w-[150px]">{item.name}</span>
+                </TD>
+                <TD align="right" className="py-2">
+                  <span className="text-xs font-medium text-rose-600 tabular-nums">{item.outstanding}</span>
+                </TD>
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      </div>
+    </Card>
+  );
+};
+
 const NewAdminPanel: React.FC = () => {
   const kpiIconMap: any = {
     sales: { icon: ShoppingCart, color: 'indigo', hero: true },
@@ -612,45 +862,6 @@ const NewAdminPanel: React.FC = () => {
     };
   }, []);
 
-  const [stockSearch, setStockSearch] = useState('');
-  const [stockBrandFilter, setStockBrandFilter] = useState('All');
-  const [stockStatusFilter, setStockStatusFilter] = useState('All');
-  const stockBrands = useMemo(
-    () => Array.from(new Set(INVENTORY_STOCK_OVERVIEW_NEW.map((item) => getStockBrand(item.name)))).sort(),
-    []
-  );
-  // "Overstock" has no dedicated health flag in the source data — the only remaining
-  // (green) bucket once Critical and Low are accounted for is "healthy", so it maps there.
-  const STOCK_STATUS_TO_HEALTH: Record<string, string> = {
-    'Critical Stock': 'critical',
-    'Low Stock': 'low',
-    'Overstock': 'healthy',
-  };
-  const filteredStockOverview = useMemo(() => {
-    const query = stockSearch.trim().toLowerCase();
-    return INVENTORY_STOCK_OVERVIEW_NEW.filter((item) => {
-      const matchesSearch = !query || item.name.toLowerCase().includes(query);
-      const matchesBrand = stockBrandFilter === 'All' || getStockBrand(item.name) === stockBrandFilter;
-      const matchesStatus = stockStatusFilter === 'All' || item.health === STOCK_STATUS_TO_HEALTH[stockStatusFilter];
-      return matchesSearch && matchesBrand && matchesStatus;
-    });
-  }, [stockSearch, stockBrandFilter, stockStatusFilter]);
-  const hasActiveStockFilters = !!stockSearch.trim() || stockBrandFilter !== 'All' || stockStatusFilter !== 'All';
-
-  // ---- Generic column-sort helpers (used only on tables large/varied enough to need it) ----
-  type SortDir = 'asc' | 'desc';
-  type SortState = { key: string; dir: SortDir } | null;
-  const toggleSort = (current: SortState, setter: (s: SortState) => void, key: string, defaultDir: SortDir = 'desc') => {
-    if (!current || current.key !== key) return setter({ key, dir: defaultDir });
-    setter({ key, dir: current.dir === 'asc' ? 'desc' : 'asc' });
-  };
-  const SortIcon = ({ sort, sortKey }: { sort: SortState; sortKey: string }) => {
-    if (!sort || sort.key !== sortKey) return <ArrowUpDown className="h-3 w-3 text-slate-300 group-hover:text-slate-400 inline ml-1" />;
-    return sort.dir === 'asc'
-      ? <ArrowUp className="h-3 w-3 text-indigo-600 inline ml-1" />
-      : <ArrowDown className="h-3 w-3 text-indigo-600 inline ml-1" />;
-  };
-
   // Dashboard card is a preview only — full sort/search/pagination lives on the dedicated /customer-ledger page
   const LEDGER_PREVIEW_COUNT = 8;
   const ledgerPreview = useMemo(
@@ -661,16 +872,6 @@ const NewAdminPanel: React.FC = () => {
   // Dashboard card is a preview only — full sort/search/pagination lives on the dedicated /payments-due page
   const DUE_PREVIEW_COUNT = 10;
   const duePreview = PAYMENT_DUE_28_DAYS_NEW.rows.slice(0, DUE_PREVIEW_COUNT);
-
-  const [topSellingSort, setTopSellingSort] = useState<SortState>(null);
-  const sortedTopSelling = useMemo(() => {
-    if (!topSellingSort) return TOP_SELLING_NEW;
-    const { key, dir } = topSellingSort;
-    const mul = dir === 'asc' ? 1 : -1;
-    return [...TOP_SELLING_NEW].sort((a: any, b: any) =>
-      key === 'product' ? a.product.localeCompare(b.product) * mul : (a[key] - b[key]) * mul
-    );
-  }, [topSellingSort]);
 
   return (
     <div className="space-y-6 pb-20">
@@ -868,148 +1069,8 @@ const NewAdminPanel: React.FC = () => {
 
       {/* INVENTORY STOCK OVERVIEW + TOP SELLING PRODUCTS */}
       <div className="grid grid-cols-12 gap-5 items-start">
-        <Card padding="none" className="rounded-2xl col-span-12 lg:col-span-6 flex flex-col p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
-          <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                <Warehouse className="h-4 w-4 text-indigo-500" />
-                Inventory Stock Overview
-              </h3>
-              <p className="text-xs text-slate-500 font-medium mt-1">
-                Stock levels per product line · {filteredStockOverview.length} of {INVENTORY_STOCK_OVERVIEW_NEW.length} SKUs · scroll for more
-              </p>
-            </div>
-            <Link
-              to="/inventory"
-              className={`text-[11px] font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors uppercase tracking-wider ${focusRing}`}
-            >
-              Manage Inventory
-            </Link>
-          </div>
-          <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-3 mb-4">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-              <Input
-                icon={<Search className="h-4 w-4" />}
-                type="text"
-                placeholder="Search product name..."
-                aria-label="Search stock overview by product name"
-                value={stockSearch}
-                onChange={(e) => setStockSearch(e.target.value)}
-                className="text-xs py-2 bg-white flex-1 sm:min-w-[180px]"
-              />
-              <div className="shrink-0 sm:w-[150px]">
-                <Select
-                  id="stock-brand-filter"
-                  icon={<Tag className="h-3.5 w-3.5" />}
-                  aria-label="Filter stock overview by brand"
-                  value={stockBrandFilter}
-                  onChange={(e) => setStockBrandFilter(e.target.value)}
-                  className="text-xs py-2 bg-white"
-                  options={['All', ...stockBrands]}
-                />
-              </div>
-              <div className="shrink-0 sm:w-[170px]">
-                <Select
-                  id="stock-status-filter"
-                  icon={<Filter className="h-3.5 w-3.5" />}
-                  aria-label="Filter stock overview by stock status"
-                  value={stockStatusFilter}
-                  onChange={(e) => setStockStatusFilter(e.target.value)}
-                  className="text-xs py-2 bg-white"
-                  options={['All', 'Critical Stock', 'Low Stock', 'Overstock']}
-                />
-              </div>
-              {hasActiveStockFilters && (
-                <button
-                  onClick={() => { setStockSearch(''); setStockBrandFilter('All'); setStockStatusFilter('All'); }}
-                  className={`flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-rose-600 bg-white border border-rose-100 hover:bg-rose-50 rounded-xl transition-colors shrink-0 ${focusRing}`}
-                >
-                  <X className="h-3.5 w-3.5" /> Clear
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="flex-1 min-h-0 max-h-[420px] overflow-y-auto space-y-2.5 pr-1 custom-scrollbar">
-            {filteredStockOverview.length === 0 && (
-              <p className="text-sm text-slate-400 font-medium text-center py-8">No SKUs match your filters.</p>
-            )}
-            {filteredStockOverview.map((item) => {
-              const barColor = item.health === 'critical' ? 'bg-rose-500' : item.health === 'low' ? 'bg-amber-500' : 'bg-emerald-500';
-              const ratio = Math.min(100, (item.stock / 300538) * 100);
-              return (
-                <div key={item.name} className="flex items-center gap-4">
-                  <span className="text-[11px] text-slate-600 font-bold w-56 text-right truncate shrink-0" title={item.name}>{item.name}</span>
-                  <div className="flex-1 h-2.5 bg-slate-100 rounded-full relative overflow-hidden">
-                    <div className={`h-full rounded-full ${barColor} transition-[width] duration-500`} style={{ width: `${Math.max(ratio, item.stock > 0 ? 1 : 0)}%` }} />
-                  </div>
-                  <span className="text-[11px] font-bold text-slate-500 w-16 text-right font-mono tabular-nums shrink-0">{item.stock.toLocaleString()}</span>
-                </div>
-              );
-            })}
-          </div>
-          <div className="mt-6 pt-4 border-t border-slate-100 flex justify-between items-center flex-wrap gap-3">
-            <div className="flex gap-5">
-              <div className="flex items-center gap-2">
-                <div className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Healthy</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-2.5 w-2.5 rounded-full bg-amber-500" />
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Low</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-2.5 w-2.5 rounded-full bg-rose-500" />
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Critical</span>
-              </div>
-            </div>
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100">Target: 30% Buffer</span>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2.5">
-            <span className="px-3 py-1.5 rounded-lg bg-rose-50 text-rose-600 text-[11px] font-bold uppercase tracking-wider border border-rose-100">Critical Stock</span>
-            <span className="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-600 text-[11px] font-bold uppercase tracking-wider border border-amber-100">Low Stock</span>
-            <span className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 text-[11px] font-bold uppercase tracking-wider border border-emerald-100">Overstock</span>
-          </div>
-        </Card>
-
-        <Card padding="none" className="rounded-2xl col-span-12 lg:col-span-6 overflow-hidden flex flex-col border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
-          <CardHeader title="Top Selling Products" description="Ranked by boxes sold this month" className="p-6 border-b border-slate-100 mb-0" />
-          <div className="overflow-x-auto">
-            <Table>
-              <THead>
-                <TR>
-                  <TH className="py-2">Rank</TH>
-                  <TH className="py-2 group" onClick={() => toggleSort(topSellingSort, setTopSellingSort, 'product', 'asc')}>
-                    Product <SortIcon sort={topSellingSort} sortKey="product" />
-                  </TH>
-                  <TH align="right" className="py-2 group" onClick={() => toggleSort(topSellingSort, setTopSellingSort, 'boxes')}>
-                    Boxes <SortIcon sort={topSellingSort} sortKey="boxes" />
-                  </TH>
-                  <TH align="right" className="py-2 group" onClick={() => toggleSort(topSellingSort, setTopSellingSort, 'units')}>
-                    Units <SortIcon sort={topSellingSort} sortKey="units" />
-                  </TH>
-                  <TH align="center" className="py-2">Trend</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {sortedTopSelling.map((row) => (
-                  <TR key={row.rank}>
-                    <TD className="py-2">
-                      <span className="h-6 w-6 rounded-lg bg-slate-100 text-slate-600 text-[11px] font-bold flex items-center justify-center tabular-nums">{row.rank}</span>
-                    </TD>
-                    <TD className="py-2 text-xs font-medium text-slate-900 truncate max-w-[160px]">{row.product}</TD>
-                    <TD align="right" className="py-2 text-xs font-medium text-slate-600 tabular-nums">{row.boxes}</TD>
-                    <TD align="right" className="py-2 text-xs font-medium text-slate-600 tabular-nums">{row.units}</TD>
-                    <TD align="center" className="py-2">
-                      {row.trend === 'up'
-                        ? <TrendingUp className="h-4 w-4 text-emerald-500 inline" />
-                        : <TrendingDown className="h-4 w-4 text-rose-500 inline" />}
-                    </TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
-          </div>
-        </Card>
+        <InventoryStockOverviewCard />
+        <TopSellingProductsCard />
       </div>
 
       {/* ACTIVE CUSTOMER CARTS + INVENTORY MOVEMENT */}
@@ -1235,45 +1296,7 @@ const NewAdminPanel: React.FC = () => {
 
       {/* BALANCE RANKING + 28 DAYS PAYMENT DUE */}
       <div className="grid grid-cols-12 gap-5 items-stretch">
-        <Card padding="none" className="rounded-2xl col-span-12 lg:col-span-5 overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                <Wallet className="h-4 w-4 text-amber-500" />
-                Balance Ranking
-              </h3>
-              <p className="text-xs text-slate-500 font-medium mt-1">Top 10 by outstanding</p>
-            </div>
-            <Link
-              to="/customers"
-              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors whitespace-nowrap ${focusRing}`}
-            >
-              View All <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-          <div className="-mx-6">
-            <Table className="w-full">
-              <THead>
-                <TR>
-                  <TH className="py-2">Customer</TH>
-                  <TH align="right" className="py-2">Outstanding</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {BALANCE_RANKING_NEW.map((item) => (
-                  <TR key={item.name}>
-                    <TD className="py-2">
-                      <span className="text-xs font-medium text-slate-700 block truncate max-w-[150px]">{item.name}</span>
-                    </TD>
-                    <TD align="right" className="py-2">
-                      <span className="text-xs font-medium text-rose-600 tabular-nums">{item.outstanding}</span>
-                    </TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
-          </div>
-        </Card>
+        <BalanceRankingCard />
 
         <Card padding="none" className="rounded-2xl col-span-12 lg:col-span-7 overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
@@ -3818,6 +3841,357 @@ const InventoryPanel: React.FC = () => {
   );
 };
 
+const EmptyRolePanel: React.FC<{ role: string; icon: any }> = ({ role, icon: Icon }) => (
+  <div className="space-y-6 pb-20">
+    <div className="rounded-2xl border border-slate-100 bg-white flex flex-col items-center justify-center gap-3 text-center py-24">
+      <div className="p-4 rounded-full bg-slate-50 border border-slate-100">
+        <Icon className="h-8 w-8 text-slate-300" />
+      </div>
+      <div>
+        <h2 className="text-lg font-bold text-slate-900">{role} Dashboard</h2>
+        <p className="text-sm text-slate-500 font-medium mt-1">Coming soon</p>
+      </div>
+    </div>
+  </div>
+);
+
+const SalesDashboardPanel: React.FC = () => {
+  const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus-visible:ring-offset-1';
+  const [selectedRep, setSelectedRep] = useState<string | null>(null);
+
+  return (
+    <div className="space-y-6 pb-20">
+      {/* HEADER SECTION + QUICK LINKS */}
+      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6 pt-1">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Sales Performance</h1>
+          <p className="text-slate-500 font-medium">Real-time sales tracking and lead management</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {QUICK_LINKS_NEW.map((link) => (
+            <Link
+              key={link.title}
+              to={link.href}
+              className={`flex items-center gap-2.5 px-3.5 py-2 rounded-xl border transition-all hover:shadow-sm min-h-[44px] ${focusRing} ${
+                link.color === 'green'
+                  ? 'bg-emerald-50/70 border-emerald-100 hover:border-emerald-200 hover:bg-emerald-50'
+                  : 'bg-indigo-50/70 border-indigo-100 hover:border-indigo-200 hover:bg-indigo-50'
+              }`}
+            >
+              <div className={`p-1.5 rounded-lg ${link.color === 'green' ? 'bg-emerald-500' : 'bg-indigo-500'} text-white shrink-0`}>
+                {link.color === 'green' ? <BarChart3 className="h-3.5 w-3.5" /> : <Package className="h-3.5 w-3.5" />}
+              </div>
+              <div className="text-left">
+                <p className="text-xs font-bold text-slate-900 leading-tight whitespace-nowrap">{link.title}</p>
+                <p className="text-[10px] text-slate-500 font-medium leading-tight whitespace-nowrap">{link.desc}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+      <ViewModeToggle />
+
+      {/* KPI TILES */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="rounded-2xl border-2 border-indigo-200 bg-white p-4 hover:shadow-md transition-all">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Total Sales</p>
+            <div className="rounded-lg bg-indigo-50 text-indigo-600 p-1.5"><Wallet className="h-3.5 w-3.5" /></div>
+          </div>
+          <p className="mt-2 text-2xl font-black tracking-tight text-slate-900 tabular-nums">{SALES_PERFORMANCE_KPI_NEW.totalSales}</p>
+        </div>
+        <div className="rounded-2xl border border-slate-100 bg-white p-4 hover:shadow-md hover:border-slate-200 transition-all">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Total Orders</p>
+            <div className="rounded-lg bg-emerald-50 text-emerald-600 p-1.5"><ShoppingCart className="h-3.5 w-3.5" /></div>
+          </div>
+          <p className="mt-2 text-2xl font-black tracking-tight text-slate-900 tabular-nums">{SALES_PERFORMANCE_KPI_NEW.totalOrders}</p>
+        </div>
+      </div>
+
+      {/* COMMISSION LEDGER */}
+      <Card padding="none" className="rounded-2xl overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
+        <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+          <Users className="h-4 w-4 text-indigo-500" />
+          Commission Ledger
+        </h3>
+        <p className="text-xs text-slate-500 font-medium mt-1">Select a rep to view their commission history</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+          {SALES_COMMISSION_LEDGER_NEW.map((rep) => {
+            const isActive = selectedRep === rep.name;
+            return (
+              <button
+                key={rep.name}
+                onClick={() => setSelectedRep(isActive ? null : rep.name)}
+                className={`text-left rounded-xl border p-3.5 transition-all ${focusRing} ${
+                  isActive ? 'border-indigo-300 bg-indigo-50/60 shadow-sm' : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50/50'
+                }`}
+              >
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div className="h-9 w-9 rounded-full bg-indigo-100 text-indigo-600 text-xs font-bold flex items-center justify-center shrink-0">
+                    {rep.name.split(' ').map((n) => n[0]).join('')}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-slate-900 truncate">{rep.name}</p>
+                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">{rep.role}</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Earned</p>
+                    <p className="text-xs font-bold text-emerald-600 tabular-nums">{rep.earned}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Paid</p>
+                    <p className="text-xs font-bold text-slate-600 tabular-nums">{rep.paid}</p>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-slate-400 font-medium text-center mt-4">
+          {selectedRep ? `Showing commission ledger for ${selectedRep}` : 'Select a sales rep above to view their commission ledger'}
+        </p>
+      </Card>
+
+      {/* INVENTORY STOCK OVERVIEW */}
+      <InventoryStockOverviewCard />
+
+      {/* BALANCE RANKING */}
+      <BalanceRankingCard />
+
+      {/* TOP SELLING PRODUCTS */}
+      <TopSellingProductsCard />
+    </div>
+  );
+};
+
+const FinanceDashboardPanel: React.FC = () => {
+  const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus-visible:ring-offset-1';
+
+  const kpiTiles = [
+    { label: 'Total Receivable', value: FINANCE_PERFORMANCE_KPI_NEW.totalReceivable, icon: Wallet },
+    { label: 'Overdue Payments', value: FINANCE_PERFORMANCE_KPI_NEW.overduePayments, icon: AlertCircle },
+    { label: 'Total Revenue', value: FINANCE_PERFORMANCE_KPI_NEW.totalRevenue, icon: TrendingUp, primary: true },
+    { label: 'Received Today', value: FINANCE_PERFORMANCE_KPI_NEW.receivedToday, icon: CheckCircle2 },
+  ];
+
+  return (
+    <div className="space-y-6 pb-20">
+      {/* HEADER SECTION + QUICK LINKS */}
+      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6 pt-1">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Finance &amp; Accounting</h1>
+          <p className="text-slate-500 font-medium">Comprehensive financial oversight and ledger management</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {QUICK_LINKS_NEW.map((link) => (
+            <Link
+              key={link.title}
+              to={link.href}
+              className={`flex items-center gap-2.5 px-3.5 py-2 rounded-xl border transition-all hover:shadow-sm min-h-[44px] ${focusRing} ${
+                link.color === 'green'
+                  ? 'bg-emerald-50/70 border-emerald-100 hover:border-emerald-200 hover:bg-emerald-50'
+                  : 'bg-indigo-50/70 border-indigo-100 hover:border-indigo-200 hover:bg-indigo-50'
+              }`}
+            >
+              <div className={`p-1.5 rounded-lg ${link.color === 'green' ? 'bg-emerald-500' : 'bg-indigo-500'} text-white shrink-0`}>
+                {link.color === 'green' ? <BarChart3 className="h-3.5 w-3.5" /> : <Package className="h-3.5 w-3.5" />}
+              </div>
+              <div className="text-left">
+                <p className="text-xs font-bold text-slate-900 leading-tight whitespace-nowrap">{link.title}</p>
+                <p className="text-[10px] text-slate-500 font-medium leading-tight whitespace-nowrap">{link.desc}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+      <ViewModeToggle />
+
+      {/* KPI TILES */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {kpiTiles.map((tile: any) => (
+          <div
+            key={tile.label}
+            className={`rounded-2xl bg-white p-4 hover:shadow-md transition-all ${
+              tile.primary ? 'border-2 border-indigo-200' : 'border border-slate-100 hover:border-slate-200'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">{tile.label}</p>
+              <div className="rounded-lg bg-amber-50 text-amber-600 p-1.5"><tile.icon className="h-3.5 w-3.5" /></div>
+            </div>
+            <p className="mt-2 text-2xl font-black tracking-tight text-slate-900 tabular-nums">{tile.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* BALANCE RANKING */}
+      <BalanceRankingCard />
+
+      {/* CUSTOMER LEDGER QUICK ACCESS */}
+      <Card padding="none" className="rounded-2xl overflow-hidden flex flex-col border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
+        <div className="p-6 border-b border-slate-100">
+          <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <FileText className="h-4 w-4 text-indigo-500" />
+            Customer Ledger Quick Access
+          </h3>
+          <p className="text-xs text-slate-500 font-medium mt-1">Recent ledger entries</p>
+        </div>
+        <div className="flex flex-col items-center justify-center gap-2 text-center py-10">
+          <div className="p-2.5 rounded-full bg-slate-50 border border-slate-100">
+            <FileText className="h-4 w-4 text-slate-300" />
+          </div>
+          <p className="text-xs font-medium text-slate-400">No entries yet</p>
+        </div>
+      </Card>
+    </div>
+  );
+};
+
+const InventoryDashboardPanel: React.FC = () => {
+  const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus-visible:ring-offset-1';
+
+  const kpiTiles = [
+    { label: 'Total SKUs', value: INVENTORY_PERFORMANCE_KPI_NEW.totalSkus.toLocaleString(), icon: Package },
+    { label: 'Units in Stock', value: INVENTORY_PERFORMANCE_KPI_NEW.unitsInStock.toLocaleString(), icon: Warehouse },
+    { label: 'Inventory Value', value: INVENTORY_PERFORMANCE_KPI_NEW.inventoryValue, icon: Wallet, primary: true },
+    { label: 'Low Stock SKUs', value: INVENTORY_PERFORMANCE_KPI_NEW.lowStockSkus.toLocaleString(), icon: AlertTriangle },
+    { label: 'Out of Stock', value: INVENTORY_PERFORMANCE_KPI_NEW.outOfStock.toLocaleString(), icon: AlertCircle },
+    { label: 'Overstock SKUs', value: INVENTORY_PERFORMANCE_KPI_NEW.overstockSkus.toLocaleString(), icon: TrendingUp },
+  ];
+
+  const insightDotColor: Record<string, string> = {
+    CRITICAL: 'bg-rose-500',
+    WARNING: 'bg-amber-500',
+    ACTION: 'bg-emerald-500',
+  };
+  const insightTagColor: Record<string, string> = {
+    CRITICAL: 'text-rose-500',
+    WARNING: 'text-amber-500',
+    ACTION: 'text-emerald-500',
+  };
+
+  return (
+    <div className="space-y-6 pb-20">
+      {/* HEADER SECTION + QUICK LINKS */}
+      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6 pt-1">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Inventory Management</h1>
+          <p className="text-slate-500 font-medium">Stock level monitoring and warehouse logistics</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {QUICK_LINKS_NEW.map((link) => (
+            <Link
+              key={link.title}
+              to={link.href}
+              className={`flex items-center gap-2.5 px-3.5 py-2 rounded-xl border transition-all hover:shadow-sm min-h-[44px] ${focusRing} ${
+                link.color === 'green'
+                  ? 'bg-emerald-50/70 border-emerald-100 hover:border-emerald-200 hover:bg-emerald-50'
+                  : 'bg-indigo-50/70 border-indigo-100 hover:border-indigo-200 hover:bg-indigo-50'
+              }`}
+            >
+              <div className={`p-1.5 rounded-lg ${link.color === 'green' ? 'bg-emerald-500' : 'bg-indigo-500'} text-white shrink-0`}>
+                {link.color === 'green' ? <BarChart3 className="h-3.5 w-3.5" /> : <Package className="h-3.5 w-3.5" />}
+              </div>
+              <div className="text-left">
+                <p className="text-xs font-bold text-slate-900 leading-tight whitespace-nowrap">{link.title}</p>
+                <p className="text-[10px] text-slate-500 font-medium leading-tight whitespace-nowrap">{link.desc}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+      <ViewModeToggle />
+
+      {/* KPI TILES */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        {kpiTiles.map((tile: any) => (
+          <div
+            key={tile.label}
+            className={`rounded-2xl bg-white p-4 hover:shadow-md transition-all ${
+              tile.primary ? 'border-2 border-indigo-200' : 'border border-slate-100 hover:border-slate-200'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">{tile.label}</p>
+              <div className="rounded-lg bg-indigo-50 text-indigo-600 p-1.5"><tile.icon className="h-3.5 w-3.5" /></div>
+            </div>
+            <p className="mt-2 text-xl font-black tracking-tight text-slate-900 tabular-nums">{tile.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* INVENTORY STOCK OVERVIEW */}
+      <InventoryStockOverviewCard data={INVENTORY_TAB_STOCK_NEW} />
+
+      {/* AI STOCK INSIGHTS */}
+      <Card padding="none" className="rounded-2xl overflow-hidden flex flex-col p-6 border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <Zap className="h-4 w-4 text-indigo-500" />
+            AI Stock Insights
+          </h3>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Recommendations</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {INVENTORY_AI_INSIGHTS_NEW.map((insight, idx) => (
+            <div key={idx} className="flex items-start gap-2.5 rounded-xl border border-slate-100 p-3">
+              <div className={`h-1.5 w-1.5 rounded-full mt-1.5 shrink-0 ${insightDotColor[insight.tag]}`} />
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-slate-700 leading-snug">{insight.text}</p>
+                <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${insightTagColor[insight.tag]}`}>{insight.tag}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* WORST PERFORMING SKUS */}
+      <Card padding="none" className="rounded-2xl overflow-hidden flex flex-col border-slate-100 hover:shadow-md hover:border-slate-200 transition-all">
+        <div className="p-6 border-b border-slate-100">
+          <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-rose-500" />
+            Worst Performing SKUs
+          </h3>
+          <p className="text-xs text-slate-500 font-medium mt-1">Products requiring attention based on sales velocity</p>
+        </div>
+        <div className="overflow-x-auto">
+          <Table className="w-full">
+            <THead>
+              <TR>
+                <TH className="py-2">SKU / Barcode</TH>
+                <TH className="py-2">Product Name</TH>
+                <TH className="py-2">Brand</TH>
+                <TH className="py-2">Type</TH>
+                <TH align="right" className="py-2">Sales</TH>
+                <TH align="right" className="py-2">Stock</TH>
+                <TH align="right" className="py-2">Status</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {WORST_PERFORMING_SKUS_NEW.map((row) => (
+                <TR key={row.sku}>
+                  <TD className="py-2 text-xs text-slate-500 font-mono truncate max-w-[160px]" title={row.sku}>{row.sku}</TD>
+                  <TD className="py-2 text-xs font-medium text-slate-900 truncate max-w-[160px]">{row.product}</TD>
+                  <TD className="py-2 text-xs text-slate-600">{row.brand}</TD>
+                  <TD className="py-2 text-xs text-slate-500 truncate max-w-[160px]">{row.type}</TD>
+                  <TD align="right" className="py-2 text-xs font-medium text-slate-600 tabular-nums">{row.sales}</TD>
+                  <TD align="right" className="py-2 text-xs font-medium text-slate-900 tabular-nums">{row.stock}</TD>
+                  <TD align="right" className="py-2">
+                    <Badge variant="danger" className="text-[10px] uppercase tracking-wider">Dead</Badge>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        </div>
+      </Card>
+    </div>
+  );
+};
+
 const NewDashboard: React.FC = () => {
   const { activeRole, setActiveRole } = useDashboard();
   const { user } = useAuth();
@@ -3842,10 +4216,10 @@ const NewDashboard: React.FC = () => {
         transition={{ duration: 0.2, ease: "easeOut" }}
       >
         {activeRole === 'admin' && <NewAdminPanel />}
-        {activeRole === 'sales' && <SalesPanel />}
-        {activeRole === 'finance' && <FinancePanel />}
-        {activeRole === 'inventory' && <InventoryPanel />}
-        {activeRole === 'supplier' && <SupplierPanel />}
+        {activeRole === 'sales' && <SalesDashboardPanel />}
+        {activeRole === 'finance' && <FinanceDashboardPanel />}
+        {activeRole === 'inventory' && <InventoryDashboardPanel />}
+        {activeRole === 'supplier' && <EmptyRolePanel role="Supplier" icon={ShoppingBag} />}
       </motion.div>
     </AnimatePresence>
   );
