@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   X, Phone, MapPin, RefreshCw, ShoppingCart, Wallet,
   MessageCircle, FileText, Video, Briefcase, ArrowLeft,
-  ChevronRight, Search,
+  ChevronRight, Users,
 } from 'lucide-react';
 import { TimelineEventType } from '../../types';
 
@@ -91,6 +91,7 @@ const TimelineLogForm: React.FC<Props> = ({
   const [outcome,    setOutcome]    = useState('');
   const [nextAction, setNextAction] = useState('');
   const [amount,     setAmount]     = useState('');
+  const [duration,   setDuration]   = useState('');
 
   const hasCustomer = !!selCustomerId;
 
@@ -146,7 +147,7 @@ const TimelineLogForm: React.FC<Props> = ({
   const handleBack = () => {
     setPhase('select');
     setActiveType(null);
-    setNotes(''); setOutcome(''); setNextAction(''); setAmount('');
+    setNotes(''); setOutcome(''); setNextAction(''); setAmount(''); setDuration('');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -162,7 +163,7 @@ const TimelineLogForm: React.FC<Props> = ({
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex flex-col justify-end sm:items-center sm:justify-center sm:p-6">
-      <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md max-h-[92vh] overflow-y-auto">
+      <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg lg:max-w-2xl max-h-[92vh] overflow-y-auto">
 
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1 sm:hidden flex-shrink-0">
@@ -216,17 +217,24 @@ const TimelineLogForm: React.FC<Props> = ({
                     </button>
                   </div>
                 ) : (
-                  <div className="relative">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                    <input
-                      value={custSearch}
-                      onChange={e => { setCustSearch(e.target.value); setCustError(false); setShowCustList(true); }}
-                      onFocus={() => setShowCustList(true)}
-                      placeholder="Search customers..."
-                      className={`w-full pl-10 pr-3 py-2.5 border-2 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-colors ${
-                        custError ? 'border-rose-300 bg-rose-50 placeholder-rose-300' : 'border-slate-200'
-                      }`}
-                    />
+                  <div>
+                    <div className={`flex items-center gap-0 border-2 rounded-2xl overflow-hidden transition-colors focus-within:ring-2 focus-within:ring-indigo-300 ${
+                      custError ? 'border-rose-300 bg-rose-50' : 'border-slate-200 bg-white'
+                    }`}>
+                      <div className={`flex items-center justify-center h-10 w-10 flex-shrink-0 ${custError ? 'bg-rose-100' : 'bg-indigo-50'}`}>
+                        <Users className={`h-4 w-4 ${custError ? 'text-rose-400' : 'text-indigo-400'}`} />
+                      </div>
+                      <div className={`w-px h-5 flex-shrink-0 ${custError ? 'bg-rose-200' : 'bg-slate-200'}`} />
+                      <input
+                        value={custSearch}
+                        onChange={e => { setCustSearch(e.target.value); setCustError(false); setShowCustList(true); }}
+                        onFocus={() => setShowCustList(true)}
+                        placeholder="Search customers..."
+                        className={`flex-1 pl-3 pr-3 py-2.5 text-sm focus:outline-none bg-transparent ${
+                          custError ? 'placeholder-rose-300' : ''
+                        }`}
+                      />
+                    </div>
                     {showCustList && (filteredCusts.length > 0) && (
                       <div className="mt-1 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-md">
                         {filteredCusts.map(c => (
@@ -249,11 +257,11 @@ const TimelineLogForm: React.FC<Props> = ({
             )}
 
             {/* Activity type grid */}
-            <div className="space-y-3">
+            <div className={`space-y-3 transition-opacity duration-200 ${!hasCustomer ? 'opacity-40 pointer-events-none select-none' : ''}`}>
               {TYPE_GROUPS.map(group => (
                 <div key={group.label}>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{group.label}</p>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
                     {group.types.map(t => {
                       const m = TYPE_META[t];
                       const Icon = m.icon;
@@ -278,6 +286,13 @@ const TimelineLogForm: React.FC<Props> = ({
               ))}
             </div>
 
+            {/* Pick customer hint — shown below grid when no customer */}
+            {!hasCustomer && (
+              <p className="text-center text-xs text-slate-400 -mt-1">
+                Select a customer above to unlock activities
+              </p>
+            )}
+
           </div>
         )}
 
@@ -295,6 +310,19 @@ const TimelineLogForm: React.FC<Props> = ({
                 <p className="text-xs text-slate-400 italic mt-0.5">{meta.hint}</p>
               </div>
             </div>
+
+            {/* Duration — Call only */}
+            {activeType === 'Call' && (
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Duration (mins)</label>
+                <div className="relative">
+                  <input type="number" value={duration} onChange={e => setDuration(e.target.value)}
+                    placeholder="e.g. 15" min="1" step="1"
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">min</span>
+                </div>
+              </div>
+            )}
 
             {/* Amount — Payment only */}
             {showAmount && (
@@ -320,23 +348,26 @@ const TimelineLogForm: React.FC<Props> = ({
                 required autoFocus />
             </div>
 
-            {/* Outcome */}
-            {showOutcome && (
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Outcome</label>
-                <input value={outcome} onChange={e => setOutcome(e.target.value)}
-                  placeholder="What was the result?"
-                  className="w-full px-3 py-2.5 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-              </div>
-            )}
+            {/* Outcome + Next Action */}
+            {(showOutcome || showNext) && (
+              <div className={`grid grid-cols-1 ${showOutcome && showNext ? 'lg:grid-cols-2' : ''} gap-4`}>
+                {showOutcome && (
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Outcome</label>
+                    <input value={outcome} onChange={e => setOutcome(e.target.value)}
+                      placeholder="What was the result?"
+                      className="w-full px-3 py-2.5 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                  </div>
+                )}
 
-            {/* Next Action */}
-            {showNext && (
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Next Action</label>
-                <input value={nextAction} onChange={e => setNextAction(e.target.value)}
-                  placeholder="What should happen next?"
-                  className="w-full px-3 py-2.5 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                {showNext && (
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Next Action</label>
+                    <input value={nextAction} onChange={e => setNextAction(e.target.value)}
+                      placeholder="What should happen next?"
+                      className="w-full px-3 py-2.5 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                  </div>
+                )}
               </div>
             )}
 

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, MapPin, Phone, Mail, ShoppingCart, Wallet, Plus, Calendar, CheckCircle, Clock } from 'lucide-react';
 import { Card } from '../../components/ui';
 import LifecycleBadge from '../../components/sales/LifecycleBadge';
 import CustomerTimelineItem from '../../components/sales/CustomerTimelineItem';
 import TimelineLogForm from '../../components/sales/TimelineLogForm';
+import VisitWorkflowModal from '../../components/sales/VisitWorkflowModal';
 import { useSalesCRM } from '../../context/SalesCRMContext';
 import { useSalesExecution } from '../../context/SalesExecutionContext';
 import { useAuth } from '../../context/AuthContext';
@@ -15,12 +16,14 @@ import { TimelineEventType } from '../../types';
 const RepCustomerDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { customers, getCustomerTimeline, addTimelineEntry } = useSalesCRM();
   const { getRepFollowUps, completeFollowUp, addFollowUp } = useSalesExecution();
   const { checkIn, checkOut, checkedInCustomer } = useCheckIn();
   const [showLogForm, setShowLogForm] = useState(false);
   const [checkingIn, setCheckingIn] = useState(false);
+  const [visitModal, setVisitModal] = useState<{ customerId: string; customerName: string } | null>(null);
 
   const customer = customers.find(c => c.id === id);
   const timeline = id ? getCustomerTimeline(id) : [];
@@ -42,9 +45,9 @@ const RepCustomerDetail: React.FC = () => {
   const totalRevenue = ORDERS.filter(o => o.customerId === id && o.paymentStatus === 'Paid').reduce((s, o) => s + o.total, 0);
   const lastOrder = customerOrders[0];
 
-  const handleLogActivity = (type: TimelineEventType, notes: string, outcome: string, nextAction: string, amount?: number) => {
+  const handleLogActivity = (customerId: string, type: TimelineEventType, notes: string, outcome: string, nextAction: string, amount?: number) => {
     addTimelineEntry({
-      customerId: customer.id,
+      customerId,
       type,
       repId: user?.id ?? '',
       repName: user?.name ?? '',
@@ -248,7 +251,33 @@ const RepCustomerDetail: React.FC = () => {
       </div>
 
       {showLogForm && (
-        <TimelineLogForm onSave={handleLogActivity} onClose={() => setShowLogForm(false)} />
+        <TimelineLogForm
+          onSave={handleLogActivity}
+          onClose={() => setShowLogForm(false)}
+          customerId={customer.id}
+          customerName={customer.storeName}
+          onLaunchVisit={(customerId, customerName) => {
+            setShowLogForm(false);
+            if (customerId && customerName) {
+              setVisitModal({ customerId, customerName });
+            }
+          }}
+          onLaunchOrder={(customerId, customerName) => {
+            setShowLogForm(false);
+            navigate('/sales/orders/new', {
+              state: { customerId, customerName, repId, returnPath: location.pathname },
+            });
+          }}
+        />
+      )}
+
+      {visitModal && (
+        <VisitWorkflowModal
+          customerId={visitModal.customerId}
+          customerName={visitModal.customerName}
+          onComplete={() => setVisitModal(null)}
+          onClose={() => setVisitModal(null)}
+        />
       )}
     </div>
   );

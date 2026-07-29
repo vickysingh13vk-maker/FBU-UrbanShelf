@@ -43,15 +43,15 @@ const RepCollections: React.FC = () => {
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center">
               <p className="text-2xl font-black text-slate-800">£{totalRequested.toFixed(0)}</p>
-              <p className="text-xs text-slate-400 mt-0.5">Requested</p>
+              <p className="text-xs text-slate-500 mt-0.5">Requested</p>
             </div>
             <div className="text-center border-x border-slate-100">
               <p className="text-2xl font-black text-emerald-600">£{totalCollected.toFixed(0)}</p>
-              <p className="text-xs text-slate-400 mt-0.5">Collected</p>
+              <p className="text-xs text-slate-500 mt-0.5">Collected</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-black text-rose-600">£{totalOutstanding.toFixed(0)}</p>
-              <p className="text-xs text-slate-400 mt-0.5">Outstanding</p>
+              <p className="text-xs text-slate-500 mt-0.5">Outstanding</p>
             </div>
           </div>
           <div className="mt-3 h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -60,7 +60,7 @@ const RepCollections: React.FC = () => {
               style={{ width: `${totalRequested > 0 ? Math.round((totalCollected / totalRequested) * 100) : 0}%` }}
             />
           </div>
-          <p className="text-xs text-slate-400 mt-1 text-right">
+          <p className="text-xs text-slate-500 mt-1 text-right">
             {totalRequested > 0 ? Math.round((totalCollected / totalRequested) * 100) : 0}% recovered
           </p>
         </Card>
@@ -69,12 +69,18 @@ const RepCollections: React.FC = () => {
       {/* Status breakdown */}
       {outstanding.length > 0 && (
         <div className="grid grid-cols-4 gap-2">
-          {(['Pending', 'Partially Paid', 'Overdue', 'Disputed'] as CollectionStatus[]).map(s => {
+          {([
+            { status: 'Pending', text: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
+            { status: 'Partially Paid', text: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
+            { status: 'Overdue', text: 'text-rose-700', bg: 'bg-rose-100', border: 'border-rose-200' },
+            { status: 'Disputed', text: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100' },
+          ] as { status: CollectionStatus; text: string; bg: string; border: string }[]).map(({ status: s, text, bg, border }) => {
             const count = all.filter(c => c.status === s).length;
+            const isZero = count === 0;
             return (
-              <div key={s} className="text-center p-3 bg-white border border-slate-100 rounded-xl">
-                <p className="text-xl font-black text-slate-800">{count}</p>
-                <p className="text-xs text-slate-400 leading-tight mt-0.5">{s}</p>
+              <div key={s} className={`text-center p-3 rounded-xl border ${isZero ? 'bg-white border-slate-100' : `${bg} ${border}`}`}>
+                <p className={`text-xl font-black ${isZero ? 'text-slate-300' : text}`}>{count}</p>
+                <p className="text-xs text-slate-500 leading-tight mt-0.5">{s}</p>
               </div>
             );
           })}
@@ -97,12 +103,12 @@ const RepCollections: React.FC = () => {
       {displayList.length === 0 ? (
         <Card padding="lg" className="text-center py-16">
           <Banknote className="h-10 w-10 text-slate-200 mx-auto mb-3" />
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-slate-500">
             {tab === 'outstanding' ? 'No outstanding collections' : 'No collection records'}
           </p>
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
           {displayList.map(attempt => (
             <CollectionCard
               key={attempt.id}
