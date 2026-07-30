@@ -20,7 +20,7 @@ import { useSalesCRM } from '../../context/SalesCRMContext';
 import { useSalesExecution } from '../../context/SalesExecutionContext';
 import { useAuth } from '../../context/AuthContext';
 import { TimelineEventType } from '../../types';
-import { WORK_SESSIONS } from '../../data';
+import { WORK_SESSIONS, ORDERS } from '../../data';
 
 type SheetType = 'route' | 'followups' | 'collections' | 'tasks';
 
@@ -127,7 +127,11 @@ const RepDashboard: React.FC = () => {
     .filter(s => s.status === 'Pending')
     .sort((a, b) => a.suggestedOrder - b.suggestedOrder);
 
-  const overdueCollections = myCustomers.filter(c => c.walletBalance < 0);
+  // Same definition as RepPayments' "customers due": negative balance OR an unpaid order on file.
+  const overdueCollections = myCustomers.filter(c => {
+    const hasUnpaid = ORDERS.some(o => o.customerId === c.id && o.paymentStatus === 'Pending' && o.repId === repId);
+    return c.walletBalance < 0 || hasUnpaid;
+  });
 
   const mySessions = WORK_SESSIONS.filter(s => s.repId === repId).slice(0, 6);
   const weekVisits = mySessions.reduce((a, s) => a + s.totalVisits, 0) + todayStats.visits;
@@ -314,7 +318,7 @@ const RepDashboard: React.FC = () => {
             <RepGroupedKpiCard title="TODAY'S ACTIVITY" icon={MapPin} color="indigo" onClick={() => navigate('/sales/visits')}
               items={[
                 { label: 'VISITS',     value: metrics.visitsCompleted, trend: routeStop.length > 0 ? `${routeVisited}/${routeStop.length} stops` : 'no route', trendColor: 'text-slate-400' },
-                { label: 'ORDERS',     value: todayStats.orders,       trend: `£${todayStats.revenue.toLocaleString()}`, trendColor: 'text-emerald-500' },
+                { label: 'ORDERS',     value: todayStats.orders,       trend: `£${todayStats.revenue.toFixed(2)}`, trendColor: 'text-emerald-500' },
                 { label: 'COLLECTED',  value: `£${todayStats.collections.toLocaleString()}`, trend: 'cash in', trendColor: 'text-slate-400' },
                 { label: 'FOLLOW-UPS', value: overdueFU.length + todayFU.length, trend: overdueFU.length > 0 ? `${overdueFU.length} overdue` : 'on track', trendColor: overdueFU.length > 0 ? 'text-rose-500' : 'text-emerald-500' },
               ]}

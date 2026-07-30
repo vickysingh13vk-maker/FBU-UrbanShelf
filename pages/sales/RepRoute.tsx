@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   MapPin, Clock, CheckCircle, AlertCircle, Plus, X,
@@ -35,18 +35,19 @@ const RepRoute: React.FC = () => {
   const canAct = isOnline && isSessionActive;
   const [search, setSearch] = useState('');
   const [visitModal, setVisitModal] = useState<VisitModalState | null>(null);
-  const handledReturnRef = useRef(false);
 
   const repId = user?.id ?? '';
   const todayRoute = getTodayRoute(repId);
   const activeVisit = getActiveVisit(repId);
   const myCustomers = getRepCustomers(repId);
 
-  // Reopen modal when returning from RepOrderCreate
+  // Reopen modal when returning from RepOrderCreate. Depends on location.state (not []) so it
+  // re-fires correctly if this component is ever kept mounted across the round trip; clearing
+  // the state via replace navigation (rather than a mount-scoped ref) is what actually prevents
+  // re-processing on back-navigation.
   useEffect(() => {
     const state = location.state as any;
-    if (state?.returnedOrderId && !handledReturnRef.current) {
-      handledReturnRef.current = true;
+    if (state?.returnedOrderId) {
       const av = getActiveVisit(repId);
       if (av) {
         const orderObj = av.objectives.find((o: any) => o.type === 'Order' && !o.completed);
@@ -60,8 +61,9 @@ const RepRoute: React.FC = () => {
           initialLinkedOrderTotal: state.returnedOrderTotal,
         });
       }
+      navigate(location.pathname, { replace: true, state: null });
     }
-  }, []);
+  }, [location.state]);
 
   const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 

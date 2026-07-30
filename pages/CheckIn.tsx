@@ -127,7 +127,7 @@ const CheckIn: React.FC = () => {
               <Button 
                 variant="secondary" 
                 className="flex-1 py-3 text-xs font-bold thumb-button"
-                onClick={() => navigate(`/customers/${customer.id}`)}
+                onClick={() => navigate(`/sales/customers/${customer.id}`)}
               >
                 View Profile
               </Button>

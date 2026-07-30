@@ -59,6 +59,7 @@ import SMReports from './pages/sales-manager/SMReports';
 import SMAnalytics from './pages/sales-manager/SMAnalytics';
 import SMCustomerHealth from './pages/sales-manager/SMCustomerHealth';
 import SMAlerts from './pages/sales-manager/SMAlerts';
+import SMRepProfile from './pages/sales-manager/SMRepProfile';
 
 // Sales Rep CRM
 import RepDashboard from './pages/sales/RepDashboard';
@@ -186,6 +187,7 @@ const App: React.FC = () => {
                     <Route path="/sales-manager/analytics" element={<SMAnalytics />} />
                     <Route path="/sales-manager/customer-health" element={<SMCustomerHealth />} />
                     <Route path="/sales-manager/alerts" element={<SMAlerts />} />
+                    <Route path="/sales-manager/team/:repId" element={<SMRepProfile />} />
                     <Route path="/sales-manager/escalations" element={<EscalationsDashboard />} />
                     <Route path="/sales-manager/approvals" element={<ApprovalQueue />} />
 

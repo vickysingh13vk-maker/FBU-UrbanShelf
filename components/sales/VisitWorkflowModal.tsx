@@ -5,6 +5,7 @@ import {
   ShoppingCart, Package, WifiOff, CheckCircle2,
   CreditCard, Link2, Calendar, Plus,
   Phone, RefreshCw, Handshake, FlaskConical, Wallet,
+  ImagePlus, Video, Trash2,
 } from 'lucide-react';
 import { VisitObjective, VisitObjectiveType, VisitOutcome, FollowUpType, FollowUpPriority, PaymentStatus, PaymentMethod } from '../../types';
 import { useSalesExecution } from '../../context/SalesExecutionContext';
@@ -48,7 +49,7 @@ const VisitWorkflowModal: React.FC<Props> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const isOnline = useOnlineStatus();
-  const { isOnline: isSessionActive } = useWorkSession();
+  const { isOnline: isSessionActive, recordVisit } = useWorkSession();
   const canAct = isOnline && isSessionActive;
   const { startVisit, updateVisitObjective, endVisit, getActiveVisit, addFollowUp } = useSalesExecution();
 
@@ -67,6 +68,22 @@ const VisitWorkflowModal: React.FC<Props> = ({
   const [outcomeNotes, setOutcomeNotes] = useState('');
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
+
+  // Media attachments
+  const [mediaFiles, setMediaFiles] = useState<{ file: File; url: string; type: 'image' | 'video' }[]>([]);
+
+  const handleMediaAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    const items = files
+      .filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'))
+      .map(f => ({ file: f, url: URL.createObjectURL(f), type: (f.type.startsWith('video/') ? 'video' : 'image') as 'image' | 'video' }));
+    setMediaFiles(prev => [...prev, ...items]);
+    e.target.value = '';
+  };
+
+  const removeMedia = (idx: number) => {
+    setMediaFiles(prev => { URL.revokeObjectURL(prev[idx].url); return prev.filter((_, i) => i !== idx); });
+  };
 
   // Follow-up state
   const [createFollowUp, setCreateFollowUp] = useState(false);
@@ -127,6 +144,7 @@ const VisitWorkflowModal: React.FC<Props> = ({
       paymentMethod: paymentStatus === 'Paid' ? (paymentMethod ?? undefined) : undefined,
     };
     endVisit(visitId, outcome);
+    recordVisit();
     if (createFollowUp && fuNotes.trim()) {
       addFollowUp({
         type: fuType, repId: user?.id ?? '', customerId, customerName,
@@ -475,6 +493,46 @@ const VisitWorkflowModal: React.FC<Props> = ({
                 <textarea value={outcomeNotes} onChange={e => setOutcomeNotes(e.target.value)} rows={2}
                   placeholder="How did the visit go?"
                   className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none" />
+              </div>
+
+              {/* ── Media upload ── */}
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">
+                  Media <span className="normal-case font-normal text-slate-400">(optional)</span>
+                </label>
+                <div className="space-y-2">
+                  {mediaFiles.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {mediaFiles.map((m, idx) => (
+                        <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden bg-slate-100">
+                          {m.type === 'image' ? (
+                            <img src={m.url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center gap-1">
+                              <Video className="h-6 w-6 text-slate-400" />
+                              <span className="text-[10px] text-slate-400 font-medium px-1 text-center truncate w-full px-2">{m.file.name}</span>
+                            </div>
+                          )}
+                          <button
+                            onClick={() => removeMedia(idx)}
+                            className="absolute top-1 right-1 h-6 w-6 bg-black/60 hover:bg-black/80 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Trash2 className="h-3 w-3 text-white" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <label className="flex items-center gap-3 w-full px-4 py-3 border-2 border-dashed border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/40 rounded-2xl cursor-pointer transition-colors">
+                    <div className="h-8 w-8 bg-slate-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <ImagePlus className="h-4 w-4 text-slate-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-700">Add photos or videos</p>
+                      <p className="text-xs text-slate-400">Tap to choose multiple files</p>
+                    </div>
+                    <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleMediaAdd} />
+                  </label>
+                </div>
               </div>
 
               {/* ── Follow-Up section ── */}

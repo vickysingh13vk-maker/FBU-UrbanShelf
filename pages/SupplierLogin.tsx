@@ -38,7 +38,7 @@ const SupplierLogin: React.FC = () => {
       <div className="w-full max-w-md">
         {/* Logo Section */}
         <div className="text-center mb-8">
-          <img src="/Src/Images/Logo_black.png" alt="FBU" className="h-12 mx-auto mb-2" />
+          <img src="/Src/Images/Logo.png" alt="Urban Shelf" className="h-14 mx-auto mb-2" />
         </div>
 
         <Card className="p-8 shadow-xl shadow-slate-200/50 border-slate-100">
@@ -93,7 +93,7 @@ const SupplierLogin: React.FC = () => {
                 type="submit"
                 variant="primary"
                 className="w-full h-12 text-base font-bold shadow-lg shadow-indigo-100"
-                loading={loading}
+                isLoading={loading}
               >
                 Login
               </Button>

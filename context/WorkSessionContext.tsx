@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { WorkSession, SessionSummary } from '../types';
 import { WORK_SESSIONS } from '../data';
+import { useAuth } from './AuthContext';
 
 interface TodayStats {
   visits: number;
@@ -30,13 +31,14 @@ interface WorkSessionContextType {
 
 const WorkSessionContext = createContext<WorkSessionContextType | null>(null);
 
-const SESSION_KEY = 'crm_work_session';
+const sessionKeyFor = (repId: string) => `crm_work_session_${repId}`;
 
 function generateId() {
   return 'WS' + Date.now().toString(36).toUpperCase();
 }
 
 export const WorkSessionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [isOnline, setIsOnline] = useState(false);
   const [currentSession, setCurrentSession] = useState<WorkSession | null>(null);
   const [sessionStart, setSessionStart] = useState<Date | null>(null);
@@ -45,24 +47,38 @@ export const WorkSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [lastSummary, setLastSummary] = useState<SessionSummary | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Restore active session from localStorage on mount
+  // Restore this rep's own active session from localStorage whenever the logged-in user changes.
+  // Scoping the storage key (and re-running on user?.id) prevents one rep's in-progress
+  // session from leaking onto another rep's dashboard on a shared device.
   useEffect(() => {
-    const stored = localStorage.getItem(SESSION_KEY);
+    if (!user?.id) {
+      setCurrentSession(null);
+      setSessionStart(null);
+      setIsOnline(false);
+      setElapsedSeconds(0);
+      return;
+    }
+    const stored = localStorage.getItem(sessionKeyFor(user.id));
     if (stored) {
       try {
         const session: WorkSession = JSON.parse(stored);
-        if (session.status === 'active') {
+        if (session.status === 'active' && session.repId === user.id) {
           const start = new Date(session.startTime);
           setCurrentSession(session);
           setSessionStart(start);
           setIsOnline(true);
           setElapsedSeconds(Math.floor((Date.now() - start.getTime()) / 1000));
+          return;
         }
       } catch {
-        localStorage.removeItem(SESSION_KEY);
+        localStorage.removeItem(sessionKeyFor(user.id));
       }
     }
-  }, []);
+    setCurrentSession(null);
+    setSessionStart(null);
+    setIsOnline(false);
+    setElapsedSeconds(0);
+  }, [user?.id]);
 
   // Timer
   useEffect(() => {
@@ -80,7 +96,7 @@ export const WorkSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [isOnline]);
 
   const persistSession = useCallback((session: WorkSession) => {
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    localStorage.setItem(sessionKeyFor(session.repId), JSON.stringify(session));
   }, []);
 
   const startSession = useCallback((repId: string, repName: string) => {
@@ -130,7 +146,7 @@ export const WorkSessionProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setElapsedSeconds(0);
     setIsOnline(false);
     setLastSummary(summary);
-    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(sessionKeyFor(currentSession.repId));
     return summary;
   }, [currentSession, sessionStart]);
 

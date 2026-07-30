@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, CheckSquare, Square, Star, Package, Banknote, FileText, Calendar, StopCircle } from 'lucide-react';
 import { Card } from '../../components/ui';
 import { useSalesExecution } from '../../context/SalesExecutionContext';
+import { useWorkSession } from '../../context/WorkSessionContext';
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   planned:   { bg: 'bg-blue-50',    text: 'text-blue-700' },
@@ -15,6 +16,7 @@ const RepVisitDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getVisitById, updateVisitObjective, endVisit } = useSalesExecution();
+  const { recordVisit } = useWorkSession();
 
   const visit = getVisitById(id ?? '');
 
@@ -222,7 +224,7 @@ const RepVisitDetail: React.FC = () => {
       <div className="flex gap-3">
         {visit.status === 'active' && (
           <button
-            onClick={() => { endVisit(visit.id, { productsDiscussed: [], notes: 'Ended from visit detail.' }); navigate('/sales/visits'); }}
+            onClick={() => { endVisit(visit.id, { productsDiscussed: [], notes: 'Ended from visit detail.' }); recordVisit(); navigate('/sales/visits'); }}
             className="flex items-center gap-2 px-5 py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-sm font-bold transition-colors">
             <StopCircle className="h-4 w-4" /> End Visit
           </button>

@@ -4,35 +4,23 @@ import { Card } from '../../components/ui';
 import { useSalesCRM } from '../../context/SalesCRMContext';
 import { useWorkSession } from '../../context/WorkSessionContext';
 import { useAuth } from '../../context/AuthContext';
-import { WORK_SESSIONS } from '../../data';
+import { WORK_SESSIONS, ORDERS } from '../../data';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Area, AreaChart,
 } from 'recharts';
 
-const WEEKLY_DATA = [
-  { day: 'Mon', visits: 8, orders: 3 },
-  { day: 'Tue', visits: 12, orders: 5 },
-  { day: 'Wed', visits: 7, orders: 2 },
-  { day: 'Thu', visits: 10, orders: 4 },
-  { day: 'Fri', visits: 9, orders: 3 },
-  { day: 'Sat', visits: 5, orders: 2 },
-  { day: 'Sun', visits: 0, orders: 0 },
-];
+const COMMISSION_RATE = 0.08;
+const WEEKLY_TARGET = 5000;
+const DAY_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-const TARGET_DATA = [
-  { week: 'W1', actual: 4200, target: 5000 },
-  { week: 'W2', actual: 5100, target: 5000 },
-  { week: 'W3', actual: 4700, target: 5000 },
-  { week: 'W4', actual: 6200, target: 6000 },
-];
-
-const COMMISSION_ENTRIES = [
-  { id: 'C001', orderId: '326', customer: 'James Cameron', amount: 118.63, status: 'Earned' },
-  { id: 'C002', orderId: '325', customer: 'Sarah Connor', amount: 12.00, status: 'Pending' },
-  { id: 'C003', orderId: '322', customer: 'James Cameron', amount: 26.50, status: 'Earned' },
-  { id: 'C004', orderId: '324', customer: 'Rick Deckard', amount: 26.00, status: 'Pending' },
-];
+const startOfWeek = (d: Date) => {
+  const dt = new Date(d);
+  const day = dt.getDay(); // 0=Sun..6=Sat
+  dt.setDate(dt.getDate() + (day === 0 ? -6 : 1) - day); // shift back to Monday
+  dt.setHours(0, 0, 0, 0);
+  return dt;
+};
 
 const PERIOD_OPTIONS = ['This Week', 'This Month', 'Last Month'] as const;
 type Period = typeof PERIOD_OPTIONS[number];
@@ -48,24 +36,64 @@ const RepReporting: React.FC = () => {
   const myLeads = getRepLeads(repId);
 
   const historicalSessions = WORK_SESSIONS.filter(s => s.repId === repId);
+  const myOrders = ORDERS.filter(o => o.repId === repId);
 
   const totalHistVisits = historicalSessions.reduce((s, ws) => s + ws.totalVisits, 0) + todayStats.visits;
   const totalHistOrders = historicalSessions.reduce((s, ws) => s + ws.totalOrders, 0) + todayStats.orders;
   const totalHistCollections = historicalSessions.reduce((s, ws) => s + ws.totalCollections, 0) + todayStats.collections;
   const totalHistRevenue = historicalSessions.reduce((s, ws) => s + ws.totalRevenue, 0);
 
-  const earnedCommission = COMMISSION_ENTRIES.filter(e => e.status === 'Earned').reduce((s, e) => s + e.amount, 0);
-  const pendingCommission = COMMISSION_ENTRIES.filter(e => e.status === 'Pending').reduce((s, e) => s + e.amount, 0);
+  // Commission entries derived from this rep's own orders, not a shared mock list.
+  const commissionEntries = myOrders.map(o => ({
+    id: o.id,
+    orderId: o.id,
+    customer: o.customer,
+    amount: o.total * COMMISSION_RATE,
+    status: (o.status === 'Cancelled' || o.paymentStatus === 'Refunded')
+      ? 'Blocked' as const
+      : o.paymentStatus === 'Paid' ? 'Earned' as const : 'Pending' as const,
+  }));
+  const earnedCommission = commissionEntries.filter(e => e.status === 'Earned').reduce((s, e) => s + e.amount, 0);
+  const pendingCommission = commissionEntries.filter(e => e.status === 'Pending').reduce((s, e) => s + e.amount, 0);
 
   const activeLeads = myLeads.filter(l => l.stage !== 'Converted' && l.stage !== 'Lost').length;
   const convertedLeads = myLeads.filter(l => l.stage === 'Converted').length;
   const conversionRate = myLeads.length > 0 ? Math.round((convertedLeads / myLeads.length) * 100) : 0;
 
-  const weeklyVisits = WEEKLY_DATA.reduce((s, d) => s + d.visits, 0);
-  const weeklyOrders = WEEKLY_DATA.reduce((s, d) => s + d.orders, 0);
+  // This week's visits/orders per day, aggregated from this rep's own session history.
+  const now = new Date();
+  const weekStart = startOfWeek(now);
+  const todayDateStr = now.toISOString().split('T')[0];
+  const weeklyChartData = DAY_ORDER.map((day, i) => {
+    const d = new Date(weekStart);
+    d.setDate(d.getDate() + i);
+    const dateStr = d.toISOString().split('T')[0];
+    const sessionsForDay = historicalSessions.filter(s => s.date === dateStr);
+    const isToday = dateStr === todayDateStr;
+    return {
+      day,
+      visits: sessionsForDay.reduce((s, ws) => s + ws.totalVisits, 0) + (isToday ? todayStats.visits : 0),
+      orders: sessionsForDay.reduce((s, ws) => s + ws.totalOrders, 0) + (isToday ? todayStats.orders : 0),
+    };
+  });
+  const weeklyVisits = weeklyChartData.reduce((s, d) => s + d.visits, 0);
+  const weeklyOrders = weeklyChartData.reduce((s, d) => s + d.orders, 0);
 
-  const currentTarget = TARGET_DATA[TARGET_DATA.length - 1];
-  const targetPct = Math.min(100, Math.round((currentTarget.actual / currentTarget.target) * 100));
+  // Revenue for the last 4 weeks vs a fixed weekly target, from this rep's own sessions.
+  const targetChartData = Array.from({ length: 4 }, (_, i) => {
+    const weeksAgo = 3 - i;
+    const bucketStart = new Date(weekStart);
+    bucketStart.setDate(bucketStart.getDate() - weeksAgo * 7);
+    const bucketEnd = new Date(bucketStart);
+    bucketEnd.setDate(bucketEnd.getDate() + 7);
+    const revenue = historicalSessions
+      .filter(s => { const sd = new Date(s.date); return sd >= bucketStart && sd < bucketEnd; })
+      .reduce((s, ws) => s + ws.totalRevenue, 0) + (weeksAgo === 0 ? todayStats.revenue : 0);
+    return { week: `W${i + 1}`, actual: revenue, target: WEEKLY_TARGET };
+  });
+
+  const currentTarget = targetChartData[targetChartData.length - 1];
+  const targetPct = currentTarget.target > 0 ? Math.min(100, Math.round((currentTarget.actual / currentTarget.target) * 100)) : 0;
 
   return (
     <div className="space-y-5">
@@ -126,7 +154,7 @@ const RepReporting: React.FC = () => {
           </div>
           <div style={{ height: 200 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={WEEKLY_DATA} margin={{ top: 4, right: 4, left: -20, bottom: 0 }} barGap={4}>
+              <BarChart data={weeklyChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }} barGap={4}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
@@ -154,7 +182,7 @@ const RepReporting: React.FC = () => {
           </div>
           <div style={{ height: 200 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={TARGET_DATA} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+              <AreaChart data={targetChartData} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
                 <defs>
                   <linearGradient id="actualGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
@@ -196,7 +224,7 @@ const RepReporting: React.FC = () => {
             </div>
           </div>
           <div className="space-y-2 border-t border-slate-100 pt-3">
-            {COMMISSION_ENTRIES.map(e => (
+            {commissionEntries.slice(0, 8).map(e => (
               <div key={e.id} className="flex items-center justify-between text-xs">
                 <div className="min-w-0">
                   <p className="font-semibold text-slate-600 truncate">{e.customer}</p>
@@ -204,7 +232,7 @@ const RepReporting: React.FC = () => {
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className="font-bold text-slate-700">£{e.amount.toFixed(2)}</p>
-                  <span className={`font-semibold ${e.status === 'Earned' ? 'text-emerald-600' : 'text-amber-600'}`}>{e.status}</span>
+                  <span className={`font-semibold ${e.status === 'Earned' ? 'text-emerald-600' : e.status === 'Blocked' ? 'text-rose-600' : 'text-amber-600'}`}>{e.status}</span>
                 </div>
               </div>
             ))}

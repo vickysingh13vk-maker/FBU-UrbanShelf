@@ -78,8 +78,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, isCollapsed, onClose, 
         <div className={`flex items-center h-16 flex-shrink-0 px-4 border-b border-slate-800/50 ${effectiveCollapsed ? 'justify-center' : ''}`}>
           <Link to="/" className="flex items-center gap-3 group">
             {effectiveCollapsed
-              ? <img src="/Src/Images/Logo_Icon.png" alt="FBU" className="h-8 shrink-0 group-hover:scale-105 transition-transform duration-300" />
-              : <img src="/Src/Images/Logo.png" alt="FBU" className="h-10 shrink-0 group-hover:scale-105 transition-transform duration-300" />
+              ? <img src="/Src/Images/Logo_Icon.png" alt="Urban Shelf" className="h-8 shrink-0 group-hover:scale-105 transition-transform duration-300" />
+              : <img src="/Src/Images/Logo.png" alt="Urban Shelf" className="h-8 w-auto shrink-0 group-hover:scale-105 transition-transform duration-300" />
             }
           </Link>
           <button 

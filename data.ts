@@ -88,6 +88,132 @@ export const CUSTOMERS: Customer[] = [
     assignedRepId: 'U010', assignedRepName: 'Emma Clarke', ownershipStatus: 'assigned',
     lifecycleStage: 'Inactive', lastContactDate: '2026-03-15T13:00:00Z'
   },
+  {
+    id: 'C007', name: 'Walter White', email: 'walter@heisenberg.co.uk', phone: '+44 7700 900103', mobile: '+44 7900 111222',
+    companyName: 'Heisenberg Ltd', storeName: 'Heisenberg Supplies', regNo: 'GB44556677',
+    address: '14 Aztec St, Albuquerque, NM1 7AB', status: 'Approved', walletBalance: 3200.00, creditLimit: 8000,
+    joinedDate: 'Mar 05, 2024', image: 'https://i.pravatar.cc/150?u=C007',
+    category: 'Vaping', supplier: 'Lost Mary',
+    assignedRepId: 'U004', assignedRepName: 'John Smith', ownershipStatus: 'assigned',
+    lifecycleStage: 'Active', lastContactDate: '2026-05-10T09:00:00Z', nextFollowUp: '2026-05-23T10:00:00Z'
+  },
+  {
+    id: 'C008', name: 'Tony Stark', email: 'tony@starkindustries.com', phone: '+44 7700 900104', mobile: '+44 7900 333444',
+    companyName: 'Stark Industries UK', storeName: 'Stark Retail', regNo: 'GB77889900',
+    address: '3000 Iron Way, London, N1 9QR', status: 'Approved', walletBalance: 9999.00, creditLimit: 50000,
+    joinedDate: 'Feb 14, 2024', image: 'https://i.pravatar.cc/150?u=C008',
+    category: 'Open Devices', supplier: 'Lost Mary',
+    assignedRepId: 'U004', assignedRepName: 'John Smith', ownershipStatus: 'assigned',
+    lifecycleStage: 'Active', lastContactDate: '2026-05-12T14:30:00Z', nextFollowUp: '2026-05-26T11:00:00Z'
+  },
+  {
+    id: 'C009', name: 'Sherlock Holmes', email: 'sherlock@221b.co.uk', phone: '+44 7700 900105',
+    companyName: '221B Consulting', storeName: 'Baker Street Shop', regNo: 'GB22100221',
+    address: '221B Baker Street, London, NW1 6XE', status: 'Approved', walletBalance: 475.00, creditLimit: 3000,
+    joinedDate: 'Apr 01, 2024', image: 'https://i.pravatar.cc/150?u=C009',
+    category: 'Nicotine Pouch', supplier: 'Velo',
+    assignedRepId: 'U004', assignedRepName: 'John Smith', ownershipStatus: 'assigned',
+    lifecycleStage: 'Active', lastContactDate: '2026-05-09T16:00:00Z', nextFollowUp: '2026-05-21T10:00:00Z'
+  },
+  {
+    id: 'C010', name: 'Hermione Granger', email: 'hermione@diagonalley.co.uk', phone: '+44 7700 900106',
+    companyName: 'Diagon Alley Goods', storeName: 'Diagon Alley Goods', regNo: 'GB98765000',
+    address: '9¾ Platform Rd, London, WC1N 3XX', status: 'Pending', walletBalance: 0.00, creditLimit: 500,
+    joinedDate: 'May 01, 2026', image: 'https://i.pravatar.cc/150?u=C010',
+    category: 'Deals and Offers', supplier: 'Elf Bar',
+    assignedRepId: 'U010', assignedRepName: 'Emma Clarke', ownershipStatus: 'assigned',
+    lifecycleStage: 'New', lastContactDate: '2026-05-14T10:00:00Z', nextFollowUp: '2026-05-16T09:00:00Z'
+  },
+  {
+    id: 'C011', name: 'Jack Sparrow', email: 'jack@jollyroger.co.uk', phone: '+44 7700 900107', mobile: '+44 7900 555666',
+    companyName: 'Jolly Roger Trading', storeName: 'Jolly Roger Trading', regNo: 'GB13579246',
+    address: '1 Port Royal St, Portsmouth, PO1 2XY', status: 'Approved', walletBalance: 88.00, creditLimit: 2000,
+    joinedDate: 'Jun 15, 2023', image: 'https://i.pravatar.cc/150?u=C011',
+    category: 'Vaping', supplier: 'Elf Bar',
+    assignedRepId: 'U004', assignedRepName: 'John Smith', ownershipStatus: 'assigned',
+    lifecycleStage: 'Inactive', lastContactDate: '2026-02-28T12:00:00Z', nextFollowUp: '2026-05-20T10:00:00Z'
+  },
+  {
+    id: 'C012', name: 'Katniss Everdeen', email: 'katniss@district12.co.uk', phone: '+44 7700 900108',
+    companyName: 'District 12 Stores', storeName: 'District 12 Stores', regNo: 'GB24680135',
+    address: '12 Seam Road, Sheffield, S1 2AB', status: 'Approved', walletBalance: 210.00, creditLimit: 1500,
+    joinedDate: 'Jul 04, 2023', image: 'https://i.pravatar.cc/150?u=C012',
+    category: 'Nicotine Pouch', supplier: 'Velo',
+    assignedRepId: 'U010', assignedRepName: 'Emma Clarke', ownershipStatus: 'assigned',
+    lifecycleStage: 'Active', lastContactDate: '2026-05-11T11:00:00Z', nextFollowUp: '2026-05-25T10:00:00Z'
+  },
+  {
+    id: 'C013', name: 'Tony Montana', email: 'tony@montana-wholesale.co.uk', phone: '+44 7700 900109', mobile: '+44 7900 777888',
+    companyName: 'Montana Wholesale', storeName: 'Montana Wholesale', regNo: 'GB55500555',
+    address: '44 Scarface Ave, Birmingham, B1 1AA', status: 'Blocked', walletBalance: 0.00, creditLimit: 0,
+    joinedDate: 'Jan 10, 2023', image: 'https://i.pravatar.cc/150?u=C013',
+    category: 'Vaping', supplier: 'Lost Mary',
+    assignedRepId: 'U010', assignedRepName: 'Emma Clarke', ownershipStatus: 'assigned',
+    lifecycleStage: 'Churned', lastContactDate: '2025-11-01T09:00:00Z'
+  },
+  {
+    id: 'C014', name: 'John Wick', email: 'john@continental.co.uk', phone: '+44 7700 900110', mobile: '+44 7900 999000',
+    companyName: 'Continental Supply Co', storeName: 'Continental Supply', regNo: 'GB77700777',
+    address: '7 Gold Coin Lane, London, EC2V 8RT', status: 'Approved', walletBalance: 1500.00, creditLimit: 12000,
+    joinedDate: 'Sep 01, 2023', image: 'https://i.pravatar.cc/150?u=C014',
+    category: 'Open Devices', supplier: 'Lost Mary',
+    assignedRepId: 'U004', assignedRepName: 'John Smith', ownershipStatus: 'assigned',
+    lifecycleStage: 'Active', lastContactDate: '2026-05-13T08:00:00Z', nextFollowUp: '2026-05-27T09:00:00Z'
+  },
+  {
+    id: 'C015', name: 'Elsa Frost', email: 'elsa@arendelle.co.uk', phone: '+44 7700 900111',
+    companyName: 'Arendelle Retail Ltd', storeName: 'Arendelle Retail', regNo: 'GB33300333',
+    address: '1 Frozen Fjord St, Edinburgh, EH1 1AA', status: 'Approved', walletBalance: 320.00, creditLimit: 4000,
+    joinedDate: 'Dec 01, 2023', image: 'https://i.pravatar.cc/150?u=C015',
+    category: 'Pre-filled Vape Kits + Pods', supplier: 'Elf Bar',
+    assignedRepId: 'U010', assignedRepName: 'Emma Clarke', ownershipStatus: 'assigned',
+    lifecycleStage: 'Active', lastContactDate: '2026-05-08T15:00:00Z', nextFollowUp: '2026-05-22T10:00:00Z'
+  },
+  {
+    id: 'C016', name: 'Bruce Wayne', email: 'bruce@wayneent.co.uk', phone: '+44 7700 900112', mobile: '+44 7900 112233',
+    companyName: 'Wayne Enterprises UK', storeName: 'Wayne Corner Store', regNo: 'GB88800888',
+    address: '1 Gotham Pl, London, SE1 7PB', status: 'Approved', walletBalance: 7500.00, creditLimit: 25000,
+    joinedDate: 'Mar 20, 2023', image: 'https://i.pravatar.cc/150?u=C016',
+    category: 'Vaping', supplier: 'Lost Mary',
+    assignedRepId: 'U004', assignedRepName: 'John Smith', ownershipStatus: 'assigned',
+    lifecycleStage: 'Active', lastContactDate: '2026-05-14T10:00:00Z', nextFollowUp: '2026-05-28T10:00:00Z'
+  },
+  {
+    id: 'C017', name: 'Darth Vader', email: 'vader@empire-trade.co.uk', phone: '+44 7700 900113',
+    companyName: 'Empire Trade Ltd', storeName: 'Empire Trade', regNo: 'GB66600666',
+    address: '66 Death Star Rd, Coventry, CV1 3HH', status: 'Pending', walletBalance: 0.00, creditLimit: 1000,
+    joinedDate: 'Apr 20, 2026', image: 'https://i.pravatar.cc/150?u=C017',
+    category: 'Nicotine Pouch', supplier: 'Velo',
+    assignedRepId: 'U010', assignedRepName: 'Emma Clarke', ownershipStatus: 'assigned',
+    lifecycleStage: 'New', lastContactDate: '2026-05-13T11:00:00Z', nextFollowUp: '2026-05-17T09:00:00Z'
+  },
+  {
+    id: 'C018', name: 'Mulan Fa', email: 'mulan@dragonimports.co.uk', phone: '+44 7700 900114', mobile: '+44 7900 445566',
+    companyName: 'Dragon Imports UK', storeName: 'Dragon Imports', regNo: 'GB44400444',
+    address: '8 Great Wall St, Manchester, M4 7AB', status: 'Approved', walletBalance: 650.00, creditLimit: 3500,
+    joinedDate: 'Feb 01, 2024', image: 'https://i.pravatar.cc/150?u=C018',
+    category: 'Pre-filled Vape Kits + Pods', supplier: 'Elf Bar',
+    assignedRepId: 'U004', assignedRepName: 'John Smith', ownershipStatus: 'assigned',
+    lifecycleStage: 'Active', lastContactDate: '2026-05-07T13:00:00Z', nextFollowUp: '2026-05-21T10:00:00Z'
+  },
+  {
+    id: 'C019', name: 'Atticus Finch', email: 'atticus@maycomb.co.uk', phone: '+44 7700 900115',
+    companyName: 'Maycomb Goods Ltd', storeName: 'Maycomb Goods', regNo: 'GB11100111',
+    address: '10 Mockingbird Lane, Bristol, BS1 5EE', status: 'Approved', walletBalance: 180.00, creditLimit: 2000,
+    joinedDate: 'Aug 22, 2023', image: 'https://i.pravatar.cc/150?u=C019',
+    category: 'Deals and Offers', supplier: 'Elf Bar',
+    assignedRepId: 'U010', assignedRepName: 'Emma Clarke', ownershipStatus: 'assigned',
+    lifecycleStage: 'At Risk', lastContactDate: '2026-04-01T10:00:00Z', nextFollowUp: '2026-05-16T10:00:00Z'
+  },
+  {
+    id: 'C020', name: 'T-800 Unit', email: 'support@skynet-dist.co.uk', phone: '+44 7700 900116', mobile: '+44 7900 778899',
+    companyName: 'Skynet Distribution', storeName: 'Skynet Distribution', regNo: 'GB18002029',
+    address: '2029 Judgement St, Leeds, LS1 4XZ', status: 'Approved', walletBalance: 2100.00, creditLimit: 6000,
+    joinedDate: 'Nov 15, 2023', image: 'https://i.pravatar.cc/150?u=C020',
+    category: 'Vaping', supplier: 'Lost Mary',
+    assignedRepId: 'U004', assignedRepName: 'John Smith', ownershipStatus: 'assigned',
+    lifecycleStage: 'Active', lastContactDate: '2026-05-15T08:30:00Z', nextFollowUp: '2026-05-29T09:00:00Z'
+  },
 ];
 
 export const COUPONS: Coupon[] = [

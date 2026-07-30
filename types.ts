@@ -50,7 +50,9 @@ export interface Order {
   total: number;
   items: number;
   status: 'Pending' | 'Approved' | 'Picking' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled';
-  paymentStatus: 'Paid' | 'Unpaid' | 'Pending' | 'Refunded';
+  paymentStatus: 'Paid' | 'Unpaid' | 'Pending' | 'Refunded' | 'On Credit';
+  paymentMethod?: 'Link' | 'Card';
+  notes?: string;
   repId?: string;
   collectionAmount?: number;
   visitId?: string;

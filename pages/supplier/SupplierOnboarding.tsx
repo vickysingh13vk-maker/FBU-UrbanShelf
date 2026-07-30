@@ -101,7 +101,7 @@ const SupplierOnboarding: React.FC = () => {
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/Src/Images/Logo_black.png" alt="FBU" className="h-10" />
+            <img src="/Src/Images/Logo.png" alt="Urban Shelf" className="h-9 w-auto" />
             <div className="h-6 w-px bg-slate-200" />
             <div>
               <p className="text-sm font-bold text-slate-900">Supplier Onboarding</p>

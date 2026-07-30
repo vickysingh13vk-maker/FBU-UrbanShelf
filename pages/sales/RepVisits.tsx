@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { MapPin, Clock, CheckCircle, XCircle, Calendar, Plus, Search, X, Route, AlertCircle, WifiOff } from 'lucide-react';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
@@ -33,7 +33,6 @@ const RepVisits: React.FC = () => {
   const { user } = useAuth();
   const { getRepVisits, getActiveVisit, endVisit, getTodayRoute, updateVisitObjective } = useSalesExecution();
   const { getRepCustomers } = useSalesCRM();
-  const handledReturnRef = useRef(false);
 
   const [tab, setTab] = useState<'today' | 'history'>('today');
   const [visitModal, setVisitModal] = useState<VisitModalState | null>(null);
@@ -43,17 +42,19 @@ const RepVisits: React.FC = () => {
   const [pickerTab, setPickerTab] = useState<'route' | 'all'>('route');
 
   const isOnline = useOnlineStatus();
-  const { isOnline: isSessionActive } = useWorkSession();
+  const { isOnline: isSessionActive, recordVisit } = useWorkSession();
   const canAct = isOnline && isSessionActive;
   const repId = user?.id ?? '';
   const allVisits = getRepVisits(repId);
   const activeVisit = getActiveVisit(repId);
 
-  // Reopen modal when returning from RepOrderCreate
+  // Reopen modal when returning from RepOrderCreate. Depends on location.state (not []) so it
+  // re-fires correctly if this component is ever kept mounted across the round trip; clearing
+  // the state via replace navigation (rather than a mount-scoped ref) is what actually prevents
+  // re-processing on back-navigation.
   useEffect(() => {
     const state = location.state as any;
-    if (state?.returnedOrderId && !handledReturnRef.current) {
-      handledReturnRef.current = true;
+    if (state?.returnedOrderId) {
       const av = getActiveVisit(repId);
       if (av) {
         // Auto-complete Order objective
@@ -69,8 +70,9 @@ const RepVisits: React.FC = () => {
           initialLinkedOrderTotal: state.returnedOrderTotal,
         });
       }
+      navigate(location.pathname, { replace: true, state: null });
     }
-  }, []);
+  }, [location.state]);
   const myCustomers = getRepCustomers(repId);
   const todayRoute = getTodayRoute(repId);
 
@@ -93,6 +95,7 @@ const RepVisits: React.FC = () => {
   const handleEndActive = (outcome: any) => {
     if (!activeVisit) return;
     endVisit(activeVisit.id, { productsDiscussed: [], notes: 'Ended from visits page.', ...outcome });
+    recordVisit();
     setShowEndConfirm(false);
   };
 

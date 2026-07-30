@@ -6,12 +6,7 @@ import { useWorkSession } from '../../context/WorkSessionContext';
 import { useAuth } from '../../context/AuthContext';
 import { ORDERS } from '../../data';
 
-const MOCK_COMMISSION = {
-  earned: 145.13,
-  pending: 38.00,
-  blocked: 12.50,
-  rate: '8%',
-};
+const COMMISSION_RATE = 0.08;
 
 const RepPayments: React.FC = () => {
   const { user } = useAuth();
@@ -32,6 +27,14 @@ const RepPayments: React.FC = () => {
 
   const myOrders = ORDERS.filter(o => o.repId === repId);
   const recentOrders = myOrders.slice(0, 5);
+
+  // Commission is computed from this rep's own orders, not a shared mock figure.
+  const commission = {
+    earned: myOrders.filter(o => o.paymentStatus === 'Paid').reduce((s, o) => s + o.total, 0) * COMMISSION_RATE,
+    pending: myOrders.filter(o => o.paymentStatus === 'Pending' || o.paymentStatus === 'On Credit').reduce((s, o) => s + o.total, 0) * COMMISSION_RATE,
+    blocked: myOrders.filter(o => o.status === 'Cancelled' || o.paymentStatus === 'Refunded').reduce((s, o) => s + o.total, 0) * COMMISSION_RATE,
+    rate: `${Math.round(COMMISSION_RATE * 100)}%`,
+  };
 
   const handleCollect = (customerId: string, customerName: string) => {
     const amt = parseFloat(amounts[customerId] ?? '0');
@@ -62,7 +65,7 @@ const RepPayments: React.FC = () => {
         {[
           { label: 'Collected Today', value: `£${todayStats.collections.toLocaleString()}`, icon: <Wallet className="h-4 w-4 text-emerald-500" />, bg: 'bg-emerald-50', color: 'text-slate-800' },
           { label: 'Due Collections', value: customersDue.length, icon: <Clock className="h-4 w-4 text-amber-500" />, bg: 'bg-amber-50', color: customersDue.length > 0 ? 'text-amber-700' : 'text-slate-800' },
-          { label: 'Commission Earned', value: `£${MOCK_COMMISSION.earned}`, icon: <TrendingUp className="h-4 w-4 text-blue-500" />, bg: 'bg-blue-50', color: 'text-slate-800' },
+          { label: 'Commission Earned', value: `£${commission.earned.toFixed(2)}`, icon: <TrendingUp className="h-4 w-4 text-blue-500" />, bg: 'bg-blue-50', color: 'text-slate-800' },
         ].map(kpi => (
           <div key={kpi.label} className="bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm flex items-center gap-3">
             <div className={`h-8 w-8 ${kpi.bg} rounded-xl flex items-center justify-center flex-shrink-0`}>
@@ -153,9 +156,9 @@ const RepPayments: React.FC = () => {
             <h3 className="text-sm font-bold text-slate-700 mb-4">My Commission</h3>
             <div className="space-y-3">
               {[
-                { label: 'Earned',  value: MOCK_COMMISSION.earned,  color: 'text-emerald-600', bg: 'bg-emerald-50', icon: <CheckCircle className="h-4 w-4 text-emerald-500" /> },
-                { label: 'Pending', value: MOCK_COMMISSION.pending, color: 'text-amber-600',   bg: 'bg-amber-50',   icon: <Clock className="h-4 w-4 text-amber-500" /> },
-                { label: 'Blocked', value: MOCK_COMMISSION.blocked, color: 'text-rose-600',    bg: 'bg-rose-50',    icon: <AlertCircle className="h-4 w-4 text-rose-500" /> },
+                { label: 'Earned',  value: commission.earned,  color: 'text-emerald-600', bg: 'bg-emerald-50', icon: <CheckCircle className="h-4 w-4 text-emerald-500" /> },
+                { label: 'Pending', value: commission.pending, color: 'text-amber-600',   bg: 'bg-amber-50',   icon: <Clock className="h-4 w-4 text-amber-500" /> },
+                { label: 'Blocked', value: commission.blocked, color: 'text-rose-600',    bg: 'bg-rose-50',    icon: <AlertCircle className="h-4 w-4 text-rose-500" /> },
               ].map(item => (
                 <div key={item.label} className={`flex items-center justify-between p-3 ${item.bg} rounded-xl`}>
                   <div className="flex items-center gap-2">
@@ -167,7 +170,7 @@ const RepPayments: React.FC = () => {
               ))}
               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
                 <span className="text-xs text-slate-500">Commission rate</span>
-                <span className="text-xs font-bold text-slate-700">{MOCK_COMMISSION.rate} of paid orders</span>
+                <span className="text-xs font-bold text-slate-700">{commission.rate} of paid orders</span>
               </div>
             </div>
           </Card>

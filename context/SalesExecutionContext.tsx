@@ -9,6 +9,7 @@ import {
   Order,
 } from '../types';
 import { VISITS, FOLLOW_UPS, TASKS, COLLECTION_ATTEMPTS, ROUTE_PLANS, ORDERS } from '../data';
+import { useSalesCRM } from './SalesCRMContext';
 
 interface SalesExecutionContextValue {
   // Visit
@@ -58,6 +59,7 @@ interface SalesExecutionContextValue {
   // Orders
   orders: Order[];
   createOrder: (data: Omit<Order, 'id'>) => string;
+  updateOrder: (id: string, updates: Partial<Order>) => void;
   getRepOrders: (repId: string) => Order[];
 
   // Productivity
@@ -81,6 +83,7 @@ function isToday(dueDate: string) {
 }
 
 export const SalesExecutionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { getRepLeads } = useSalesCRM();
   const [visits, setVisits] = useState<Visit[]>(VISITS);
   const [followUps, setFollowUps] = useState<FollowUp[]>(() =>
     FOLLOW_UPS.map(f => ({
@@ -115,12 +118,6 @@ export const SalesExecutionProvider: React.FC<{ children: React.ReactNode }> = (
       notes: '',
     };
     setVisits(prev => [visit, ...prev]);
-    // Auto-mark matching route stop as Visited
-    const todayStr = today();
-    setRoutePlans(prev => prev.map(r => {
-      if (r.repId !== repId || r.date !== todayStr) return r;
-      return { ...r, stops: r.stops.map(s => s.customerId === customerId ? { ...s, status: 'Visited' as RoutePlanStop['status'] } : s) };
-    }));
     return id;
   }, []);
 
@@ -135,13 +132,24 @@ export const SalesExecutionProvider: React.FC<{ children: React.ReactNode }> = (
 
   const endVisit = useCallback((visitId: string, outcome: VisitOutcome) => {
     const endTime = nowIso();
+    let visitRepId = '', visitCustomerId = '', visitDate = '';
     setVisits(prev => prev.map(v => {
       if (v.id !== visitId) return v;
+      visitRepId = v.repId; visitCustomerId = v.customerId; visitDate = v.date;
       const start = new Date(v.startTime).getTime();
       const end = new Date(endTime).getTime();
       const durationMinutes = Math.round((end - start) / 60000);
       return { ...v, status: 'completed' as VisitStatus, endTime, durationMinutes, outcome };
     }));
+    // Mark the matching route stop as Visited only once the visit actually completes,
+    // not when it starts — otherwise the route progress bar reads 100% while the rep
+    // is still mid-visit, and a closed/cancelled visit leaves a falsely "done" stop.
+    if (visitRepId && visitCustomerId) {
+      setRoutePlans(prev => prev.map(r => {
+        if (r.repId !== visitRepId || r.date !== visitDate) return r;
+        return { ...r, stops: r.stops.map(s => s.customerId === visitCustomerId ? { ...s, status: 'Visited' as RoutePlanStop['status'] } : s) };
+      }));
+    }
   }, []);
 
   const cancelVisit = useCallback((visitId: string) => {
@@ -359,6 +367,10 @@ export const SalesExecutionProvider: React.FC<{ children: React.ReactNode }> = (
     return id;
   }, []);
 
+  const updateOrder = useCallback((id: string, updates: Partial<Order>) => {
+    setOrders(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
+  }, []);
+
   const getRepOrders = useCallback((repId: string) =>
     orders.filter(o => o.repId === repId), [orders]);
 
@@ -382,6 +394,11 @@ export const SalesExecutionProvider: React.FC<{ children: React.ReactNode }> = (
     const totalMinutes = completed.reduce((s, v) => s + (v.durationMinutes ?? 0), 0);
     const productiveHours = Math.round((totalMinutes / 60) * 10) / 10;
 
+    const repLeads = getRepLeads(repId);
+    const convertedLeads = repLeads.filter(l => l.stage === 'Converted').length;
+    const leadConversionRate = repLeads.length > 0
+      ? Math.round((convertedLeads / repLeads.length) * 100) : 0;
+
     return {
       repId, date: todayStr,
       visitsCompleted: completed.length,
@@ -390,10 +407,10 @@ export const SalesExecutionProvider: React.FC<{ children: React.ReactNode }> = (
       ordersPerVisit: Math.round(ordersPerVisit * 10) / 10,
       collectionsRecovered,
       followUpCompletionRate: Math.round(followUpRate * 100),
-      leadConversionRate: 25,
+      leadConversionRate,
       productiveHours,
     };
-  }, [visits, followUps]);
+  }, [visits, followUps, getRepLeads]);
 
   const value: SalesExecutionContextValue = {
     visits, startVisit, updateVisitObjective, endVisit, cancelVisit,
@@ -405,7 +422,7 @@ export const SalesExecutionProvider: React.FC<{ children: React.ReactNode }> = (
     getRepCollections, getCustomerCollections,
     routePlans, getTodayRoute, markStopVisited, markStopSkipped,
     createOrUpdateRoute, addStopToRoute, removeStopFromRoute, reorderRouteStops,
-    orders, createOrder, getRepOrders,
+    orders, createOrder, updateOrder, getRepOrders,
     getProductivityMetrics,
   };
 

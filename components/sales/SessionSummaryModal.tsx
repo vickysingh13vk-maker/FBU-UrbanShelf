@@ -30,7 +30,7 @@ const SessionSummaryModal: React.FC<Props> = ({ summary, onClose }) => (
           { icon: <MapPin className="h-4 w-4 text-indigo-400" />,     label: 'Visits',      value: summary.visits },
           { icon: <ShoppingCart className="h-4 w-4 text-blue-400" />, label: 'Orders',      value: summary.orders },
           { icon: <Wallet className="h-4 w-4 text-emerald-400" />,    label: 'Collections', value: `£${summary.collections.toLocaleString()}` },
-          { icon: <Wallet className="h-4 w-4 text-green-500" />,      label: 'Revenue',     value: `£${summary.revenue.toLocaleString()}` },
+          { icon: <Wallet className="h-4 w-4 text-green-500" />,      label: 'Revenue',     value: `£${summary.revenue.toFixed(2)}` },
           { icon: <Users className="h-4 w-4 text-violet-400" />,      label: 'Leads Added', value: summary.leadsAdded },
         ].map(item => (
           <div key={item.label} className="bg-slate-50 rounded-xl p-3">
