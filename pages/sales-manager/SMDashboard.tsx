@@ -144,7 +144,7 @@ const SMDashboard: React.FC = () => {
             ) : (
               <div className="space-y-2">
                 {atRisk.map(c => (
-                  <CustomerHealthCard key={c.customerId} health={c} />
+                  <CustomerHealthCard key={c.customerId} health={c} onClick={() => navigate(`/customers/${c.customerId}/360`)} />
                 ))}
               </div>
             )}

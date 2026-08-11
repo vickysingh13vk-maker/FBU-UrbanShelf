@@ -27,6 +27,7 @@ interface SalesCRMContextType {
   customers: Customer[];
   getRepCustomers: (repId: string) => Customer[];
   updateCustomerLifecycle: (customerId: string, stage: CustomerLifecycleStage) => void;
+  reassignCustomerRep: (customerId: string, repId: string, repName: string) => void;
 
   // Helpers
   getTodayLeadCount: (repId: string) => number;
@@ -151,6 +152,12 @@ export const SalesCRMProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     ));
   }, []);
 
+  const reassignCustomerRep = useCallback((customerId: string, repId: string, repName: string) => {
+    setCustomers(prev => prev.map(c =>
+      c.id === customerId ? { ...c, assignedRepId: repId, assignedRepName: repName, ownershipStatus: 'assigned' } : c
+    ));
+  }, []);
+
   const getTodayLeadCount = useCallback((repId: string): number => {
     const today = new Date().toISOString().split('T')[0];
     return leads.filter(l => l.repId === repId && l.createdDate.startsWith(today)).length;
@@ -171,7 +178,7 @@ export const SalesCRMProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     <SalesCRMContext.Provider value={{
       leads, getRepLeads, addLead, updateLead, moveLeadStage, convertLead, addLeadActivity,
       timelines, getCustomerTimeline, addTimelineEntry,
-      customers, getRepCustomers, addCustomer, updateCustomerLifecycle,
+      customers, getRepCustomers, addCustomer, updateCustomerLifecycle, reassignCustomerRep,
       getTodayLeadCount, getPendingFollowUps,
     }}>
       {children}

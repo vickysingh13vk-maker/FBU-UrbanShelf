@@ -2,6 +2,7 @@ import React from 'react';
 // phase5-cache-bust
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
+import { RequireRole } from './components/RequireRole';
 import Dashboard from './pages/Dashboard';
 import NewDashboard from './pages/NewDashboard';
 import CustomerLedgerPage from './pages/CustomerLedger';
@@ -176,39 +177,39 @@ const App: React.FC = () => {
                     <Route path="/loyalty" element={<GenericPage title="Loyalty Program" description="Points and rewards configuration." data={[]} columns={[]} actionLabel="Configure" />} />
 
                     {/* Sales Manager CRM */}
-                    <Route path="/sales-manager/dashboard" element={<SMDashboard />} />
-                    <Route path="/sales-manager/team" element={<SMTeam />} />
-                    <Route path="/sales-manager/customers" element={<SMCustomers />} />
-                    <Route path="/sales-manager/leads" element={<SMLeads />} />
-                    <Route path="/sales-manager/orders" element={<SMOrders />} />
-                    <Route path="/sales-manager/payments" element={<SMPayments />} />
-                    <Route path="/sales-manager/territories" element={<SMTerritories />} />
-                    <Route path="/sales-manager/reports" element={<SMReports />} />
-                    <Route path="/sales-manager/analytics" element={<SMAnalytics />} />
-                    <Route path="/sales-manager/customer-health" element={<SMCustomerHealth />} />
-                    <Route path="/sales-manager/alerts" element={<SMAlerts />} />
-                    <Route path="/sales-manager/team/:repId" element={<SMRepProfile />} />
-                    <Route path="/sales-manager/escalations" element={<EscalationsDashboard />} />
-                    <Route path="/sales-manager/approvals" element={<ApprovalQueue />} />
+                    <Route path="/sales-manager/dashboard" element={<RequireRole roles={['Sales Manager']}><SMDashboard /></RequireRole>} />
+                    <Route path="/sales-manager/team" element={<RequireRole roles={['Sales Manager']}><SMTeam /></RequireRole>} />
+                    <Route path="/sales-manager/customers" element={<RequireRole roles={['Sales Manager']}><SMCustomers /></RequireRole>} />
+                    <Route path="/sales-manager/leads" element={<RequireRole roles={['Sales Manager']}><SMLeads /></RequireRole>} />
+                    <Route path="/sales-manager/orders" element={<RequireRole roles={['Sales Manager']}><SMOrders /></RequireRole>} />
+                    <Route path="/sales-manager/payments" element={<RequireRole roles={['Sales Manager']}><SMPayments /></RequireRole>} />
+                    <Route path="/sales-manager/territories" element={<RequireRole roles={['Sales Manager']}><SMTerritories /></RequireRole>} />
+                    <Route path="/sales-manager/reports" element={<RequireRole roles={['Sales Manager']}><SMReports /></RequireRole>} />
+                    <Route path="/sales-manager/analytics" element={<RequireRole roles={['Sales Manager']}><SMAnalytics /></RequireRole>} />
+                    <Route path="/sales-manager/customer-health" element={<RequireRole roles={['Sales Manager']}><SMCustomerHealth /></RequireRole>} />
+                    <Route path="/sales-manager/alerts" element={<RequireRole roles={['Sales Manager']}><SMAlerts /></RequireRole>} />
+                    <Route path="/sales-manager/team/:repId" element={<RequireRole roles={['Sales Manager']}><SMRepProfile /></RequireRole>} />
+                    <Route path="/sales-manager/escalations" element={<RequireRole roles={['Sales Manager']}><EscalationsDashboard /></RequireRole>} />
+                    <Route path="/sales-manager/approvals" element={<RequireRole roles={['Sales Manager']}><ApprovalQueue /></RequireRole>} />
 
                     {/* Sales Rep CRM */}
-                    <Route path="/sales/dashboard" element={<RepDashboard />} />
-                    <Route path="/sales/customers" element={<RepCustomers />} />
-                    <Route path="/sales/customers/:id" element={<RepCustomerDetail />} />
-                    <Route path="/sales/leads/:id" element={<RepLeadDetail />} />
-                    <Route path="/sales/leads" element={<RepLeads />} />
-                    <Route path="/sales/activities" element={<RepActivities />} />
-                    <Route path="/sales/orders" element={<RepOrders />} />
-                    <Route path="/sales/orders/new" element={<RepOrderCreate />} />
-                    <Route path="/sales/payments" element={<RepPayments />} />
-                    <Route path="/sales/reporting" element={<RepReporting />} />
-                    <Route path="/sales/profile" element={<RepProfile />} />
-                    <Route path="/sales/visits" element={<RepVisits />} />
-                    <Route path="/sales/visits/:id" element={<RepVisitDetail />} />
-                    <Route path="/sales/follow-ups" element={<RepFollowUps />} />
-                    <Route path="/sales/tasks" element={<RepTasks />} />
-                    <Route path="/sales/collections" element={<RepCollections />} />
-                    <Route path="/sales/route" element={<RepRoute />} />
+                    <Route path="/sales/dashboard" element={<RequireRole roles={['Sales Rep']}><RepDashboard /></RequireRole>} />
+                    <Route path="/sales/customers" element={<RequireRole roles={['Sales Rep']}><RepCustomers /></RequireRole>} />
+                    <Route path="/sales/customers/:id" element={<RequireRole roles={['Sales Rep']}><RepCustomerDetail /></RequireRole>} />
+                    <Route path="/sales/leads/:id" element={<RequireRole roles={['Sales Rep']}><RepLeadDetail /></RequireRole>} />
+                    <Route path="/sales/leads" element={<RequireRole roles={['Sales Rep']}><RepLeads /></RequireRole>} />
+                    <Route path="/sales/activities" element={<RequireRole roles={['Sales Rep']}><RepActivities /></RequireRole>} />
+                    <Route path="/sales/orders" element={<RequireRole roles={['Sales Rep']}><RepOrders /></RequireRole>} />
+                    <Route path="/sales/orders/new" element={<RequireRole roles={['Sales Rep']}><RepOrderCreate /></RequireRole>} />
+                    <Route path="/sales/payments" element={<RequireRole roles={['Sales Rep']}><RepPayments /></RequireRole>} />
+                    <Route path="/sales/reporting" element={<RequireRole roles={['Sales Rep']}><RepReporting /></RequireRole>} />
+                    <Route path="/sales/profile" element={<RequireRole roles={['Sales Rep']}><RepProfile /></RequireRole>} />
+                    <Route path="/sales/visits" element={<RequireRole roles={['Sales Rep']}><RepVisits /></RequireRole>} />
+                    <Route path="/sales/visits/:id" element={<RequireRole roles={['Sales Rep']}><RepVisitDetail /></RequireRole>} />
+                    <Route path="/sales/follow-ups" element={<RequireRole roles={['Sales Rep']}><RepFollowUps /></RequireRole>} />
+                    <Route path="/sales/tasks" element={<RequireRole roles={['Sales Rep']}><RepTasks /></RequireRole>} />
+                    <Route path="/sales/collections" element={<RequireRole roles={['Sales Rep']}><RepCollections /></RequireRole>} />
+                    <Route path="/sales/route" element={<RequireRole roles={['Sales Rep']}><RepRoute /></RequireRole>} />
 
                     {/* CRM Ops (Phase 5) */}
                     <Route path="/notifications" element={<NotificationsCenter />} />

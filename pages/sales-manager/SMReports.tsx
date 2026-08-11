@@ -4,11 +4,29 @@ import {
   BarChart3, Calendar, ChevronDown,
 } from 'lucide-react';
 import { Card, Badge, Button, Table, THead, TBody, TR, TH, TD } from '../../components/ui';
-import { ORDERS, CUSTOMERS, COLLECTION_ATTEMPTS, REP_STATUSES } from '../../data';
+import { REP_STATUSES } from '../../data';
+import { useSalesExecution } from '../../context/SalesExecutionContext';
+import { useSalesCRM } from '../../context/SalesCRMContext';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const fmt = (n: number) => `£${n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+function downloadCSV(filename: string, rows: (string | number)[][]) {
+  const csv = rows.map(row => row.map(cell => {
+    const s = String(cell);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  }).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
 
 type Period = 'all' | 'thisMonth' | 'lastMonth';
 
@@ -35,16 +53,18 @@ const inPeriod = (dateStr: string, period: Period): boolean => {
 const SMReports: React.FC = () => {
   const [period, setPeriod] = useState<Period>('all');
   const [expandedRep, setExpandedRep] = useState<string | null>(null);
+  const { orders: ORDERS, collectionAttempts: COLLECTION_ATTEMPTS } = useSalesExecution();
+  const { customers: CUSTOMERS } = useSalesCRM();
 
   // ── Period-filtered data ──────────────────────────────────────────────────
   const filteredOrders = useMemo(() =>
     ORDERS.filter(o => inPeriod(o.date, period)),
-    [period],
+    [ORDERS, period],
   );
 
   const filteredCollections = useMemo(() =>
     COLLECTION_ATTEMPTS.filter(c => inPeriod(c.attemptDate, period)),
-    [period],
+    [COLLECTION_ATTEMPTS, period],
   );
 
   // ── Summary KPIs ──────────────────────────────────────────────────────────
@@ -64,24 +84,52 @@ const SMReports: React.FC = () => {
     const collected    = collections.reduce((s, c) => s + c.amountCollected, 0);
     const overdue      = collections.filter(c => c.status === 'Overdue').length;
     return { ...rep, orders: orders.length, revenue, pending, delivered, customers, collected, overdue };
-  }), [filteredOrders, filteredCollections]);
+  }), [filteredOrders, filteredCollections, CUSTOMERS]);
 
   // ── Customer breakdown ────────────────────────────────────────────────────
   const lifecycleCounts = useMemo(() => {
-    const stages = ['New', 'Prospect', 'Active', 'Inactive', 'At Risk', 'Churned'];
+    const stages = ['Lead', 'Prospect', 'Qualified', 'Active', 'Inactive', 'At Risk', 'Lost', 'Archived'];
     return stages.map(stage => ({
       stage,
       count: CUSTOMERS.filter(c => c.lifecycleStage === stage).length,
     })).filter(s => s.count > 0);
-  }, []);
+  }, [CUSTOMERS]);
 
   const lifecycleVariant = (stage: string): any => {
     if (stage === 'Active')   return 'success';
-    if (stage === 'New' || stage === 'Prospect') return 'info';
-    if (stage === 'Inactive') return 'secondary';
+    if (stage === 'Lead' || stage === 'Prospect' || stage === 'Qualified') return 'info';
+    if (stage === 'Inactive' || stage === 'Archived') return 'secondary';
     if (stage === 'At Risk')  return 'warning';
-    if (stage === 'Churned')  return 'danger';
+    if (stage === 'Lost')     return 'danger';
     return 'secondary';
+  };
+
+  // ── Export handlers ───────────────────────────────────────────────────────
+  const exportRepPerformance = () => downloadCSV('rep-performance.csv', [
+    ['Rep', 'Customers', 'Orders', 'Delivered', 'Pending', 'Revenue (Paid)', 'Collected', 'Overdue'],
+    ...repStats.map(r => [r.repName, r.customers, r.orders, r.delivered, r.pending, r.revenue.toFixed(2), r.collected.toFixed(2), r.overdue]),
+  ]);
+
+  const exportOrderSummary = () => downloadCSV('order-summary.csv', [
+    ['Order ID', 'Rep', 'Customer', 'Date', 'Status', 'Payment Status', 'Total'],
+    ...filteredOrders.map(o => [o.id, REP_STATUSES.find(r => r.repId === o.repId)?.repName ?? o.repId, o.customer, o.date, o.status, o.paymentStatus, o.total.toFixed(2)]),
+  ]);
+
+  const exportCollections = () => downloadCSV('collections.csv', [
+    ['Customer', 'Rep', 'Attempt Date', 'Status', 'Requested', 'Collected'],
+    ...filteredCollections.map(c => [c.customerName, REP_STATUSES.find(r => r.repId === c.repId)?.repName ?? c.repId, c.attemptDate, c.status, c.amountRequested.toFixed(2), c.amountCollected.toFixed(2)]),
+  ]);
+
+  const exportCustomerHealth = () => downloadCSV('customer-lifecycle.csv', [
+    ['Lifecycle Stage', 'Customer Count'],
+    ...lifecycleCounts.map(s => [s.stage, s.count]),
+  ]);
+
+  const EXPORTS: Record<string, () => void> = {
+    'Rep Performance': exportRepPerformance,
+    'Order Summary': exportOrderSummary,
+    'Collections': exportCollections,
+    'Customer Health': exportCustomerHealth,
   };
 
   // ─── Render ────────────────────────────────────────────────────────────────
@@ -108,7 +156,7 @@ const SMReports: React.FC = () => {
               </button>
             ))}
           </div>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={exportRepPerformance}>
             <Download className="h-4 w-4 mr-1.5" />
             Export
           </Button>
@@ -255,8 +303,8 @@ const SMReports: React.FC = () => {
                     <div
                       className={`h-full rounded-full ${
                         stage === 'Active'   ? 'bg-emerald-400' :
-                        stage === 'New' || stage === 'Prospect' ? 'bg-sky-400' :
-                        stage === 'Inactive' ? 'bg-slate-300' :
+                        stage === 'Lead' || stage === 'Prospect' || stage === 'Qualified' ? 'bg-sky-400' :
+                        stage === 'Inactive' || stage === 'Archived' ? 'bg-slate-300' :
                         stage === 'At Risk'  ? 'bg-amber-400' : 'bg-rose-400'
                       }`}
                       style={{ width: `${pct}%` }}
@@ -316,6 +364,7 @@ const SMReports: React.FC = () => {
           ].map(({ label, icon: Icon }) => (
             <button
               key={label}
+              onClick={EXPORTS[label]}
               className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors text-center"
             >
               <Icon className="h-5 w-5 text-slate-500" />

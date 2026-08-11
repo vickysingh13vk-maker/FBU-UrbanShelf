@@ -1,22 +1,50 @@
 import React, { useState } from 'react'; // p5-touch
-import { CheckSquare } from 'lucide-react';
-import { Card } from '../components/ui';
+import { CheckSquare, Plus } from 'lucide-react';
+import { Card, Modal, Button, Input, TextArea } from '../components/ui';
 import { useCRMOps } from '../context/CRMOpsContext';
 import { useAuth } from '../context/AuthContext';
 import ApprovalCard from '../components/crm-ops/ApprovalCard';
-import { ApprovalStatus } from '../types';
+import { ApprovalStatus, ApprovalType } from '../types';
 
 type Filter = 'all' | ApprovalStatus;
 
+const APPROVAL_TYPES: ApprovalType[] = [
+  'discount', 'credit-increase', 'order-override',
+  'customer-activation', 'payment-adjustment', 'write-off',
+];
+
 const ApprovalQueue: React.FC = () => {
-  const { approvals } = useCRMOps();
+  const { approvals, createApproval } = useCRMOps();
   const { user } = useAuth();
   const [filter, setFilter] = useState<Filter>('Pending');
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState({
+    type: 'discount' as ApprovalType,
+    title: '',
+    description: '',
+    customerName: '',
+    amount: '',
+  });
 
   const isRep = user?.roleName === 'Sales Rep';
   const visible = isRep
     ? approvals.filter(a => a.requestedBy === user?.id)
     : approvals;
+
+  const handleCreate = () => {
+    if (!form.title.trim() || !form.description.trim()) return;
+    createApproval({
+      type: form.type,
+      title: form.title.trim(),
+      description: form.description.trim(),
+      requestedBy: user?.id ?? '',
+      requestedByName: user?.name ?? '',
+      customerName: form.customerName.trim() || undefined,
+      amount: form.amount ? parseFloat(form.amount) : undefined,
+    });
+    setForm({ type: 'discount', title: '', description: '', customerName: '', amount: '' });
+    setShowCreate(false);
+  };
 
   const counts: Record<ApprovalStatus, number> = {
     Pending: visible.filter(a => a.status === 'Pending').length,
@@ -30,9 +58,14 @@ const ApprovalQueue: React.FC = () => {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-black text-slate-800">Approval Queue</h1>
-        <p className="text-sm text-slate-500 mt-0.5">{counts.Pending} pending · {visible.length} total</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-slate-800">Approval Queue</h1>
+          <p className="text-sm text-slate-500 mt-0.5">{counts.Pending} pending · {visible.length} total</p>
+        </div>
+        <Button variant="primary" size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => setShowCreate(true)}>
+          Request Approval
+        </Button>
       </div>
 
       {/* Summary */}
@@ -76,6 +109,61 @@ const ApprovalQueue: React.FC = () => {
           {sorted.map(a => <ApprovalCard key={a.id} approval={a} />)}
         </div>
       )}
+
+      {/* Request Approval Modal */}
+      <Modal
+        isOpen={showCreate}
+        onClose={() => setShowCreate(false)}
+        title="Request Approval"
+        size="md"
+        footer={
+          <div className="flex gap-2 justify-end w-full">
+            <Button variant="outline" size="sm" onClick={() => setShowCreate(false)}>Cancel</Button>
+            <Button variant="primary" size="sm" onClick={handleCreate}>Submit Request</Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">Type</label>
+            <select
+              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+              value={form.type}
+              onChange={e => setForm(f => ({ ...f, type: e.target.value as ApprovalType }))}
+            >
+              {APPROVAL_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <Input
+            label="Title"
+            placeholder="Brief summary of the request"
+            value={form.title}
+            onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Customer (optional)"
+              placeholder="Customer or account name"
+              value={form.customerName}
+              onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))}
+            />
+            <Input
+              label="Amount / % (optional)"
+              type="number"
+              placeholder="e.g. 15"
+              value={form.amount}
+              onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
+            />
+          </div>
+          <TextArea
+            label="Description"
+            rows={3}
+            placeholder="Full details of the request"
+            value={form.description}
+            onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+          />
+        </div>
+      </Modal>
     </div>
   );
 };

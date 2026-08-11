@@ -10,7 +10,7 @@ import {
 } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { useSalesExecution } from '../../context/SalesExecutionContext';
-import { CUSTOMERS } from '../../data';
+import { useSalesCRM } from '../../context/SalesCRMContext';
 import { Order } from '../../types';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -24,12 +24,6 @@ const SIMULATED_ORDER_ITEMS = [
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const getCustomerDetails = (customerName: string) =>
-  CUSTOMERS.find(c => c.name === customerName || c.storeName === customerName) ?? {
-    email: 'N/A', address: 'N/A', companyName: 'N/A',
-    phone: 'N/A', image: undefined,
-  };
 
 const getStatusVariant = (status: string): 'success' | 'danger' | 'info' | 'warning' | 'secondary' => {
   if (status === 'Delivered') return 'success';
@@ -57,11 +51,17 @@ const RepOrders: React.FC = () => {
   const preselectedCustomerId   = (location.state as any)?.customerId;
   const preselectedCustomerName = (location.state as any)?.customerName;
 
-  const { getRepOrders } = useSalesExecution();
+  const { getRepOrders, updateOrder } = useSalesExecution();
+  const { customers } = useSalesCRM();
   const repId = user?.id ?? '';
 
-  // Local orders state (allows cancel mutations without backend)
-  const [localOrders, setLocalOrders] = useState<Order[]>(() => getRepOrders(repId));
+  const getCustomerDetails = (customerName: string) =>
+    customers.find(c => c.name === customerName || c.storeName === customerName) ?? {
+      email: 'N/A', address: 'N/A', companyName: 'N/A',
+      phone: 'N/A', image: undefined,
+    };
+
+  const orders = useMemo(() => getRepOrders(repId), [getRepOrders, repId]);
 
   // Filters
   const [search,       setSearch]       = useState('');
@@ -70,16 +70,21 @@ const RepOrders: React.FC = () => {
   const [page,         setPage]         = useState(1);
 
   // Modals
-  const [selectedOrder,   setSelectedOrder]   = useState<Order | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [showDetail,      setShowDetail]      = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [orderToCancel,   setOrderToCancel]   = useState<Order | null>(null);
 
+  const selectedOrder = useMemo(() =>
+    orders.find(o => o.id === selectedOrderId) ?? null,
+    [orders, selectedOrderId],
+  );
+
   // ── Derived ────────────────────────────────────────────────────────────────
 
   const baseOrders = preselectedCustomerId
-    ? localOrders.filter(o => o.customerId === preselectedCustomerId)
-    : localOrders;
+    ? orders.filter(o => o.customerId === preselectedCustomerId)
+    : orders;
 
   const filtered = useMemo(() => {
     return baseOrders.filter(o => {
@@ -95,17 +100,17 @@ const RepOrders: React.FC = () => {
   const totalPages    = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const paginated     = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
-  const totalRevenue  = localOrders.filter(o => o.paymentStatus === 'Paid').reduce((s, o) => s + o.total, 0);
-  const pendingPay    = localOrders.filter(o => o.paymentStatus === 'Pending').reduce((s, o) => s + o.total, 0);
-  const deliveredCount = localOrders.filter(o => o.status === 'Delivered').length;
-  const pendingCount  = localOrders.filter(o => o.status === 'Pending').length;
+  const totalRevenue  = orders.filter(o => o.paymentStatus === 'Paid').reduce((s, o) => s + o.total, 0);
+  const pendingPay    = orders.filter(o => o.paymentStatus === 'Pending').reduce((s, o) => s + o.total, 0);
+  const deliveredCount = orders.filter(o => o.status === 'Delivered').length;
+  const pendingCount  = orders.filter(o => o.status === 'Pending').length;
 
   const statuses = ['Pending', 'Approved', 'Picking', 'Packed', 'Shipped', 'Delivered', 'Cancelled'];
 
   // ── Actions ────────────────────────────────────────────────────────────────
 
   const openDetail = (order: Order) => {
-    setSelectedOrder(order);
+    setSelectedOrderId(order.id);
     setShowDetail(true);
   };
 
@@ -147,12 +152,7 @@ const RepOrders: React.FC = () => {
 
   const handleCancelConfirm = () => {
     if (!orderToCancel) return;
-    setLocalOrders(prev =>
-      prev.map(o => o.id === orderToCancel.id ? { ...o, status: 'Cancelled' as const } : o),
-    );
-    if (selectedOrder?.id === orderToCancel.id) {
-      setSelectedOrder(prev => prev ? { ...prev, status: 'Cancelled' as const } : prev);
-    }
+    updateOrder(orderToCancel.id, { status: 'Cancelled' });
     setShowCancelModal(false);
     setOrderToCancel(null);
   };
@@ -217,8 +217,9 @@ const RepOrders: React.FC = () => {
 
         {/* Order Items */}
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <div className="px-5 py-3 bg-slate-50 border-b border-slate-200 text-sm font-bold text-slate-900">
-            Order Items
+          <div className="px-5 py-3 bg-slate-50 border-b border-slate-200">
+            <p className="text-sm font-bold text-slate-900">Order Items</p>
+            <p className="text-xs text-slate-400 mt-0.5">Sample line items — the order model doesn't yet track per-item detail, only the {selectedOrder.items}-item count and total shown above.</p>
           </div>
           <div className="divide-y divide-slate-100">
             {SIMULATED_ORDER_ITEMS.map((item, idx) => (
@@ -293,7 +294,7 @@ const RepOrders: React.FC = () => {
               </button>
             </p>
           ) : (
-            <p className="text-xs text-slate-500 mt-0.5">{localOrders.length} total orders</p>
+            <p className="text-xs text-slate-500 mt-0.5">{orders.length} total orders</p>
           )}
         </div>
         <button
@@ -306,7 +307,7 @@ const RepOrders: React.FC = () => {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Total Orders',     value: localOrders.length,                icon: <Box className="h-5 w-5" />,           color: 'text-indigo-600', bg: 'bg-indigo-50',  border: 'border-indigo-100' },
+          { label: 'Total Orders',     value: orders.length,                icon: <Box className="h-5 w-5" />,           color: 'text-indigo-600', bg: 'bg-indigo-50',  border: 'border-indigo-100' },
           { label: 'Revenue (Paid)',   value: `£${totalRevenue.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: <CheckCircle className="h-5 w-5" />, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
           { label: 'Pending Payment',  value: `£${pendingPay.toLocaleString('en-GB',  { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: <Clock className="h-5 w-5" />,        color: 'text-amber-600',   bg: 'bg-amber-50',   border: 'border-amber-100' },
           { label: 'Delivered',        value: deliveredCount,                     icon: <Truck className="h-5 w-5" />,         color: 'text-slate-600',  bg: 'bg-slate-50',   border: 'border-slate-200' },

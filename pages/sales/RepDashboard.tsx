@@ -20,7 +20,6 @@ import { useSalesCRM } from '../../context/SalesCRMContext';
 import { useSalesExecution } from '../../context/SalesExecutionContext';
 import { useAuth } from '../../context/AuthContext';
 import { TimelineEventType } from '../../types';
-import { WORK_SESSIONS, ORDERS } from '../../data';
 
 type SheetType = 'route' | 'followups' | 'collections' | 'tasks';
 
@@ -77,12 +76,12 @@ const RepDashboard: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { isOnline, startSession, endSession, todayStats, elapsedSeconds, lastSummary, clearLastSummary } = useWorkSession();
+  const { isOnline, startSession, endSession, todayStats, elapsedSeconds, lastSummary, clearLastSummary, sessionHistory } = useWorkSession();
   const { getRepCustomers, getRepLeads, addTimelineEntry } = useSalesCRM();
   const {
     getActiveVisit, getTodayFollowUps, getOverdueFollowUps, getRepTasks,
     completeFollowUp, dismissFollowUp, getProductivityMetrics, getTodayRoute,
-    logCollectionAttempt, completeTask,
+    logCollectionAttempt, completeTask, getRepOrders,
   } = useSalesExecution();
 
   const [dashTab, setDashTab] = useState<'office' | 'field'>('office');
@@ -127,13 +126,15 @@ const RepDashboard: React.FC = () => {
     .filter(s => s.status === 'Pending')
     .sort((a, b) => a.suggestedOrder - b.suggestedOrder);
 
+  const myOrders = getRepOrders(repId);
+
   // Same definition as RepPayments' "customers due": negative balance OR an unpaid order on file.
   const overdueCollections = myCustomers.filter(c => {
-    const hasUnpaid = ORDERS.some(o => o.customerId === c.id && o.paymentStatus === 'Pending' && o.repId === repId);
+    const hasUnpaid = myOrders.some(o => o.customerId === c.id && o.paymentStatus === 'Pending');
     return c.walletBalance < 0 || hasUnpaid;
   });
 
-  const mySessions = WORK_SESSIONS.filter(s => s.repId === repId).slice(0, 6);
+  const mySessions = sessionHistory.filter(s => s.repId === repId).slice(0, 6);
   const weekVisits = mySessions.reduce((a, s) => a + s.totalVisits, 0) + todayStats.visits;
   const weekOrders = mySessions.reduce((a, s) => a + s.totalOrders, 0) + todayStats.orders;
   const weekCollections = mySessions.reduce((a, s) => a + s.totalCollections, 0) + todayStats.collections;
@@ -202,7 +203,7 @@ const RepDashboard: React.FC = () => {
       attemptDate: new Date().toISOString().split('T')[0],
       amountRequested: amountOwed,
       amountCollected: amount,
-      status: 'Collected',
+      status: amount >= amountOwed ? 'Paid' : 'Partially Paid',
       notes: 'Logged from field dashboard',
     });
     setCollectionAmounts(prev => ({ ...prev, [customerId]: '' }));

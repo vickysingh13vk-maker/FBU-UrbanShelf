@@ -10,7 +10,6 @@ import { useSalesCRM } from '../../context/SalesCRMContext';
 import { useSalesExecution } from '../../context/SalesExecutionContext';
 import { useAuth } from '../../context/AuthContext';
 import { useCheckIn } from '../../context/CheckInContext';
-import { ORDERS } from '../../data';
 import { TimelineEventType } from '../../types';
 
 const RepCustomerDetail: React.FC = () => {
@@ -19,7 +18,7 @@ const RepCustomerDetail: React.FC = () => {
   const location = useLocation();
   const { user } = useAuth();
   const { customers, getCustomerTimeline, addTimelineEntry } = useSalesCRM();
-  const { getRepFollowUps, completeFollowUp, addFollowUp } = useSalesExecution();
+  const { getRepFollowUps, completeFollowUp, addFollowUp, orders } = useSalesExecution();
   const { checkIn, checkOut, checkedInCustomer } = useCheckIn();
   const [showLogForm, setShowLogForm] = useState(false);
   const [checkingIn, setCheckingIn] = useState(false);
@@ -27,9 +26,9 @@ const RepCustomerDetail: React.FC = () => {
 
   const customer = customers.find(c => c.id === id);
   const timeline = id ? getCustomerTimeline(id) : [];
-  const customerOrders = ORDERS.filter(o => o.customerId === id).slice(0, 5);
-  const isCheckedIn = checkedInCustomer?.id === id;
   const repId = user?.id ?? '';
+  const customerOrders = orders.filter(o => o.customerId === id).slice(0, 5);
+  const isCheckedIn = checkedInCustomer?.id === id;
   const customerFollowUps = getRepFollowUps(repId).filter(f => f.customerId === id && f.status !== 'Cancelled');
 
   if (!customer) {
@@ -41,8 +40,8 @@ const RepCustomerDetail: React.FC = () => {
     );
   }
 
-  const totalOrders = ORDERS.filter(o => o.customerId === id).length;
-  const totalRevenue = ORDERS.filter(o => o.customerId === id && o.paymentStatus === 'Paid').reduce((s, o) => s + o.total, 0);
+  const totalOrders = orders.filter(o => o.customerId === id).length;
+  const totalRevenue = orders.filter(o => o.customerId === id && o.paymentStatus === 'Paid').reduce((s, o) => s + o.total, 0);
   const lastOrder = customerOrders[0];
 
   const handleLogActivity = (customerId: string, type: TimelineEventType, notes: string, outcome: string, nextAction: string, amount?: number) => {

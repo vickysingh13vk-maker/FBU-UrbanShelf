@@ -7,8 +7,12 @@ import { useNavigate } from 'react-router-dom';
 import {
   Card, Table, THead, TBody, TR, TH, TD, Badge, Button, Modal,
 } from '../../components/ui';
-import { CUSTOMERS, ORDERS, REP_STATUSES } from '../../data';
-import { Customer } from '../../types';
+import { REP_STATUSES } from '../../data';
+import { Customer, CustomerLifecycleStage } from '../../types';
+import { useSalesCRM } from '../../context/SalesCRMContext';
+import { useSalesExecution } from '../../context/SalesExecutionContext';
+import { useSalesManager } from '../../context/SalesManagerContext';
+import { useAuth } from '../../context/AuthContext';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -18,11 +22,10 @@ const getRepName = (repId?: string) =>
 const getLifecycleVariant = (stage?: string): any => {
   if (!stage) return 'secondary';
   if (stage === 'Active')   return 'success';
-  if (stage === 'New')      return 'info';
-  if (stage === 'Prospect') return 'info';
-  if (stage === 'Inactive') return 'secondary';
+  if (stage === 'Lead' || stage === 'Prospect' || stage === 'Qualified') return 'info';
+  if (stage === 'Inactive' || stage === 'Archived') return 'secondary';
   if (stage === 'At Risk')  return 'warning';
-  if (stage === 'Churned')  return 'danger';
+  if (stage === 'Lost')     return 'danger';
   return 'secondary';
 };
 
@@ -46,13 +49,18 @@ const daysAgo = (iso?: string) => {
 };
 
 const ITEMS_PER_PAGE = 10;
-const LIFECYCLE_STAGES = ['New', 'Prospect', 'Active', 'Inactive', 'At Risk', 'Churned'];
+const LIFECYCLE_STAGES: CustomerLifecycleStage[] = ['Lead', 'Prospect', 'Qualified', 'Active', 'At Risk', 'Inactive', 'Lost', 'Archived'];
 const STATUSES = ['Approved', 'Pending', 'Blocked'];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const SMCustomers: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { customers: CUSTOMERS, reassignCustomerRep, updateCustomerLifecycle } = useSalesCRM();
+  const { orders: ORDERS } = useSalesExecution();
+  const { getRepsForManager } = useSalesManager();
+  const myReps = useMemo(() => getRepsForManager(user?.id ?? ''), [getRepsForManager, user?.id]);
   const [search,          setSearch]          = useState('');
   const [repFilter,       setRepFilter]       = useState('All');
   const [lifecycleFilter, setLifecycleFilter] = useState('All');
@@ -67,7 +75,7 @@ const SMCustomers: React.FC = () => {
       CUSTOMERS.filter(c => c.assignedRepId)
         .map(c => [c.assignedRepId!, getRepName(c.assignedRepId)])
     ).entries()),
-    [],
+    [CUSTOMERS],
   );
 
   const filtered = useMemo(() => CUSTOMERS.filter(c => {
@@ -81,7 +89,7 @@ const SMCustomers: React.FC = () => {
     const matchLifecycle = lifecycleFilter === 'All' || c.lifecycleStage === lifecycleFilter;
     const matchStatus    = statusFilter    === 'All' || c.status         === statusFilter;
     return matchSearch && matchRep && matchLifecycle && matchStatus;
-  }), [search, repFilter, lifecycleFilter, statusFilter]);
+  }), [CUSTOMERS, search, repFilter, lifecycleFilter, statusFilter]);
 
   const totalPages  = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const safePage    = Math.min(page, totalPages);
@@ -90,17 +98,36 @@ const SMCustomers: React.FC = () => {
   // ── KPIs ─────────────────────────────────────────────────────────────────
   const totalCustomers = CUSTOMERS.length;
   const activeCount    = CUSTOMERS.filter(c => c.lifecycleStage === 'Active').length;
-  const atRiskCount    = CUSTOMERS.filter(c => c.lifecycleStage === 'At Risk' || c.lifecycleStage === 'Churned').length;
-  const newCount       = CUSTOMERS.filter(c => c.lifecycleStage === 'New' || c.lifecycleStage === 'Prospect').length;
+  const atRiskCount    = CUSTOMERS.filter(c => c.lifecycleStage === 'At Risk' || c.lifecycleStage === 'Lost').length;
+  const newCount       = CUSTOMERS.filter(c => c.lifecycleStage === 'Lead' || c.lifecycleStage === 'Prospect').length;
 
   // ── Customer orders ───────────────────────────────────────────────────────
   const customerOrders = useMemo(() =>
     selected ? ORDERS.filter(o => o.customerId === selected.id) : [],
-    [selected],
+    [selected, ORDERS],
+  );
+
+  // selected is a snapshot taken at open time; re-derive from the live list so
+  // rep/lifecycle changes made in this modal are reflected immediately.
+  const liveSelected = useMemo(() =>
+    selected ? CUSTOMERS.find(c => c.id === selected.id) ?? selected : null,
+    [selected, CUSTOMERS],
   );
 
   const handleOpen = (c: Customer) => { setSelected(c); setShowDetail(true); };
   const handleClose = () => { setShowDetail(false); setSelected(null); };
+
+  const handleAssignRep = (repId: string) => {
+    if (!liveSelected) return;
+    const rep = myReps.find(r => r.id === repId);
+    if (!rep) return;
+    reassignCustomerRep(liveSelected.id, rep.id, rep.name);
+  };
+
+  const handleLifecycleChange = (stage: CustomerLifecycleStage) => {
+    if (!liveSelected) return;
+    updateCustomerLifecycle(liveSelected.id, stage);
+  };
 
   const handleView360 = () => {
     if (!selected) return;
@@ -319,32 +346,54 @@ const SMCustomers: React.FC = () => {
           </div>
         }
       >
-        {selected && (
+        {liveSelected && (
           <div className="space-y-5">
             {/* Customer card */}
             <div className="flex items-start gap-4 p-4 bg-slate-50 rounded-xl">
-              {selected.image ? (
-                <img src={selected.image} alt={selected.name} className="h-16 w-16 rounded-full object-cover flex-shrink-0" />
+              {liveSelected.image ? (
+                <img src={liveSelected.image} alt={liveSelected.name} className="h-16 w-16 rounded-full object-cover flex-shrink-0" />
               ) : (
                 <div className="h-16 w-16 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                  <span className="text-xl font-bold text-indigo-700">{selected.name.charAt(0)}</span>
+                  <span className="text-xl font-bold text-indigo-700">{liveSelected.name.charAt(0)}</span>
                 </div>
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2 flex-wrap">
                   <div>
-                    <h3 className="text-base font-bold text-slate-800">{selected.name}</h3>
-                    <p className="text-sm text-slate-500">{selected.storeName ?? selected.companyName}</p>
+                    <h3 className="text-base font-bold text-slate-800">{liveSelected.name}</h3>
+                    <p className="text-sm text-slate-500">{liveSelected.storeName ?? liveSelected.companyName}</p>
                   </div>
                   <div className="flex gap-2">
-                    <Badge variant={getLifecycleVariant(selected.lifecycleStage)} size="sm">
-                      {selected.lifecycleStage}
-                    </Badge>
-                    <Badge variant={getStatusVariant(selected.status)} size="sm">
-                      {selected.status}
+                    <Badge variant={getStatusVariant(liveSelected.status)} size="sm">
+                      {liveSelected.status}
                     </Badge>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Assignment & lifecycle controls */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Assigned Rep</label>
+                <select
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+                  value={liveSelected.assignedRepId ?? ''}
+                  onChange={e => handleAssignRep(e.target.value)}
+                >
+                  <option value="" disabled>Select a rep…</option>
+                  {myReps.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Lifecycle Stage</label>
+                <select
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+                  value={liveSelected.lifecycleStage ?? ''}
+                  onChange={e => handleLifecycleChange(e.target.value as CustomerLifecycleStage)}
+                >
+                  {LIFECYCLE_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
               </div>
             </div>
 
@@ -354,43 +403,36 @@ const SMCustomers: React.FC = () => {
                 <Mail className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-xs text-slate-500">Email</p>
-                  <p className="text-sm font-medium text-slate-700 break-all">{selected.email}</p>
+                  <p className="text-sm font-medium text-slate-700 break-all">{liveSelected.email}</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <Phone className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-xs text-slate-500">Phone</p>
-                  <p className="text-sm font-medium text-slate-700">{selected.phone}</p>
+                  <p className="text-sm font-medium text-slate-700">{liveSelected.phone}</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <MapPin className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-xs text-slate-500">Address</p>
-                  <p className="text-sm font-medium text-slate-700">{selected.address}</p>
+                  <p className="text-sm font-medium text-slate-700">{liveSelected.address}</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <Building2 className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-xs text-slate-500">Company / Reg</p>
-                  <p className="text-sm font-medium text-slate-700">{selected.companyName}</p>
-                  <p className="text-xs text-slate-400">{selected.regNo ?? '—'}</p>
+                  <p className="text-sm font-medium text-slate-700">{liveSelected.companyName}</p>
+                  <p className="text-xs text-slate-400">{liveSelected.regNo ?? '—'}</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <Wallet className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-xs text-slate-500">Wallet Balance</p>
-                  <p className="text-sm font-bold text-emerald-700">£{(selected.walletBalance ?? 0).toFixed(2)}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <Users className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-xs text-slate-500">Assigned Rep</p>
-                  <p className="text-sm font-medium text-slate-700">{getRepName(selected.assignedRepId)}</p>
+                  <p className="text-sm font-bold text-emerald-700">£{(liveSelected.walletBalance ?? 0).toFixed(2)}</p>
                 </div>
               </div>
             </div>
@@ -398,9 +440,9 @@ const SMCustomers: React.FC = () => {
             {/* Timeline info */}
             <div className="grid grid-cols-3 gap-3">
               {[
-                { label: 'Joined', value: selected.joinedDate ?? '—' },
-                { label: 'Last Contact', value: formatDate(selected.lastContactDate) },
-                { label: 'Next Follow-Up', value: formatDate(selected.nextFollowUp) },
+                { label: 'Joined', value: liveSelected.joinedDate ?? '—' },
+                { label: 'Last Contact', value: formatDate(liveSelected.lastContactDate) },
+                { label: 'Next Follow-Up', value: formatDate(liveSelected.nextFollowUp) },
               ].map(({ label, value }) => (
                 <div key={label} className="p-3 bg-slate-50 rounded-lg">
                   <p className="text-xs text-slate-500 mb-1">{label}</p>
@@ -413,7 +455,7 @@ const SMCustomers: React.FC = () => {
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 bg-slate-50 rounded-lg">
                 <p className="text-xs text-slate-500 mb-1">Credit Limit</p>
-                <p className="text-sm font-bold text-slate-700">£{(selected.creditLimit ?? 0).toLocaleString()}</p>
+                <p className="text-sm font-bold text-slate-700">£{(liveSelected.creditLimit ?? 0).toLocaleString()}</p>
               </div>
               <div className="p-3 bg-slate-50 rounded-lg">
                 <p className="text-xs text-slate-500 mb-1">Total Orders</p>

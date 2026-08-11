@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '../../components/ui';
 import { useSalesManager } from '../../context/SalesManagerContext';
 import CustomerHealthCard from '../../components/sales-manager/CustomerHealthCard';
@@ -9,6 +10,7 @@ type Filter = 'all' | CustomerHealthState;
 
 const SMCustomerHealth: React.FC = () => {
   const { customerHealth } = useSalesManager();
+  const navigate = useNavigate();
   const [filter, setFilter] = useState<Filter>('all');
 
   const counts: Record<CustomerHealthState, number> = {
@@ -69,7 +71,9 @@ const SMCustomerHealth: React.FC = () => {
 
       {/* List */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map(c => <CustomerHealthCard key={c.customerId} health={c} />)}
+        {filtered.map(c => (
+          <CustomerHealthCard key={c.customerId} health={c} onClick={() => navigate(`/customers/${c.customerId}/360`)} />
+        ))}
       </div>
 
       {filtered.length === 0 && (

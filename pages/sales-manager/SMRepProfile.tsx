@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft, Mail, Shield, MapPin, ShoppingCart, Wallet,
   TrendingUp, Users, Calendar, Clock, AlertTriangle,
@@ -7,11 +7,11 @@ import {
 } from 'lucide-react';
 import { Card, Badge, Button, Table, THead, TBody, TR, TH, TD } from '../../components/ui';
 import { useSalesManager } from '../../context/SalesManagerContext';
+import { useSalesCRM } from '../../context/SalesCRMContext';
+import { useSalesExecution } from '../../context/SalesExecutionContext';
+import { useWorkSession } from '../../context/WorkSessionContext';
 import PerformanceBar from '../../components/sales-manager/PerformanceBar';
-import {
-  USERS, WORK_SESSIONS, ORDERS, CUSTOMERS,
-  VISITS, COLLECTION_ATTEMPTS, FOLLOW_UPS, TASKS, LEADS,
-} from '../../data';
+import { USERS } from '../../data';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -47,10 +47,10 @@ const fmtDateTime = (iso: string) => {
 
 const lcVariant = (stage?: string): any => {
   if (stage === 'Active')   return 'success';
-  if (stage === 'New' || stage === 'Prospect') return 'info';
-  if (stage === 'Inactive') return 'secondary';
+  if (stage === 'Lead' || stage === 'Prospect' || stage === 'Qualified') return 'info';
+  if (stage === 'Inactive' || stage === 'Archived') return 'secondary';
   if (stage === 'At Risk')  return 'warning';
-  if (stage === 'Churned')  return 'danger';
+  if (stage === 'Lost')     return 'danger';
   return 'secondary';
 };
 
@@ -89,9 +89,14 @@ const ACTIVITY_ICONS: Record<Exclude<ActivityType, 'All'>, React.FC<any>> = {
 const SMRepProfile: React.FC = () => {
   const { repId } = useParams<{ repId: string }>();
   const navigate  = useNavigate();
+  const location  = useLocation();
   const { repStatuses, repPerformance } = useSalesManager();
+  const { getRepCustomers, getRepLeads } = useSalesCRM();
+  const { getRepOrders, getRepVisits, getRepCollections, getRepFollowUps, getRepTasks } = useSalesExecution();
+  const { sessionHistory } = useWorkSession();
 
-  const [activeTab,     setActiveTab]    = useState<Tab>('overview');
+  const requestedTab = (location.state as { tab?: Tab } | null)?.tab;
+  const [activeTab,     setActiveTab]    = useState<Tab>(requestedTab ?? 'overview');
   const [activityType,  setActivityType] = useState<ActivityType>('All');
   const [dateFrom,      setDateFrom]     = useState('');
   const [dateTo,        setDateTo]       = useState('');
@@ -101,14 +106,14 @@ const SMRepProfile: React.FC = () => {
   const repStatus    = repStatuses.find(r => r.repId === repId);
   const repPerf      = repPerformance.find(p => p.repId === repId && p.period === 'daily');
 
-  const customers    = useMemo(() => CUSTOMERS.filter(c => c.assignedRepId === repId), [repId]);
-  const orders       = useMemo(() => ORDERS.filter(o => o.repId === repId), [repId]);
-  const visits       = useMemo(() => VISITS.filter(v => v.repId === repId), [repId]);
-  const collections  = useMemo(() => COLLECTION_ATTEMPTS.filter(c => c.repId === repId), [repId]);
-  const leads        = useMemo(() => LEADS.filter(l => l.repId === repId), [repId]);
-  const tasks        = useMemo(() => TASKS.filter(t => t.repId === repId), [repId]);
-  const followUps    = useMemo(() => FOLLOW_UPS.filter(f => f.repId === repId), [repId]);
-  const sessions     = useMemo(() => WORK_SESSIONS.filter(s => s.repId === repId), [repId]);
+  const customers    = useMemo(() => repId ? getRepCustomers(repId) : [], [repId, getRepCustomers]);
+  const orders       = useMemo(() => repId ? getRepOrders(repId) : [], [repId, getRepOrders]);
+  const visits       = useMemo(() => repId ? getRepVisits(repId) : [], [repId, getRepVisits]);
+  const collections  = useMemo(() => repId ? getRepCollections(repId) : [], [repId, getRepCollections]);
+  const leads        = useMemo(() => repId ? getRepLeads(repId) : [], [repId, getRepLeads]);
+  const tasks        = useMemo(() => repId ? getRepTasks(repId) : [], [repId, getRepTasks]);
+  const followUps    = useMemo(() => repId ? getRepFollowUps(repId) : [], [repId, getRepFollowUps]);
+  const sessions     = useMemo(() => sessionHistory.filter(s => s.repId === repId), [sessionHistory, repId]);
 
   // ── Derived stats ─────────────────────────────────────────────────────────
   const totalRevenue      = orders.filter(o => o.paymentStatus === 'Paid').reduce((s, o) => s + o.total, 0);

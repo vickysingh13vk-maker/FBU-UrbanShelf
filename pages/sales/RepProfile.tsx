@@ -5,11 +5,10 @@ import { useAuth } from '../../context/AuthContext';
 import { useWorkSession } from '../../context/WorkSessionContext';
 import { useSalesExecution } from '../../context/SalesExecutionContext';
 import { useSalesCRM } from '../../context/SalesCRMContext';
-import { WORK_SESSIONS } from '../../data';
 
 const RepProfile: React.FC = () => {
   const { user } = useAuth();
-  const { isOnline, elapsedSeconds, todayStats } = useWorkSession();
+  const { isOnline, elapsedSeconds, todayStats, sessionHistory } = useWorkSession();
   const { getRepVisits } = useSalesExecution();
   const { getRepCustomers, getRepLeads } = useSalesCRM();
 
@@ -20,7 +19,7 @@ const RepProfile: React.FC = () => {
   const myLeads = getRepLeads(repId);
   const activeLeads = myLeads.filter(l => l.stage !== 'Converted' && l.stage !== 'Lost');
 
-  const mySessions = WORK_SESSIONS.filter(s => s.repId === repId).slice(0, 5);
+  const mySessions = sessionHistory.filter(s => s.repId === repId).slice(0, 5);
 
   const formatTime = (s: number) => {
     const h = Math.floor(s / 3600);

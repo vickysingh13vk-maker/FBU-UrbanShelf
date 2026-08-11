@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Activity, DollarSign, FileText, ClipboardList, AlertTriangle, CheckSquare } from 'lucide-react';
 import { useSalesCRM } from '../context/SalesCRMContext';
+import { useSalesExecution } from '../context/SalesExecutionContext';
+import { useSalesManager } from '../context/SalesManagerContext';
 import { useCRMOps } from '../context/CRMOpsContext';
 import { Card } from '../components/ui';
 import EscalationCard from '../components/crm-ops/EscalationCard';
 import ApprovalCard from '../components/crm-ops/ApprovalCard';
 import DocumentCard from '../components/crm-ops/DocumentCard';
-import { ORDERS, COLLECTION_ATTEMPTS } from '../data';
 
 type Tab = 'profile' | 'activity' | 'financials' | 'documents' | 'escalations' | 'approvals';
 
@@ -31,6 +32,8 @@ const Customer360: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { customers } = useSalesCRM();
+  const { orders, collectionAttempts } = useSalesExecution();
+  const { getCustomerHealth } = useSalesManager();
   const { escalations, approvals, getDocumentsForEntity, auditLogs } = useCRMOps();
   const [tab, setTab] = useState<Tab>('profile');
 
@@ -48,20 +51,21 @@ const Customer360: React.FC = () => {
     );
   }
 
-  const custOrders = ORDERS.filter(o => o.customerId === id);
-  const custCollections = COLLECTION_ATTEMPTS.filter(c => c.customerId === id);
+  const custOrders = orders.filter(o => o.customerId === id);
+  const custCollections = collectionAttempts.filter(c => c.customerId === id);
   const custEscalations = escalations.filter(e => e.customerId === id);
   const custApprovals = approvals.filter(a => a.customerId === id);
   const custDocs = getDocumentsForEntity('customer', id!);
   const custAudit = auditLogs.filter(l => l.entityId === id).slice(0, 20);
+  const health = getCustomerHealth(id!);
 
   const totalOrders = custOrders.reduce((s, o) => s + o.total, 0);
   const totalCollected = custCollections.reduce((s, c) => s + c.amountCollected, 0);
-  const overdue = custCollections.filter(c => c.status === 'Promised' || c.status === 'Failed').reduce((s, c) => s + (c.amountRequested - c.amountCollected), 0);
+  const overdue = custCollections.filter(c => c.status === 'Overdue' || c.status === 'Disputed').reduce((s, c) => s + (c.amountRequested - c.amountCollected), 0);
 
-  const fmt = (v: number) => `₹${v.toLocaleString('en-IN')}`;
+  const fmt = (v: number) => `£${v.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const lifecycleStage = customer.lifecycleStage ?? 'Active';
-  const healthCls = HEALTH_COLORS['Healthy'];
+  const healthCls = HEALTH_COLORS[health?.healthState ?? 'Healthy'];
 
   const timeAgo = (ts: string) => {
     const diff = Date.now() - new Date(ts).getTime();
@@ -86,7 +90,10 @@ const Customer360: React.FC = () => {
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-black text-slate-800">{customer.name}</h1>
               {lifecycleStage && (
-                <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${healthCls}`}>{lifecycleStage}</span>
+                <span className="px-2.5 py-1 rounded-full text-xs font-bold border border-slate-200 bg-slate-50 text-slate-600">{lifecycleStage}</span>
+              )}
+              {health && (
+                <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${healthCls}`}>{health.healthState}</span>
               )}
             </div>
             <p className="text-sm text-slate-500 mt-0.5">{customer.phone} · {customer.address}</p>
@@ -160,8 +167,8 @@ const Customer360: React.FC = () => {
                 <div className="mt-1.5 h-2 w-2 rounded-full bg-indigo-400 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-slate-700">{log.action} — {log.entityType}</p>
-                  <p className="text-xs text-slate-400">{log.performedByName} · {timeAgo(log.performedAt)}</p>
-                  {log.notes && <p className="text-xs text-slate-500 mt-0.5">{log.notes}</p>}
+                  <p className="text-xs text-slate-400">{log.performedByName} · {timeAgo(log.timestamp)}</p>
+                  {log.note && <p className="text-xs text-slate-500 mt-0.5">{log.note}</p>}
                 </div>
               </div>
             ))
@@ -202,8 +209,8 @@ const Customer360: React.FC = () => {
                     <p className="text-xs text-slate-400">{c.attemptDate} · collected: {fmt(c.amountCollected)}</p>
                   </div>
                   <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                    c.status === 'Collected' ? 'bg-emerald-100 text-emerald-700' :
-                    c.status === 'Failed' ? 'bg-rose-100 text-rose-700' :
+                    c.status === 'Paid' ? 'bg-emerald-100 text-emerald-700' :
+                    c.status === 'Overdue' || c.status === 'Disputed' ? 'bg-rose-100 text-rose-700' :
                     'bg-amber-100 text-amber-700'
                   }`}>{c.status}</span>
                 </div>

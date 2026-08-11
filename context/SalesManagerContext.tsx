@@ -2,10 +2,11 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 import {
   RepStatus, RepPerformanceMetrics, PeriodType, CustomerHealth,
   OperationalAlert, TeamAnalytics, Territory, TerritoryPerformance, LeadAnalytics,
+  User,
 } from '../types';
 import {
   REP_STATUSES, REP_PERFORMANCE, CUSTOMER_HEALTH, OPERATIONAL_ALERTS,
-  TEAM_ANALYTICS, TERRITORIES, TERRITORY_PERFORMANCE, LEAD_ANALYTICS,
+  TEAM_ANALYTICS, TERRITORIES, TERRITORY_PERFORMANCE, LEAD_ANALYTICS, USERS,
 } from '../data';
 
 interface SalesManagerContextValue {
@@ -25,6 +26,8 @@ interface SalesManagerContextValue {
   territories: Territory[];
   territoryPerformance: TerritoryPerformance[];
   leadAnalytics: LeadAnalytics[];
+  getRepsForManager: (managerId: string) => User[];
+  assignTerritory: (territoryId: string, repId: string, repName: string) => void;
 }
 
 const SalesManagerContext = createContext<SalesManagerContextValue | null>(null);
@@ -35,7 +38,7 @@ export const SalesManagerProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [customerHealth] = useState<CustomerHealth[]>(CUSTOMER_HEALTH);
   const [alerts, setAlerts] = useState<OperationalAlert[]>(OPERATIONAL_ALERTS);
   const [teamAnalytics] = useState<TeamAnalytics>(TEAM_ANALYTICS);
-  const [territories] = useState<Territory[]>(TERRITORIES);
+  const [territories, setTerritories] = useState<Territory[]>(TERRITORIES);
   const [territoryPerformance] = useState<TerritoryPerformance[]>(TERRITORY_PERFORMANCE);
   const [leadAnalytics] = useState<LeadAnalytics[]>(LEAD_ANALYTICS);
 
@@ -66,6 +69,14 @@ export const SalesManagerProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const getCriticalAlerts = useCallback(() =>
     alerts.filter(a => a.severity === 'Critical' && !a.dismissed), [alerts]);
 
+  const getRepsForManager = useCallback((managerId: string) =>
+    USERS.filter(u => u.roleName === 'Sales Rep' && u.managerId === managerId), []);
+
+  const assignTerritory = useCallback((territoryId: string, repId: string, repName: string) => {
+    setTerritories(prev => prev.map(t =>
+      t.id === territoryId ? { ...t, assignedRepId: repId, assignedRepName: repName } : t));
+  }, []);
+
   return (
     <SalesManagerContext.Provider value={{
       repStatuses, getRepStatus,
@@ -75,6 +86,7 @@ export const SalesManagerProvider: React.FC<{ children: React.ReactNode }> = ({ 
       alerts, dismissAlert, markAlertRead, getUnreadAlerts, getCriticalAlerts,
       territories, territoryPerformance,
       leadAnalytics,
+      getRepsForManager, assignTerritory,
     }}>
       {children}
     </SalesManagerContext.Provider>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Escalation, EscalationStatus, EscalationPriority } from '../../types';
 import { AlertTriangle, ChevronDown, ChevronRight, Clock } from 'lucide-react';
 import { useCRMOps } from '../../context/CRMOpsContext';
+import { useAuth } from '../../context/AuthContext';
 
 const PRIORITY_CONFIG: Record<EscalationPriority, { bg: string; text: string; border: string }> = {
   Critical: { bg: 'bg-rose-50',   text: 'text-rose-700',   border: 'border-rose-200'   },
@@ -24,6 +25,8 @@ interface Props { escalation: Escalation; }
 
 const EscalationCard: React.FC<Props> = ({ escalation: e }) => {
   const { updateEscalationStatus } = useCRMOps();
+  const { user } = useAuth();
+  const isManager = user?.roleName === 'Sales Manager' || user?.roleName === 'Admin';
   const [expanded, setExpanded] = useState(false);
   const cfg = PRIORITY_CONFIG[e.priority];
 
@@ -79,9 +82,9 @@ const EscalationCard: React.FC<Props> = ({ escalation: e }) => {
             ))}
           </div>
           {/* Advance button */}
-          {nextStatus && e.status !== 'Closed' && (
+          {isManager && nextStatus && e.status !== 'Closed' && (
             <button
-              onClick={() => updateEscalationStatus(e.id, nextStatus, `Status advanced to ${nextStatus}`, 'Manager')}
+              onClick={() => updateEscalationStatus(e.id, nextStatus, `Status advanced to ${nextStatus}`, user?.name ?? 'Manager')}
               className="px-3 py-1.5 bg-indigo-500 text-white text-xs font-semibold rounded-lg hover:bg-indigo-600 transition-colors"
             >
               Advance → {nextStatus}

@@ -1,11 +1,13 @@
 import React from 'react';
 import { Target } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '../../components/ui';
 import { useSalesManager } from '../../context/SalesManagerContext';
 import LeadAnalyticsRow from '../../components/sales-manager/LeadAnalyticsRow';
 
 const SMLeads: React.FC = () => {
   const { leadAnalytics } = useSalesManager();
+  const navigate = useNavigate();
 
   const totalActive = leadAnalytics.reduce((s, r) => s + r.activeLeads, 0);
   const totalStalled = leadAnalytics.reduce((s, r) => s + r.stalledLeads, 0);
@@ -38,7 +40,13 @@ const SMLeads: React.FC = () => {
       <Card padding="md">
         <h3 className="text-sm font-bold text-slate-700 mb-3">Rep Lead Performance</h3>
         <div className="divide-y divide-slate-50">
-          {leadAnalytics.map(d => <LeadAnalyticsRow key={d.repId} data={d} />)}
+          {leadAnalytics.map(d => (
+            <LeadAnalyticsRow
+              key={d.repId}
+              data={d}
+              onClick={() => navigate(`/sales-manager/team/${d.repId}`, { state: { tab: 'leads' } })}
+            />
+          ))}
         </div>
         {leadAnalytics.length === 0 && (
           <div className="text-center py-10">

@@ -6,8 +6,10 @@ import {
 import {
   Card, Table, THead, TBody, TR, TH, TD, Badge, Button, Modal,
 } from '../../components/ui';
-import { COLLECTION_ATTEMPTS, ORDERS, CUSTOMERS, REP_STATUSES } from '../../data';
+import { REP_STATUSES } from '../../data';
 import { CollectionAttempt, Order } from '../../types';
+import { useSalesExecution } from '../../context/SalesExecutionContext';
+import { useSalesCRM } from '../../context/SalesCRMContext';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -45,6 +47,8 @@ type Tab = 'collections' | 'outstanding';
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const SMPayments: React.FC = () => {
+  const { orders: ORDERS, collectionAttempts: COLLECTION_ATTEMPTS } = useSalesExecution();
+  const { customers: CUSTOMERS } = useSalesCRM();
   const [tab,             setTab]            = useState<Tab>('collections');
   const [search,          setSearch]         = useState('');
   const [repFilter,       setRepFilter]      = useState('All');
@@ -60,13 +64,13 @@ const SMPayments: React.FC = () => {
       ...COLLECTION_ATTEMPTS.filter(c => c.repId).map(c => [c.repId, getRepName(c.repId)] as [string, string]),
       ...ORDERS.filter(o => o.repId).map(o => [o.repId!, getRepName(o.repId)] as [string, string]),
     ]).entries()),
-    [],
+    [COLLECTION_ATTEMPTS, ORDERS],
   );
 
   // ── Collection statuses ───────────────────────────────────────────────────
   const collectionStatuses = useMemo(() =>
     Array.from(new Set(COLLECTION_ATTEMPTS.map(c => c.status))),
-    [],
+    [COLLECTION_ATTEMPTS],
   );
 
   // ── Filtered collections ──────────────────────────────────────────────────
@@ -78,12 +82,12 @@ const SMPayments: React.FC = () => {
     const matchRep    = repFilter    === 'All' || c.repId   === repFilter;
     const matchStatus = statusFilter === 'All' || c.status  === statusFilter;
     return matchSearch && matchRep && matchStatus;
-  }), [search, repFilter, statusFilter]);
+  }), [COLLECTION_ATTEMPTS, search, repFilter, statusFilter]);
 
   // ── Filtered outstanding orders ───────────────────────────────────────────
   const outstandingOrders = useMemo(() =>
     ORDERS.filter(o => o.paymentStatus !== 'Paid' && o.paymentStatus !== 'Refunded'),
-    [],
+    [ORDERS],
   );
 
   const filteredOutstanding = useMemo(() => outstandingOrders.filter(o => {
@@ -125,7 +129,7 @@ const SMPayments: React.FC = () => {
     if (selectedCA)    return CUSTOMERS.find(c => c.id === selectedCA.customerId);
     if (selectedOrder) return CUSTOMERS.find(c => c.id === selectedOrder.customerId);
     return undefined;
-  }, [selectedCA, selectedOrder]);
+  }, [selectedCA, selectedOrder, CUSTOMERS]);
 
   // ── Payment statuses for filter ───────────────────────────────────────────
   const outstandingPayStatuses = useMemo(() =>

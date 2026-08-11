@@ -9,9 +9,10 @@ import {
 } from 'lucide-react';
 import { Card, Table, THead, TBody, TR, TH, TD, Badge, Button } from '../../components/ui';
 import { useSalesExecution } from '../../context/SalesExecutionContext';
+import { useSalesCRM } from '../../context/SalesCRMContext';
 import { useAuth } from '../../context/AuthContext';
 import { useWorkSession } from '../../context/WorkSessionContext';
-import { PRODUCTS, CUSTOMERS, COUPONS } from '../../data';
+import { PRODUCTS, COUPONS } from '../../data';
 import { Product, Customer, PaymentStatus, PaymentMethod, Coupon, FollowUp } from '../../types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -74,6 +75,7 @@ const RepOrderCreate: React.FC = () => {
   const location = useLocation();
   const { user } = useAuth();
   const { createOrder, updateOrder, addFollowUp } = useSalesExecution();
+  const { customers: CUSTOMERS } = useSalesCRM();
   const { recordOrder } = useWorkSession();
 
   const state = (location.state ?? {}) as {
@@ -198,7 +200,7 @@ const RepOrderCreate: React.FC = () => {
     return assigned.length > 0
       ? assigned
       : CUSTOMERS.filter(c => c.status === 'Approved');
-  }, [user?.id]);
+  }, [user?.id, CUSTOMERS]);
 
   // ── Product groups ─────────────────────────────────────────────────────────
   const filteredGroups = useMemo(() => {

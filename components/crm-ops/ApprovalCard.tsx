@@ -5,12 +5,12 @@ import { useCRMOps } from '../../context/CRMOpsContext';
 import { useAuth } from '../../context/AuthContext';
 
 const TYPE_LABELS: Record<string, string> = {
-  'discount-approval':     'Discount Approval',
-  'credit-extension':      'Credit Extension',
-  'price-override':        'Price Override',
-  'return-approval':       'Return Approval',
-  'write-off-request':     'Write-off Request',
-  'special-terms':         'Special Terms',
+  'discount':            'Discount Approval',
+  'credit-increase':     'Credit Increase',
+  'order-override':      'Order Override',
+  'customer-activation': 'Customer Activation',
+  'payment-adjustment':  'Payment Adjustment',
+  'write-off':           'Write-Off',
 };
 
 const STATUS_CONFIG: Record<ApprovalStatus, { bg: string; text: string; icon: React.ReactNode }> = {
@@ -36,19 +36,25 @@ const ApprovalCard: React.FC<Props> = ({ approval: a }) => {
     return `${Math.floor(h / 24)}d ago`;
   };
 
-  const fmt = (v: number | undefined) => v != null ? `₹${v.toLocaleString('en-IN')}` : '—';
+  const fmt = (v: number | undefined) =>
+    v == null ? '—' : a.type === 'discount'
+      ? `${v}%`
+      : `£${v.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
     <div className="p-4 rounded-2xl border border-slate-100 bg-white">
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-sm font-bold text-slate-800">{TYPE_LABELS[a.type] ?? a.type}</p>
+            <p className="text-sm font-bold text-slate-800">{a.title}</p>
+            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+              {TYPE_LABELS[a.type] ?? a.type}
+            </span>
             <span className={`px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 ${cfg.bg}`}>
               {cfg.icon} {a.status}
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">{a.reason}</p>
+          <p className="text-xs text-slate-500 mt-0.5">{a.description}</p>
 
           <div className="mt-2 flex flex-wrap gap-4 text-xs text-slate-500">
             {a.customerName && <span>Customer: <span className="font-medium text-slate-700">{a.customerName}</span></span>}
@@ -56,11 +62,15 @@ const ApprovalCard: React.FC<Props> = ({ approval: a }) => {
             <span>{timeAgo(a.requestedAt)}</span>
           </div>
 
-          {(a.requestedAmount != null || a.approvedAmount != null) && (
+          {(a.currentValue != null || a.requestedValue != null || a.amount != null) && (
             <div className="mt-2 flex items-center gap-3 text-xs">
-              <span className="text-slate-400">Requested: <span className="text-slate-700 font-semibold">{fmt(a.requestedAmount)}</span></span>
-              {a.approvedAmount != null && (
-                <span className="text-slate-400">Approved: <span className="text-emerald-700 font-semibold">{fmt(a.approvedAmount)}</span></span>
+              {a.currentValue != null && a.requestedValue != null ? (
+                <>
+                  <span className="text-slate-400">Current: <span className="text-slate-700 font-semibold">{fmt(a.currentValue)}</span></span>
+                  <span className="text-slate-400">Requested: <span className="text-emerald-700 font-semibold">{fmt(a.requestedValue)}</span></span>
+                </>
+              ) : (
+                <span className="text-slate-400">Amount: <span className="text-slate-700 font-semibold">{fmt(a.amount)}</span></span>
               )}
             </div>
           )}

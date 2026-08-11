@@ -2,7 +2,25 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button, Input, Card } from '../components/ui';
-import { Lock, Mail, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, AlertCircle, ShieldCheck, Briefcase, Users, UserCircle, Truck, ScanEye } from 'lucide-react';
+
+interface DemoAccount {
+  role: string;
+  name: string;
+  email: string;
+  password: string;
+  icon: React.ComponentType<{ className?: string }>;
+  accent: string;
+}
+
+const DEMO_ACCOUNTS: DemoAccount[] = [
+  { role: 'Admin', name: 'John Doe', email: 'admin@urbanshelf.com', password: 'admin123', icon: ShieldCheck, accent: 'text-indigo-600 bg-indigo-50 group-hover:bg-indigo-100' },
+  { role: 'Manager', name: 'Jane Smith', email: 'manager@urbanshelf.com', password: 'manager123', icon: Briefcase, accent: 'text-blue-600 bg-blue-50 group-hover:bg-blue-100' },
+  { role: 'Sales Manager', name: 'David Patel', email: 'david.patel@demand.com', password: 'manager123', icon: Users, accent: 'text-purple-600 bg-purple-50 group-hover:bg-purple-100' },
+  { role: 'Sales Rep', name: 'John Smith', email: 'john.smith@demand.com', password: 'sales123', icon: UserCircle, accent: 'text-emerald-600 bg-emerald-50 group-hover:bg-emerald-100' },
+  { role: 'Supplier', name: 'FBU Supplier', email: 'supplier@demo.com', password: '123456', icon: Truck, accent: 'text-amber-600 bg-amber-50 group-hover:bg-amber-100' },
+  { role: 'Viewer', name: 'Olivia Bennett', email: 'viewer.demo@urbanshelf.com', password: 'viewer123', icon: ScanEye, accent: 'text-slate-600 bg-slate-100 group-hover:bg-slate-200' },
+];
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -10,18 +28,16 @@ const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [demoLoadingEmail, setDemoLoadingEmail] = useState<string | null>(null);
   const [rememberMe, setRememberMe] = useState(false);
-  
+
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const performLogin = async (loginEmail: string, loginPassword: string) => {
     setError(null);
-    setLoading(true);
-
     try {
-      const success = await login(email, password);
+      const success = await login(loginEmail, loginPassword);
       if (success) {
         const savedUser = localStorage.getItem('auth_user');
         const parsedUser = savedUser ? JSON.parse(savedUser) : null;
@@ -43,9 +59,22 @@ const LoginPage: React.FC = () => {
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred during login');
-    } finally {
-      setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    await performLogin(email, password);
+    setLoading(false);
+  };
+
+  const handleDemoLogin = async (account: DemoAccount) => {
+    setEmail(account.email);
+    setPassword(account.password);
+    setDemoLoadingEmail(account.email);
+    await performLogin(account.email, account.password);
+    setDemoLoadingEmail(null);
   };
 
   return (
@@ -133,6 +162,41 @@ const LoginPage: React.FC = () => {
             </Button>
 
           </form>
+        </Card>
+
+        <Card className="mt-6 p-6 shadow-xl shadow-slate-200/50 border-slate-100">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-px flex-1 bg-slate-100" />
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Quick Demo Login</p>
+            <div className="h-px flex-1 bg-slate-100" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {DEMO_ACCOUNTS.map((account) => {
+              const Icon = account.icon;
+              const isLoadingThis = demoLoadingEmail === account.email;
+              return (
+                <button
+                  key={account.email}
+                  type="button"
+                  onClick={() => handleDemoLogin(account)}
+                  disabled={demoLoadingEmail !== null || loading}
+                  className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left transition-all hover:border-indigo-200 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg transition-colors ${account.accent}`}>
+                    {isLoadingThis ? (
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                    ) : (
+                      <Icon className="h-4 w-4" />
+                    )}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-slate-700 truncate">{account.role}</span>
+                    <span className="block text-xs text-slate-400 truncate">{account.email}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </Card>
 
         <p className="text-center mt-8 text-slate-400 text-sm">

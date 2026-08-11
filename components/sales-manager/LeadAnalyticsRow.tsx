@@ -1,10 +1,13 @@
 import React from 'react';
 import { LeadAnalytics } from '../../types';
 
-interface Props { data: LeadAnalytics; }
+interface Props { data: LeadAnalytics; onClick?: () => void; }
 
-const LeadAnalyticsRow: React.FC<Props> = ({ data }) => (
-  <div className="flex items-center gap-4 p-3 hover:bg-slate-50 rounded-xl transition-colors">
+const LeadAnalyticsRow: React.FC<Props> = ({ data, onClick }) => (
+  <div
+    onClick={onClick}
+    className={`flex items-center gap-4 p-3 hover:bg-slate-50 rounded-xl transition-colors ${onClick ? 'cursor-pointer' : ''}`}
+  >
     <img
       src={`https://ui-avatars.com/api/?name=${encodeURIComponent(data.repName)}&background=e0e7ff&color=6366f1`}
       className="h-9 w-9 rounded-xl object-cover flex-shrink-0"

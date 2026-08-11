@@ -122,7 +122,7 @@ export const CUSTOMERS: Customer[] = [
     joinedDate: 'May 01, 2026', image: 'https://i.pravatar.cc/150?u=C010',
     category: 'Deals and Offers', supplier: 'Elf Bar',
     assignedRepId: 'U010', assignedRepName: 'Emma Clarke', ownershipStatus: 'assigned',
-    lifecycleStage: 'New', lastContactDate: '2026-05-14T10:00:00Z', nextFollowUp: '2026-05-16T09:00:00Z'
+    lifecycleStage: 'Lead', lastContactDate: '2026-05-14T10:00:00Z', nextFollowUp: '2026-05-16T09:00:00Z'
   },
   {
     id: 'C011', name: 'Jack Sparrow', email: 'jack@jollyroger.co.uk', phone: '+44 7700 900107', mobile: '+44 7900 555666',
@@ -149,7 +149,7 @@ export const CUSTOMERS: Customer[] = [
     joinedDate: 'Jan 10, 2023', image: 'https://i.pravatar.cc/150?u=C013',
     category: 'Vaping', supplier: 'Lost Mary',
     assignedRepId: 'U010', assignedRepName: 'Emma Clarke', ownershipStatus: 'assigned',
-    lifecycleStage: 'Churned', lastContactDate: '2025-11-01T09:00:00Z'
+    lifecycleStage: 'Lost', lastContactDate: '2025-11-01T09:00:00Z'
   },
   {
     id: 'C014', name: 'John Wick', email: 'john@continental.co.uk', phone: '+44 7700 900110', mobile: '+44 7900 999000',
@@ -185,7 +185,7 @@ export const CUSTOMERS: Customer[] = [
     joinedDate: 'Apr 20, 2026', image: 'https://i.pravatar.cc/150?u=C017',
     category: 'Nicotine Pouch', supplier: 'Velo',
     assignedRepId: 'U010', assignedRepName: 'Emma Clarke', ownershipStatus: 'assigned',
-    lifecycleStage: 'New', lastContactDate: '2026-05-13T11:00:00Z', nextFollowUp: '2026-05-17T09:00:00Z'
+    lifecycleStage: 'Lead', lastContactDate: '2026-05-13T11:00:00Z', nextFollowUp: '2026-05-17T09:00:00Z'
   },
   {
     id: 'C018', name: 'Mulan Fa', email: 'mulan@dragonimports.co.uk', phone: '+44 7700 900114', mobile: '+44 7900 445566',
@@ -275,8 +275,19 @@ export const MODULES = [
   'Marketing',
   'Loyalty Program',
   'Users',
-  'Administration'
+  'Administration',
+  'Notifications',
+  'Escalations',
+  'Approvals',
+  'Documents',
+  'Automation',
+  'Audit Logs'
 ];
+
+// Phase 5 CRM Ops modules — governed by the switch above but access today is
+// enforced via RequireRole/component role checks, not hasPermission(); these
+// entries exist so Roles & Permissions can display/edit them consistently.
+const CRM_OPS_MODULES = ['Notifications', 'Escalations', 'Approvals', 'Documents', 'Automation', 'Audit Logs'];
 
 export const ROLES: Role[] = [
   {
@@ -303,8 +314,8 @@ export const ROLES: Role[] = [
     description: 'Field sales rep. Manages own customers, creates orders, GPS check-in, views own commission.',
     permissions: MODULES.map(m => ({
       module: m,
-      view: ['Dashboard', 'Products', 'Orders', 'Customers'].includes(m),
-      create: ['Orders', 'Customers'].includes(m),
+      view: ['Dashboard', 'Products', 'Orders', 'Customers', 'Notifications', 'Escalations', 'Approvals', 'Documents'].includes(m),
+      create: ['Orders', 'Customers', 'Escalations', 'Approvals'].includes(m),
       edit: ['Orders', 'Customers'].includes(m),
       delete: false
     }))
@@ -315,9 +326,9 @@ export const ROLES: Role[] = [
     description: 'Manages sales team. Views rep performance, analytics, commissions, and all customer/order data.',
     permissions: MODULES.map(m => ({
       module: m,
-      view: ['Dashboard', 'Analytics', 'Products', 'Orders', 'Customers', 'Suppliers', 'Categories'].includes(m),
-      create: ['Orders', 'Customers'].includes(m),
-      edit: ['Orders', 'Customers'].includes(m),
+      view: ['Dashboard', 'Analytics', 'Products', 'Orders', 'Customers', 'Suppliers', 'Categories', ...CRM_OPS_MODULES].includes(m),
+      create: ['Orders', 'Customers', 'Escalations', 'Approvals'].includes(m),
+      edit: ['Orders', 'Customers', 'Escalations', 'Approvals'].includes(m),
       delete: false
     }))
   },
@@ -380,7 +391,8 @@ export const USERS: User[] = [
     roleId: 'R003',
     roleName: 'Sales Rep',
     status: 'Active',
-    createdDate: '2023-04-20'
+    createdDate: '2023-04-20',
+    managerId: 'U011'
   },
   {
     id: 'U010',
@@ -390,7 +402,8 @@ export const USERS: User[] = [
     roleId: 'R003',
     roleName: 'Sales Rep',
     status: 'Active',
-    createdDate: '2024-01-10'
+    createdDate: '2024-01-10',
+    managerId: 'U011'
   },
   {
     id: 'U011',
@@ -457,7 +470,7 @@ export const USERS: User[] = [
     onboardingCompleted: false
   },
   {
-    id: 'U010',
+    id: 'U013',
     name: 'Elf Bar UK',
     email: 'elfbar@supplier.com',
     password: 'elfbar123',
@@ -466,6 +479,16 @@ export const USERS: User[] = [
     status: 'Active',
     createdDate: '2026-04-06',
     onboardingCompleted: false
+  },
+  {
+    id: 'U012',
+    name: 'Olivia Bennett',
+    email: 'viewer.demo@urbanshelf.com',
+    password: 'viewer123',
+    roleId: 'R004',
+    roleName: 'Viewer',
+    status: 'Active',
+    createdDate: '2024-05-12'
   }
 ];
 

@@ -101,8 +101,8 @@ const RepLeadDetail: React.FC = () => {
       assignedRepId: lead.repId,
       assignedRepName: lead.repName,
       createdByRepId: lead.repId,
-      ownershipStatus: 'Assigned',
-      lifecycleStage: 'New',
+      ownershipStatus: 'converted',
+      lifecycleStage: 'Lead',
       lastContactDate: new Date().toISOString(),
     });
     convertLead(lead.id, newCustomer.id);

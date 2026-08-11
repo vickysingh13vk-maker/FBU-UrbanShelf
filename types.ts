@@ -178,6 +178,7 @@ export interface User {
   image?: string;
   onboardingCompleted?: boolean;
   supplierId?: string;
+  managerId?: string; // For Sales Rep -> Sales Manager linkage
 }
 
 export interface SupplierOnboardingData {

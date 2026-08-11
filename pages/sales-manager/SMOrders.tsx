@@ -6,16 +6,15 @@ import {
 import {
   Card, Table, THead, TBody, TR, TH, TD, Badge, Button, Modal,
 } from '../../components/ui';
-import { ORDERS, CUSTOMERS, REP_STATUSES } from '../../data';
+import { REP_STATUSES } from '../../data';
 import { Order } from '../../types';
+import { useSalesExecution } from '../../context/SalesExecutionContext';
+import { useSalesCRM } from '../../context/SalesCRMContext';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const getRepName = (repId?: string) =>
   REP_STATUSES.find(r => r.repId === repId)?.repName ?? (repId ?? '—');
-
-const getCustomerDetails = (customerId?: string) =>
-  CUSTOMERS.find(c => c.id === customerId);
 
 const getStatusVariant = (s: string): any =>
   s === 'Delivered' ? 'success' : s === 'Cancelled' ? 'danger' :
@@ -37,22 +36,29 @@ const STATUSES = ['Pending', 'Approved', 'Picking', 'Packed', 'Shipped', 'Delive
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const SMOrders: React.FC = () => {
-  const [localOrders, setLocalOrders] = useState<Order[]>(ORDERS);
+  const { orders, updateOrder } = useSalesExecution();
+  const { customers } = useSalesCRM();
+  const getCustomerDetails = (customerId?: string) => customers.find(c => c.id === customerId);
   const [search,       setSearch]       = useState('');
   const [repFilter,    setRepFilter]    = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [payFilter,    setPayFilter]    = useState('All');
   const [page,         setPage]         = useState(1);
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [showDetail,    setShowDetail]    = useState(false);
+
+  const selectedOrder = useMemo(() =>
+    orders.find(o => o.id === selectedOrderId) ?? null,
+    [orders, selectedOrderId],
+  );
 
   // ── Derived ──────────────────────────────────────────────────────────────
   const reps = useMemo(() =>
-    Array.from(new Map(ORDERS.filter(o => o.repId).map(o => [o.repId, getRepName(o.repId)])).entries()),
-    [],
+    Array.from(new Map(orders.filter(o => o.repId).map(o => [o.repId, getRepName(o.repId)])).entries()),
+    [orders],
   );
 
-  const filtered = useMemo(() => localOrders.filter(o => {
+  const filtered = useMemo(() => orders.filter(o => {
     const q = search.toLowerCase();
     const matchSearch = !search ||
       o.id.toLowerCase().includes(q) ||
@@ -61,28 +67,23 @@ const SMOrders: React.FC = () => {
     const matchStatus = statusFilter === 'All' || o.status   === statusFilter;
     const matchPay    = payFilter    === 'All' || o.paymentStatus === payFilter;
     return matchSearch && matchRep && matchStatus && matchPay;
-  }), [localOrders, search, repFilter, statusFilter, payFilter]);
+  }), [orders, search, repFilter, statusFilter, payFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const paginated  = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
-  const pendingCount   = localOrders.filter(o => o.status === 'Pending').length;
-  const paidRevenue    = localOrders.filter(o => o.paymentStatus === 'Paid').reduce((s, o) => s + o.total, 0);
-  const pendingPayment = localOrders.filter(o => o.paymentStatus === 'Pending').reduce((s, o) => s + o.total, 0);
-  const deliveredCount = localOrders.filter(o => o.status === 'Delivered').length;
+  const pendingCount   = orders.filter(o => o.status === 'Pending').length;
+  const paidRevenue    = orders.filter(o => o.paymentStatus === 'Paid').reduce((s, o) => s + o.total, 0);
+  const pendingPayment = orders.filter(o => o.paymentStatus === 'Pending').reduce((s, o) => s + o.total, 0);
+  const deliveredCount = orders.filter(o => o.status === 'Delivered').length;
 
   // ── Actions ───────────────────────────────────────────────────────────────
   const handleApprove = (orderId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setLocalOrders(prev =>
-      prev.map(o => o.id === orderId ? { ...o, status: 'Approved' as const } : o),
-    );
-    if (selectedOrder?.id === orderId) {
-      setSelectedOrder(prev => prev ? { ...prev, status: 'Approved' as const } : prev);
-    }
+    updateOrder(orderId, { status: 'Approved' });
   };
 
-  const openDetail = (order: Order) => { setSelectedOrder(order); setShowDetail(true); };
+  const openDetail = (order: Order) => { setSelectedOrderId(order.id); setShowDetail(true); };
 
   // ── Detail modal ──────────────────────────────────────────────────────────
   const renderDetail = () => {
@@ -138,7 +139,10 @@ const SMOrders: React.FC = () => {
 
         {/* Order items */}
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-700">Order Items</div>
+          <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
+            <p className="text-xs font-bold text-slate-700">Order Items</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Sample line items — the order model doesn't yet track per-item detail, only the {selectedOrder.items}-item count and total shown above.</p>
+          </div>
           <div className="divide-y divide-slate-100">
             {SIMULATED_ITEMS.map((item, idx) => (
               <div key={idx} className="p-4 flex items-center justify-between hover:bg-slate-50">
@@ -194,7 +198,7 @@ const SMOrders: React.FC = () => {
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Total Orders',    value: localOrders.length,                bg: 'bg-indigo-50', icon: <ShoppingCart className="h-5 w-5 text-indigo-500" />, color: 'text-indigo-700' },
+          { label: 'Total Orders',    value: orders.length,                bg: 'bg-indigo-50', icon: <ShoppingCart className="h-5 w-5 text-indigo-500" />, color: 'text-indigo-700' },
           { label: 'Revenue (Paid)',  value: `£${paidRevenue.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, bg: 'bg-emerald-50', icon: <CheckCircle2 className="h-5 w-5 text-emerald-500" />, color: 'text-emerald-700' },
           { label: 'Pending Payment', value: `£${pendingPayment.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, bg: 'bg-amber-50',   icon: <Clock className="h-5 w-5 text-amber-500" />,   color: 'text-amber-700' },
           { label: 'Delivered',       value: deliveredCount,                      bg: 'bg-slate-50',  icon: <Truck className="h-5 w-5 text-slate-500" />,       color: 'text-slate-700' },

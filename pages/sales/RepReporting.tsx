@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { TrendingUp, Target, Award, Calendar } from 'lucide-react';
 import { Card } from '../../components/ui';
 import { useSalesCRM } from '../../context/SalesCRMContext';
+import { useSalesExecution } from '../../context/SalesExecutionContext';
 import { useWorkSession } from '../../context/WorkSessionContext';
 import { useAuth } from '../../context/AuthContext';
-import { WORK_SESSIONS, ORDERS } from '../../data';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Area, AreaChart,
@@ -25,25 +25,52 @@ const startOfWeek = (d: Date) => {
 const PERIOD_OPTIONS = ['This Week', 'This Month', 'Last Month'] as const;
 type Period = typeof PERIOD_OPTIONS[number];
 
+// Order dates come as "dd/mm/yyyy"; session dates as ISO "yyyy-mm-dd".
+const parseOrderDate = (dateStr: string): Date => {
+  if (dateStr.includes('T') || /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return new Date(dateStr);
+  const [dd, mm, yyyy] = dateStr.split('/');
+  return new Date(`${yyyy}-${mm}-${dd}`);
+};
+
+const periodRange = (period: Period, now: Date): [Date, Date] => {
+  if (period === 'This Week') {
+    return [startOfWeek(now), now];
+  }
+  if (period === 'This Month') {
+    return [new Date(now.getFullYear(), now.getMonth(), 1), now];
+  }
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+  return [lastMonthStart, lastMonthEnd];
+};
+
 const RepReporting: React.FC = () => {
   const { user } = useAuth();
-  const { todayStats } = useWorkSession();
+  const { todayStats, sessionHistory } = useWorkSession();
   const { getRepCustomers, getRepLeads } = useSalesCRM();
+  const { getRepOrders } = useSalesExecution();
   const [period, setPeriod] = useState<Period>('This Week');
 
   const repId = user?.id ?? '';
   const myCustomers = getRepCustomers(repId);
   const myLeads = getRepLeads(repId);
 
-  const historicalSessions = WORK_SESSIONS.filter(s => s.repId === repId);
-  const myOrders = ORDERS.filter(o => o.repId === repId);
+  const historicalSessions = sessionHistory.filter(s => s.repId === repId);
+  const allMyOrders = getRepOrders(repId);
 
-  const totalHistVisits = historicalSessions.reduce((s, ws) => s + ws.totalVisits, 0) + todayStats.visits;
-  const totalHistOrders = historicalSessions.reduce((s, ws) => s + ws.totalOrders, 0) + todayStats.orders;
-  const totalHistCollections = historicalSessions.reduce((s, ws) => s + ws.totalCollections, 0) + todayStats.collections;
-  const totalHistRevenue = historicalSessions.reduce((s, ws) => s + ws.totalRevenue, 0);
+  const now = new Date();
+  const [periodStart, periodEnd] = periodRange(period, now);
+  const inPeriod = (d: Date) => d >= periodStart && d <= periodEnd;
 
-  // Commission entries derived from this rep's own orders, not a shared mock list.
+  const periodSessions = historicalSessions.filter(s => inPeriod(new Date(s.date)));
+  const myOrders = allMyOrders.filter(o => inPeriod(parseOrderDate(o.date)));
+
+  const totalHistVisits = periodSessions.reduce((s, ws) => s + ws.totalVisits, 0) + (period === 'This Week' || period === 'This Month' ? todayStats.visits : 0);
+  const totalHistOrders = periodSessions.reduce((s, ws) => s + ws.totalOrders, 0) + (period === 'This Week' || period === 'This Month' ? todayStats.orders : 0);
+  const totalHistCollections = periodSessions.reduce((s, ws) => s + ws.totalCollections, 0) + (period === 'This Week' || period === 'This Month' ? todayStats.collections : 0);
+  const totalHistRevenue = periodSessions.reduce((s, ws) => s + ws.totalRevenue, 0);
+
+  // Commission entries derived from this rep's own orders in the selected period, not a shared mock list.
   const commissionEntries = myOrders.map(o => ({
     id: o.id,
     orderId: o.id,
@@ -61,7 +88,6 @@ const RepReporting: React.FC = () => {
   const conversionRate = myLeads.length > 0 ? Math.round((convertedLeads / myLeads.length) * 100) : 0;
 
   // This week's visits/orders per day, aggregated from this rep's own session history.
-  const now = new Date();
   const weekStart = startOfWeek(now);
   const todayDateStr = now.toISOString().split('T')[0];
   const weeklyChartData = DAY_ORDER.map((day, i) => {

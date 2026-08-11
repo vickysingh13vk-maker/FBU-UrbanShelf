@@ -2,15 +2,16 @@ import React, { useState } from 'react';
 import { Wallet, TrendingUp, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { Card } from '../../components/ui';
 import { useSalesCRM } from '../../context/SalesCRMContext';
+import { useSalesExecution } from '../../context/SalesExecutionContext';
 import { useWorkSession } from '../../context/WorkSessionContext';
 import { useAuth } from '../../context/AuthContext';
-import { ORDERS } from '../../data';
 
 const COMMISSION_RATE = 0.08;
 
 const RepPayments: React.FC = () => {
   const { user } = useAuth();
   const { getRepCustomers, addTimelineEntry } = useSalesCRM();
+  const { getRepOrders, logCollectionAttempt } = useSalesExecution();
   const { recordCollection, todayStats } = useWorkSession();
   const [collectingId, setCollectingId] = useState<string | null>(null);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
@@ -18,14 +19,14 @@ const RepPayments: React.FC = () => {
 
   const repId = user?.id ?? '';
   const myCustomers = getRepCustomers(repId);
+  const myOrders = getRepOrders(repId);
 
   // Customers with outstanding balance or unpaid orders
   const customersDue = myCustomers.filter(c => {
-    const hasUnpaid = ORDERS.some(o => o.customerId === c.id && o.paymentStatus === 'Pending' && o.repId === repId);
+    const hasUnpaid = myOrders.some(o => o.customerId === c.id && o.paymentStatus === 'Pending');
     return c.walletBalance < 0 || hasUnpaid;
   });
 
-  const myOrders = ORDERS.filter(o => o.repId === repId);
   const recentOrders = myOrders.slice(0, 5);
 
   // Commission is computed from this rep's own orders, not a shared mock figure.
@@ -36,10 +37,20 @@ const RepPayments: React.FC = () => {
     rate: `${Math.round(COMMISSION_RATE * 100)}%`,
   };
 
-  const handleCollect = (customerId: string, customerName: string) => {
+  const handleCollect = (customerId: string, customerName: string, amountOwed: number) => {
     const amt = parseFloat(amounts[customerId] ?? '0');
     if (!amt || amt <= 0) return;
     recordCollection(amt);
+    logCollectionAttempt({
+      customerId,
+      customerName,
+      repId,
+      attemptDate: new Date().toISOString().split('T')[0],
+      amountRequested: amountOwed,
+      amountCollected: amt,
+      status: amt >= amountOwed ? 'Paid' : 'Partially Paid',
+      notes: 'Logged from Payments page',
+    });
     addTimelineEntry({
       customerId,
       type: 'Payment',
@@ -91,7 +102,7 @@ const RepPayments: React.FC = () => {
           ) : (
             <div className="space-y-3">
               {customersDue.map(c => {
-                const unpaidOrders = ORDERS.filter(o => o.customerId === c.id && o.paymentStatus === 'Pending' && o.repId === repId);
+                const unpaidOrders = myOrders.filter(o => o.customerId === c.id && o.paymentStatus === 'Pending');
                 const unpaidTotal = unpaidOrders.reduce((s, o) => s + o.total, 0);
                 const dueAmount = Math.abs(c.walletBalance) + unpaidTotal;
                 const isCollecting = collectingId === c.id;
@@ -127,7 +138,7 @@ const RepPayments: React.FC = () => {
                             step="0.01"
                             className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
                           />
-                          <button onClick={() => handleCollect(c.id, c.storeName)}
+                          <button onClick={() => handleCollect(c.id, c.storeName, dueAmount)}
                             className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl transition-colors">
                             Save
                           </button>
